@@ -271,6 +271,8 @@ class _CreatorWell(ABC):
         self._df_chess.drop(columns='well.ois', inplace=True)
         self._df_chess.set_index(keys='dt', inplace=True, verify_integrity=True)
         self._df_chess.sort_index(inplace=True)
+        self._df_chess[self._NAME_RATE_LIQ].loc[self._df_chess['sost'] == 'Остановлена'] = 0
+        self._df_chess[self._NAME_RATE_OIL].loc[self._df_chess['sost'] == 'Остановлена'] = 0
 
     @abstractmethod
     def _set_well(self) -> None:
