@@ -1,6 +1,7 @@
 import datetime
 import pathlib
 import pandas as pd
+from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple
 
 from config import Config
@@ -9,18 +10,28 @@ from models.gtm_test.api.well import Well as WellByFtor
 from models.wolfram.api.well import Well as WellByWolfram
 
 
+DEFAULT_WELL_KIND = 'Горизонтально'
+DEFAULT_FRAC_DATE_MIN = datetime.date(2000, 1, 1)
+DEFAULT_THICKNESS = 3
+DEFAULT_THICKNESS_MAX = 50
+DEFAULT_POROSITY = 0.2
+DEFAULT_SATURATION_OIL = 0.5
+DEFAULT_COMPRESSIBILITY_ROCK = 0.00005
+DEFAULT_COMPRESSIBILITY_OIL = 0.0001
+DEFAULT_COMPRESSIBILITY_WATER = 0.00004
+DEFAULT_DENSITY_OIL = 0.85
+DEFAULT_VISCOSITY_LIQ = 1.5
+DEFAULT_VOLUME_FACTOR_LIQ = 1.15
+
+
 class Preprocessor(object):
 
     _path_general = pathlib.Path.cwd() / 'data'
     _tables = [
-        'coord',
-        'coordplast',
         'fond',
         'frac',
         'merop',
         'mersum',
-        'projectcoord',
-        'projectlist',
         'sh_sost_fond',
         'sost',
         'sppl',
@@ -45,11 +56,12 @@ class Preprocessor(object):
     def _run(self) -> None:
         self._check_dir_existence()
         self._read_data()
+        self._handle_data()
         self._select_well_names()
         self._create_wells()
 
     def _check_dir_existence(self) -> None:
-        self.path_current = self._path_general / self._config.field_name / self._config.folder_name
+        self.path_current = self._path_general / self._config.field_name
         if not self.path_current.exists():
             raise FileNotFoundError(f'Директория "{self.path_current}" не существует.')
 
@@ -58,6 +70,85 @@ class Preprocessor(object):
         for table in self._tables:
             self._data[table] = pd.read_feather(self.path_current / f'{table}.feather')
         self._read_gdis_from_xlsm()
+
+    def _read_gdis_from_xlsm(self) -> None:
+        cols_types = {
+            'Скважина': str,
+            'Тип скважины': str,
+            'Пласт ОИС': str,
+            'Дата окончания исследования': str,
+            'Кгидр, Д*см/сПз': float,
+            'Lэфф,м': float,
+            'Xf': float,
+            'Цвет Кпр, мД': int,
+            'Цвет Lэфф,м': int,
+            'Цвет Xf': int,
+        }
+        df = pd.read_excel(
+            io=self.path_current / 'gdis.xlsm',
+            usecols=cols_types.keys(),
+            dtype=cols_types,
+        )
+        df = df.loc[df['Тип скважины'].isin([
+            'доб',
+            'добыв.',
+            'Добывающая',
+            'Фонт.',
+            'мех.фонд',
+        ])]
+        df.dropna(subset=['Скважина', 'Дата окончания исследования', 'Пласт ОИС'], inplace=True)
+        df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(
+            lambda date: datetime.datetime.strptime(date, '%d.%m.%Y').date())
+        df['Пласт ОИС'] = df['Пласт ОИС'].apply(
+            lambda string: set(string.split()))
+        self._data['gdis'] = df
+
+    def _handle_data(self) -> None:
+        self._handle_sppl()
+        self._handle_troil()
+
+    def _handle_sppl(self) -> None:
+        self._data['sppl'].replace(
+            to_replace={
+                'pm': {0: DEFAULT_POROSITY},
+                'nb': {0: DEFAULT_SATURATION_OIL},
+                'sp': {0: DEFAULT_COMPRESSIBILITY_ROCK},
+                'sn': {0: DEFAULT_COMPRESSIBILITY_OIL},
+                'sw': {0: DEFAULT_COMPRESSIBILITY_WATER},
+                'hs': {0: DEFAULT_DENSITY_OIL},
+            },
+            inplace=True,
+        )
+
+    def _handle_troil(self) -> None:
+        self._data['troil'].replace(
+            to_replace={
+                'mu_liq': {0: DEFAULT_VISCOSITY_LIQ},
+                'ob_kt': {0: DEFAULT_VOLUME_FACTOR_LIQ},
+                'oilsaturatedthickness': {0: DEFAULT_THICKNESS},
+            },
+            inplace=True,
+        )
+        self._data['troil']['grpdate'].where(
+            self._data['troil']['grpdate'] < DEFAULT_FRAC_DATE_MIN, other=None, inplace=True)
+        self._handle_troil_by_skvtype()
+
+    def _handle_troil_by_skvtype(self) -> None:
+        df = self._data['troil']
+        kind_names_wrong = [
+            '',
+            'Прочие',
+        ]
+        well_names = df.loc[df['skvtype'].isin(kind_names_wrong)]['well.ois'].unique()
+        for well_name in well_names:
+            df_well = df.loc[df['well.ois'] == well_name].copy()
+            df_well_correct_types = df_well.loc[~df_well['skvtype'].isin(kind_names_wrong)]
+            if df_well_correct_types.empty:
+                df_well['skvtype'] = DEFAULT_WELL_KIND
+            else:
+                kind_name = df_well_correct_types['skvtype'].value_counts().idxmax()
+                df_well['skvtype'] = kind_name
+            self._data['troil'].update(df_well)
 
     def _select_well_names(self) -> None:
         df_train = self._data['sh_sost_fond'].loc[
@@ -68,14 +159,10 @@ class Preprocessor(object):
             (self._data['sh_sost_fond']['dt'] >= self._config.date_test) &
             (self._data['sh_sost_fond']['dt'] <= self._config.date_end)
         ]
-        names_by_train = self._select_well_names_unique(df_train)
-        names_by_test = self._select_well_names_unique(df_test)
-        if self._config.shops is None:
-            df = self._data['welllist']
-            names_by_shops = df.loc[df['ceh'].isin(self._config.shops)]['well.ois'].unique().tolist()
-            self._well_names = sorted(set(names_by_train) & set(names_by_test) & set(names_by_shops))
-        else:
-            self._well_names = sorted(set(names_by_train) & set(names_by_test))
+        names_train = self._select_well_names_unique(df_train)
+        names_test = self._select_well_names_unique(df_test)
+        names_by_shops = self._select_well_names_unique_by_ceh()
+        self.well_names = sorted(set(names_train) & set(names_test) & set(names_by_shops))
 
     def _select_well_names_unique(self, df: pd.DataFrame) -> List[int]:
         df = df.loc[
@@ -85,66 +172,65 @@ class Preprocessor(object):
         well_names = df['well.ois'].unique().tolist()
         return well_names
 
+    def _select_well_names_unique_by_ceh(self) -> List[int]:
+        df = self._data['welllist'].loc[self._data['welllist']['ceh'].isin(self._config.shops)]
+        well_names = df['ois'].unique().tolist()
+        return well_names
+
     def _create_wells(self) -> None:
         self.wells = []
-        for well_name in self._well_names:
-            well = Well(
-                self._config,
+        for well_name in self.well_names:
+            well = _CreatorWell(
                 self._data,
+                self._config,
                 well_name,
             )
             self.wells.append(well.well)
 
-    def _read_gdis_from_xlsm(self) -> None:
-        cols = [
-            'Скважина',
-            'Дата окончания исследования',
-            'Кпр, мД',
-            'Безразмерная проводимость трещины (Fc)',
-            'Кгидр, Д*см/сПз',
-            'Xf',
-            'S мех',
-            'Пласт ОИС',
-            'Lэфф,м',
-            'Рпл текущее на ВНК, кгс/см2',
-            'Тип скважины',
-            'Кол-во тр-н',
-            'k цвет',
-            'Pпласт цвет',
-            'l цвет',
-            'xf цвет',
-            'fcd цвет',
+
+class _CreatorWell(ABC):
+
+    _NAME_RATE_LIQ = 'Дебит жидкости среднесуточный'
+    _NAME_RATE_OIL = 'Дебит нефти расчетный'
+    _NAME_CUM_LIQ = 'Накопленная добыча жидкости'
+    _NAME_CUM_OIL = 'Накопленная добыча нефти'
+    _NAME_PRESSURE = 'Давление забойное'
+    _NAME_WATERCUT = 'Обводненность объемная'
+
+    def __init__(
+            self,
+            data: Dict[str, pd.DataFrame],
+            config: Config,
+            well_name_ois: int,
+    ):
+        self._data = data
+        self._field_name = config.field_name
+        self._date_start = config.date_start
+        self._date_test = config.date_test
+        self._date_end = config.date_end
+        self._well_name_ois = well_name_ois
+
+    @abstractmethod
+    def _run(self) -> None:
+        pass
+
+    @abstractmethod
+    def _set_chess(self) -> None:
+        df = self._data['sh_sost_fond'].loc[
+            (self._data['sh_sost_fond']['well.ois'] == self._well_name_ois)
         ]
-        df = pd.read_excel(
-            io=self.path_current / 'гдис.xlsm',
-            usecols=cols,
-            dtype={
-                'Дата окончания исследования': str,
-                'Рпл текущее на ВНК, кгс/см2': str,
-            },
-            engine='openpyxl',
-        )
-        df.dropna(subset=['Скважина', 'Дата окончания исследования', 'Пласт ОИС'], inplace=True)
-        df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(self._convert_day_date)
-        df['Пласт ОИС'] = df['Пласт ОИС'].apply(lambda string: set(string.split()))
-        production_names = [
-            'добыв.',
-            'доб',
-            'Добывающая',
-        ]
-        df = df.loc[df['Тип скважины'].isin(production_names)]
-        self._data['gdis'] = df
+        self._df_chess = df.copy()
+        self._df_chess.drop(columns='well.ois', inplace=True)
+        self._df_chess.set_index(keys='dt', inplace=True, verify_integrity=True)
+        self._df_chess.sort_index(inplace=True)
 
-    @staticmethod
-    def _convert_day_date(x: str) -> datetime.date:
-        return datetime.datetime.strptime(x, '%d.%m.%Y').date()
+    @abstractmethod
+    def _set_well(self) -> None:
+        pass
 
 
-class Well(object):
+class _CreatorWellFtor(_CreatorWell):
 
-    _ql_name = 'Дебит жидкости среднесуточный'
-    _qo_name = 'Дебит нефти расчетный'
-    _bhp_name = 'Давление забойное'
     _kind_codes_frac_no = {
         'Вертикально': 0,
         'Наклонно-направленно': 0,
@@ -158,144 +244,110 @@ class Well(object):
 
     def __init__(
             self,
-            config: Config,
             data: Dict[str, pd.DataFrame],
+            config: Config,
             well_name_ois: int,
     ):
-        self._config = config
-        self._data = data
-        self._well_name_ois = well_name_ois
+        super().__init__(
+            data,
+            config,
+            well_name_ois,
+        )
         self._run()
 
     def _run(self) -> None:
-        self._set_dates()
         self._set_well_name_geo()
         self._set_formation_names()
-        self._set_properties_by_sppl()
+        self._set_formation_properties_from_sppl()
+        self._set_formation_properties_from_troil()
         self._set_chess()
-        if self._config.model_name == 'ftor':
-            self._set_flood()
-            self._set_properties_by_troil()
-            self._add_bounds_to_chess()
-            self._create_well_for_ftor()
-        else:
-            self._create_well_for_wolfram()
-
-    def _set_dates(self) -> None:
-        self._date_start = self._config.date_start
-        self._date_test = self._config.date_test
-        self._date_end = self._config.date_end
+        self._set_flood()
+        self._set_well()
 
     def _set_well_name_geo(self) -> None:
+        """Устанавливает ГеоБД номер скважины.
+
+        Notes:
+            Номер скважины определяется как ГеоБД номер последнего вводимого ствола скважины.
+            Данный ствол должен быть активным на момент "date_test".
+        """
+        # TODO: Понять, надо ли сдигать date_start для случая, когда скважина имеет несколько стволов.
+        #  Пример 1: на скважине появляется новый ствол в период с date_start до date_test.
+        #  Пример 2: на скважине есть 2 активных ствола, в период с date_start до date_test один из них отключается.
         df = self._data['welllist'].loc[
             (self._data['welllist']['ois'] == self._well_name_ois) &
             (self._data['welllist']['dtstart'] < self._date_test) &
-            (self._data['welllist']['dtend'] > self._date_start)
+            (self._data['welllist']['dtend'] >= self._date_test)
         ]
         date_start_max = df['dtstart'].max()
-        self._well_name_geo = df[df['dtstart'] == date_start_max]['well'].iloc[-1]
-        self._correct_date_start(date_start_max)
+        self._well_name_geo = df.loc[df['dtstart'] == date_start_max]['well'].iloc[-1]
 
     def _set_formation_names(self) -> None:
+        """Устанавливает OIS названия пластов скважины.
+
+        Notes:
+            Определяются названия пластов, которые имели хоть одну активную дату в пределах "date_start" и "date_test".
+        """
+        # TODO: Понять, надо ли сдигать date_start для случая, когда скважина имеет несколько пластов.
+        #  Пример 1: к скважине последовательно подключаются 2 пласта до date_test.
+        #  Пример 2: скважина работает на 2 пластах, один пласт отключается до date_test.
         df = self._data['wellplast'].loc[
             (self._data['wellplast']['well.ois'] == self._well_name_ois) &
             (self._data['wellplast']['dtstart'] < self._date_test) &
-            (self._data['wellplast']['dtend'] > self._date_start)
+            (self._data['wellplast']['dtend'] >= self._date_start)
         ]
-        date_form_max = df['dtstart'].max()
         self._formation_names = df['plast'].to_list()
-        self._correct_date_start(date_form_max)
 
-    def _correct_date_start(self, date: datetime.date) -> None:
-        if self._date_start < date:
-            self._date_start = date
-
-    def _set_properties_by_sppl(self) -> None:
+    def _set_formation_properties_from_sppl(self) -> None:
         df = self._data['sppl'].loc[
             (self._data['sppl']['plastmer'].isin(self._formation_names)) &
             (self._data['sppl']['tk'] < self._date_test)
         ]
         self._porosity = df['pm'].mean()
-        self._cr = df['sp'].mean()
-        self._cw = df['sw'].mean()
-        self._co = df['sn'].mean()
-        self._so = df['nb'].mean()
-        self._compressibility_total = (self._co * self._so + self._cw * (1 - self._so) + self._cr) * 10
+        self._c_r = df['sp'].mean()
+        self._c_w = df['sw'].mean()
+        self._c_o = df['sn'].mean()
+        self._s_o = df['nb'].mean()
+        self._compressibility_total = (self._c_o * self._s_o + self._c_w * (1 - self._s_o) + self._c_r) * 10
         self._density_oil = df['hs'].mean()
 
-    def _set_chess(self) -> None:
-        self._df_chess = self._data['sh_sost_fond'].loc[self._data['sh_sost_fond']['well.ois'] == self._well_name_ois]
-        self._df_chess.drop(columns='well.ois', inplace=True)
-        self._df_chess.set_index(keys='dt', inplace=True, verify_integrity=True)
-        self._df_chess.sort_index(inplace=True)
-        self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
-        self._df_chess[self._qo_name] = self._df_chess[self._qo_name].apply(lambda x: x / self._density_oil)
-        ql = self._df_chess[self._ql_name]
-        qo = self._df_chess[self._qo_name]
-        self._df_chess['watercut'] = (ql - qo) / ql
-
-    def _set_flood(self) -> None:
-        df_mersum = self._data['mersum'].loc[
-            (self._data['mersum']['well.ois'] == self._well_name_ois) &
-            (self._data['mersum']['plastmer'].isin(self._formation_names)) &
-            (self._data['mersum']['dt'] < self._date_start)
-        ].copy()
-        df_mersum.drop(columns=['well.ois', 'plastmer'], inplace=True)
-        df_mersum.dropna(axis=0, how='any', inplace=True)
-        df_mersum.set_index(keys=['dt', df_mersum.index], inplace=True, verify_integrity=True)
-        df_mersum = df_mersum.sum(axis=0, level='dt')
-        df_mersum.index = df_mersum.index.map(lambda x: x.date())
-        df_mersum['wc'] = (df_mersum['liq'] - df_mersum['oilm3']) / df_mersum['liq']
-        df_mersum.columns = [
-            'cuml',
-            'cumo',
-            'wc_fact',
-        ]
-        day = datetime.timedelta(days=1)
-        df_chess = self._df_chess.loc[:self._date_test - day][[
-            self._ql_name,
-            self._qo_name,
-            'watercut',
-        ]]
-        df_chess.columns = df_mersum.columns
-        self._df_flood = pd.concat(objs=[df_mersum, df_chess])
-        self._df_flood.fillna(value=0, inplace=True)
-        self._df_flood[['cuml', 'cumo']] = self._df_flood[['cuml', 'cumo']].cumsum()
-        self._cum_liq_start = df_mersum['cuml'].sum()
-        self._cum_liq_test = self._df_flood['cuml'].iloc[-1]
-        self._cum_oil_test = self._df_flood['cumo'].iloc[-1]
-
-    def _set_properties_by_troil(self) -> None:
+    def _set_formation_properties_from_troil(self) -> None:
         df = self._data['troil'].loc[
             (self._data['troil']['well.ois'] == self._well_name_ois) &
             (self._data['troil']['plastmer'].isin(self._formation_names)) &
             (self._data['troil']['dt'] >= self._date_start) &
             (self._data['troil']['dt'] < self._date_test)
         ]
-        df.dropna(inplace=True)
-        if df.empty or df['skvtype'].iloc[-1] == '':
-            print(f'Скважина {self._well_name_ois} не имеет данных в таблице troil на заданные даты расчета.')
-            self._kind_code = 1
-            self._thickness_oil_saturated = 5
-            self._viscosity_liq = 2
-            self._volume_factor_liq = 1.2
-        else:
-            kind_name = df['skvtype'].iloc[-1]
-            date = self._date_start + datetime.timedelta(days=31)
-            frac_dates = df[df['dt'] < date]['grpdate'].dropna()
-            if frac_dates.empty:
-                self._kind_code = self._kind_codes_frac_no[kind_name]
-            else:
+        if not df.empty:
+            kind_name = df['skvtype'].value_counts().idxmax()
+            frac_date = df['grpdate'].iloc[0]
+            if frac_date <= self._date_start:
                 self._kind_code = self._kind_codes_frac[kind_name]
-            self._thickness_oil_saturated = 0
-            for formation in self._formation_names:
-                self._thickness_oil_saturated += df[df['plastmer'] == formation]['oilsaturatedthickness'].mean()
-            if self._thickness_oil_saturated > 50:
-                self._thickness_oil_saturated = 10
+            else:
+                self._kind_code = self._kind_codes_frac_no[kind_name]
+            df.set_index(keys=['plastmer', df.index], inplace=True, verify_integrity=True)
+            self._thickness = df['oilsaturatedthickness'].mean(level='plastmer').sum()
+            if self._thickness >= DEFAULT_THICKNESS_MAX:
+                self._thickness = DEFAULT_THICKNESS
             self._viscosity_liq = df['mu_liq'].mean()
             self._volume_factor_liq = df['ob_kt'].mean()
+        else:
+            self._kind_code = self._kind_codes_frac_no[DEFAULT_WELL_KIND]
+            self._thickness = DEFAULT_THICKNESS
+            self._viscosity_liq = DEFAULT_VISCOSITY_LIQ
+            self._volume_factor_liq = DEFAULT_VOLUME_FACTOR_LIQ
 
-    def _add_bounds_to_chess(self) -> None:
+    def _set_chess(self) -> None:
+        super()._set_chess()
+        self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
+        self._df_chess[self._NAME_RATE_OIL] = self._df_chess[self._NAME_RATE_OIL].apply(
+            lambda x: x / self._density_oil)
+        rates_liq = self._df_chess[self._NAME_RATE_LIQ]
+        rates_oil = self._df_chess[self._NAME_RATE_OIL]
+        self._df_chess[self._NAME_WATERCUT] = (rates_liq - rates_oil) / rates_liq
+        self._set_chess_bounds()
+
+    def _set_chess_bounds(self) -> None:
         event_dates = self._df_chess['merid.name'].dropna().index
         event_dates = event_dates.insert(0, self._date_start)
         for date in event_dates:
@@ -303,12 +355,12 @@ class Well(object):
                 self._data,
                 date,
                 self._date_test,
-                self._config.field_name,
+                self._field_name,
                 self._well_name_ois,
                 self._well_name_geo,
                 self._kind_code,
                 self._formation_names,
-                self._thickness_oil_saturated,
+                self._thickness,
                 self._viscosity_liq,
             )
             self._df_chess.loc[date, 'bounds'] = Bounds(
@@ -317,54 +369,113 @@ class Well(object):
                 xf=bound_selector.xf,
             )
 
-    def _create_well_for_ftor(self) -> None:
+    def _set_flood(self) -> None:
+        df = self._data['mersum'].loc[
+            (self._data['mersum']['well.ois'] == self._well_name_ois) &
+            (self._data['mersum']['plastmer'].isin(self._formation_names)) &
+            (self._data['mersum']['dt'] < self._date_start)
+        ]
+        df_mersum = df.copy()
+        df_mersum.drop(columns=['well.ois', 'plastmer'], inplace=True)
+        df_mersum.dropna(axis=0, how='any', inplace=True)
+        df_mersum.set_index(keys=['dt', df_mersum.index], inplace=True, verify_integrity=True)
+        df_mersum = df_mersum.sum(axis=0, level='dt')
+        df_mersum.index = df_mersum.index.map(lambda x: x.date())
+        prods_liq = df_mersum['liq']
+        prods_oil = df_mersum['oilm3']
+        df_mersum[self._NAME_WATERCUT] = (prods_liq - prods_oil) / prods_liq
+        df_mersum.columns = [
+            self._NAME_CUM_LIQ,
+            self._NAME_CUM_OIL,
+            self._NAME_WATERCUT,
+        ]
+        df_chess = self._df_chess.loc[
+                   :self._date_test - datetime.timedelta(days=1),
+                   [
+                       self._NAME_RATE_LIQ,
+                       self._NAME_RATE_OIL,
+                       self._NAME_WATERCUT,
+                   ]
+        ]
+        df_chess.columns = df_mersum.columns
+        self._df_flood = pd.concat(objs=[df_mersum, df_chess])
+        self._df_flood.fillna(value=0, inplace=True)
+        self._df_flood.update(self._df_flood[[self._NAME_CUM_LIQ, self._NAME_CUM_OIL]].cumsum())
+        self._cum_liq_start = df_mersum[self._NAME_CUM_LIQ].sum()
+        self._cum_liq_test = self._df_flood[self._NAME_CUM_LIQ].iloc[-1]
+        self._cum_oil_test = self._df_flood[self._NAME_CUM_OIL].iloc[-1]
+
+    def _set_well(self) -> None:
         df_chess = self._df_chess[[
-            self._bhp_name,
-            self._ql_name,
-            self._qo_name,
-            'watercut',
             'sost',
             'merid.name',
             'bounds',
+            self._NAME_PRESSURE,
+            self._NAME_WATERCUT,
+            self._NAME_RATE_LIQ,
+            self._NAME_RATE_OIL,
         ]]
         df_chess.columns = [
-            'p',
-            'ql_m3_fact',
-            'qo_m3_fact',
-            'wc_fact',
             'status',
             'event',
             'bounds',
+            'p',
+            'wc_fact',
+            'ql_m3_fact',
+            'qo_m3_fact',
         ]
         self.well = WellByFtor(
             self._well_name_ois,
             self._date_start,
             self._date_test,
             self._date_end,
-            df_chess,
-            self._df_flood,
             self._kind_code,
+            self._thickness,
             self._porosity,
             self._compressibility_total,
-            self._thickness_oil_saturated,
+            self._density_oil,
             self._viscosity_liq,
             self._volume_factor_liq,
-            self._density_oil,
             self._cum_liq_start,
             self._cum_liq_test,
             self._cum_oil_test,
+            df_chess,
+            self._df_flood,
         )
 
-    def _create_well_for_wolfram(self) -> None:
+
+class _CreatorWellWolfram(_CreatorWell):
+
+    def __init__(
+            self,
+            data: Dict[str, pd.DataFrame],
+            config: Config,
+            well_name_ois: int,
+    ):
+        super().__init__(
+            data,
+            config,
+            well_name_ois,
+        )
+        self._run()
+
+    def _run(self) -> None:
+        self._set_chess()
+        self._set_well()
+
+    def _set_chess(self) -> None:
+        super()._set_chess()
+        self._df_chess = self._df_chess.loc[:self._date_end]
+
+    def _set_well(self) -> None:
         df_chess = self._df_chess[[
-            self._bhp_name,
-            self._ql_name,
-            self._qo_name,
+            self._NAME_PRESSURE,
+            self._NAME_RATE_LIQ,
+            self._NAME_RATE_OIL,
         ]]
         self.well = WellByWolfram(
             self._well_name_ois,
             df_chess,
-            self._density_oil,
         )
 
 
@@ -387,7 +498,7 @@ class _BoundParamSelector:
             well_name_geo: str,
             kind_code: int,
             formation_names: List[str],
-            thickness_oil_saturated: float,
+            thickness: float,
             viscosity_liq: float,
     ):
         self._data = data
@@ -398,14 +509,14 @@ class _BoundParamSelector:
         self._well_name_geo = well_name_geo
         self._kind_code = kind_code
         self._formation_names = formation_names
-        self._thickness_oil_saturated = thickness_oil_saturated
+        self._thickness = thickness
         self._viscosity_liq = viscosity_liq
         self._run()
 
     def _run(self) -> None:
         self._set_gdis_merop()
         self._set_bounds_permeability()
-        self._set_bounds_length_hor_wellbore()
+        self._set_bounds_length_hor_well_bore()
         self._set_bounds_length_half_fracture()
 
     def _set_gdis_merop(self) -> None:
@@ -426,7 +537,7 @@ class _BoundParamSelector:
             if not self._get_k_plast():
                 self.k = self._get_default_permeability(self._field_name)
 
-    def _set_bounds_length_hor_wellbore(self) -> None:
+    def _set_bounds_length_hor_well_bore(self) -> None:
         self.l_hor = []
         if self._kind_code in [1, 3]:
             if not self._get_l_hor():
@@ -443,11 +554,10 @@ class _BoundParamSelector:
     def _get_k_well_plast(self) -> bool:
         cols = [
             'Скважина',
-            'Дата окончания исследования',
-            'Кпр, мД',
-            'Кгидр, Д*см/сПз',
-            'k цвет',
             'Пласт ОИС',
+            'Дата окончания исследования',
+            'Кгидр, Д*см/сПз',
+            'Цвет Kпр, мД',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
@@ -470,21 +580,21 @@ class _BoundParamSelector:
         new_df = df.loc[df['k цвет'] == self._mark_code['excellent']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
-            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness_oil_saturated
+            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
             self.k = [0.7 * k_init, k_init, 1.3 * k_init]
             return True
 
         new_df = df.loc[df['k цвет'] == self._mark_code['good']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
-            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness_oil_saturated
+            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
             self.k = [0.3 * k_init, k_init, 1.7 * k_init]
             return True
 
         new_df = df.loc[df['k цвет'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
-            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness_oil_saturated
+            k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
             self.k = [1 / 3 * k_init, k_init, 3 * k_init]
             return True
 
@@ -511,8 +621,8 @@ class _BoundParamSelector:
             return False
         k_gidr_gdis_max = df['Кгидр, Д*см/сПз'].max()
         k_gidr_gdis_min = df['Кгидр, Д*см/сПз'].min()
-        k_max = 10 * self._viscosity_liq * k_gidr_gdis_max / self._thickness_oil_saturated * 1.1
-        k_min = 10 * self._viscosity_liq * k_gidr_gdis_min / self._thickness_oil_saturated / 1.1
+        k_max = 10 * self._viscosity_liq * k_gidr_gdis_max / self._thickness * 1.1
+        k_min = 10 * self._viscosity_liq * k_gidr_gdis_min / self._thickness / 1.1
         self.k = [k_min, (k_min + k_max) / 2, k_max]
         return True
 

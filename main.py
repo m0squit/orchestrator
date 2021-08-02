@@ -11,79 +11,12 @@ from preprocessor import Preprocessor
 
 
 configs_ftor = [
-    #  Прогноз по месторождению Вынгаяхинское на 2019 год.
     Config(
         field_name='Вынгаяхинское',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
+        shops=['ЦДНГ-10'],
         date_start=datetime.date(2018, 1, 1),
         date_test=datetime.date(2019, 1, 1),
         date_end=datetime.date(2019, 3, 31),
-        shops=['ЦДНГ-10'],
-    ),
-    Config(
-        field_name='Вынгаяхинское',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 4, 1),
-        date_test=datetime.date(2019, 4, 1),
-        date_end=datetime.date(2019, 6, 30),
-        shops=['ЦДНГ-10'],
-    ),
-    Config(
-        field_name='Вынгаяхинское',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 7, 1),
-        date_test=datetime.date(2019, 7, 1),
-        date_end=datetime.date(2019, 9, 30),
-        shops=['ЦДНГ-10'],
-    ),
-    Config(
-        field_name='Вынгаяхинское',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 10, 1),
-        date_test=datetime.date(2019, 10, 1),
-        date_end=datetime.date(2019, 12, 31),
-        shops=['ЦДНГ-10'],
-    ),
-    #  Прогноз по месторождению Крайнее на 2019 год.
-    Config(
-        field_name='Крайнее',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 1, 1),
-        date_test=datetime.date(2018, 11, 1),
-        date_end=datetime.date(2019, 1, 31),
-        shops=['ЦДНГ-4'],
-    ),
-    Config(
-        field_name='Крайнее',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 2, 1),
-        date_test=datetime.date(2019, 2, 1),
-        date_end=datetime.date(2019, 4, 30),
-        shops=['ЦДНГ-4'],
-    ),
-    Config(
-        field_name='Крайнее',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 5, 1),
-        date_test=datetime.date(2019, 5, 1),
-        date_end=datetime.date(2019, 7, 31),
-        shops=['ЦДНГ-4'],
-    ),
-    Config(
-        field_name='Крайнее',
-        model_name='ftor',
-        folder_name='2018_1_2021_4',
-        date_start=datetime.date(2018, 8, 1),
-        date_test=datetime.date(2019, 8, 1),
-        date_end=datetime.date(2019, 10, 31),
-        shops=['ЦДНГ-4'],
     ),
 ]
 configs_wolfram = []
