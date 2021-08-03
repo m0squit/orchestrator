@@ -2,12 +2,12 @@ import datetime
 import pathlib
 import pandas as pd
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from ftor.well import Bounds
+from ftor.well import Well as WellFtor
+from typing import Dict, List, Tuple, Union
+from wolfram.well import Well as WellWolfram
 
 from config import Config
-from models.gtm_test.api.bounds import Bounds
-from models.gtm_test.api.well import Well as WellByFtor
-from models.wolfram.api.well import Well as WellByWolfram
 
 
 DEFAULT_WELL_KIND = 'Горизонтально'
@@ -228,6 +228,11 @@ class _CreatorWell(ABC):
     def _set_well(self) -> None:
         pass
 
+    @abstractmethod
+    @property
+    def well(self) -> Union[WellFtor, WellWolfram]:
+        pass
+
 
 class _CreatorWellFtor(_CreatorWell):
 
@@ -366,9 +371,9 @@ class _CreatorWellFtor(_CreatorWell):
                 self._viscosity_liq,
             )
             self._df_chess.loc[date, 'bounds'] = Bounds(
-                k=bound_selector.k,
-                l_hor=bound_selector.l_hor,
-                xf=bound_selector.xf,
+                bound_selector.permeability,
+                bound_selector.length_hor_well_bore,
+                bound_selector.length_half_fracture,
             )
 
     def _set_flood(self) -> None:
@@ -418,15 +423,15 @@ class _CreatorWellFtor(_CreatorWell):
             self._NAME_RATE_OIL,
         ]]
         df_chess.columns = [
-            'status',
-            'event',
-            'bounds',
-            'p',
-            'wc_fact',
-            'ql_m3_fact',
-            'qo_m3_fact',
+            WellFtor.NAME_STATUS,
+            WellFtor.NAME_EVENT,
+            WellFtor.NAME_BOUNDS,
+            WellFtor.NAME_PRESSURE,
+            WellFtor.NAME_WATERCUT,
+            WellFtor.NAME_RATE_LIQ,
+            WellFtor.NAME_RATE_OIL,
         ]
-        self.well = WellByFtor(
+        self._well = WellFtor(
             self._well_name_ois,
             self._date_start,
             self._date_test,
@@ -444,6 +449,10 @@ class _CreatorWellFtor(_CreatorWell):
             df_chess,
             self._df_flood,
         )
+
+    @property
+    def well(self) -> WellFtor:
+        return self._well
 
 
 class _CreatorWellWolfram(_CreatorWell):
@@ -475,10 +484,14 @@ class _CreatorWellWolfram(_CreatorWell):
             self._NAME_RATE_LIQ,
             self._NAME_RATE_OIL,
         ]]
-        self.well = WellByWolfram(
+        self._well = WellWolfram(
             self._well_name_ois,
             df_chess,
         )
+
+    @property
+    def well(self) -> WellWolfram:
+        return self._well
 
 
 class _BoundParamSelector:
@@ -534,24 +547,24 @@ class _BoundParamSelector:
         ]
 
     def _set_bounds_permeability(self) -> None:
-        self.k = []
+        self._k = []
         if not self._get_k_well_plast():
             if not self._get_k_plast():
-                self.k = self._get_default_permeability(self._field_name)
+                self._k = self._get_default_permeability(self._field_name)
 
     def _set_bounds_length_hor_well_bore(self) -> None:
-        self.l_hor = []
+        self._l_hor = []
         if self._kind_code in [1, 3]:
             if not self._get_l_hor():
-                self.l_hor = [100, 500, 1000]
+                self._l_hor = [100, 500, 1000]
 
     def _set_bounds_length_half_fracture(self) -> None:
-        self.xf = []
+        self._xf = []
         if self._kind_code in [2, 3]:
             self._set_frac()
             if not self._get_xf_gdis():
                 if not self._get_xf_frac():
-                    self.xf = self._get_default_length_half_fracture(self._field_name)
+                    self._xf = self._get_default_length_half_fracture(self._field_name)
 
     def _get_k_well_plast(self) -> bool:
         cols = [
@@ -583,21 +596,21 @@ class _BoundParamSelector:
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self.k = [0.7 * k_init, k_init, 1.3 * k_init]
+            self._k = [0.7 * k_init, k_init, 1.3 * k_init]
             return True
 
         new_df = df.loc[df['k цвет'] == self._mark_code['good']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self.k = [0.3 * k_init, k_init, 1.7 * k_init]
+            self._k = [0.3 * k_init, k_init, 1.7 * k_init]
             return True
 
         new_df = df.loc[df['k цвет'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self.k = [1 / 3 * k_init, k_init, 3 * k_init]
+            self._k = [1 / 3 * k_init, k_init, 3 * k_init]
             return True
 
     def _get_k_plast(self) -> bool:
@@ -625,7 +638,7 @@ class _BoundParamSelector:
         k_gidr_gdis_min = df['Кгидр, Д*см/сПз'].min()
         k_max = 10 * self._viscosity_liq * k_gidr_gdis_max / self._thickness * 1.1
         k_min = 10 * self._viscosity_liq * k_gidr_gdis_min / self._thickness / 1.1
-        self.k = [k_min, (k_min + k_max) / 2, k_max]
+        self._k = [k_min, (k_min + k_max) / 2, k_max]
         return True
 
     def _get_l_hor(self) -> bool:
@@ -664,24 +677,24 @@ class _BoundParamSelector:
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
-                self.l_hor = [0.4 * l_hor_init, l_hor_init, 1.6 * l_hor_init]
+                self._l_hor = [0.4 * l_hor_init, l_hor_init, 1.6 * l_hor_init]
             else:
-                self.l_hor = [0.7 * l_hor_init, l_hor_init, 1.3 * l_hor_init]
+                self._l_hor = [0.7 * l_hor_init, l_hor_init, 1.3 * l_hor_init]
             return True
 
         new_df = df.loc[df['l цвет'] == self._mark_code['good']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
-                self.l_hor = [1 / 2 * l_hor_init, l_hor_init, 2 * l_hor_init]
+                self._l_hor = [1 / 2 * l_hor_init, l_hor_init, 2 * l_hor_init]
             else:
-                self.l_hor = [0.3 * l_hor_init, l_hor_init, 1.7 * l_hor_init]
+                self._l_hor = [0.3 * l_hor_init, l_hor_init, 1.7 * l_hor_init]
             return True
 
         new_df = df.loc[df['l цвет'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
-            self.l_hor = [1 / 3 * l_hor_init, l_hor_init, 3 * l_hor_init]
+            self._l_hor = [1 / 3 * l_hor_init, l_hor_init, 3 * l_hor_init]
             return True
 
     def _get_xf_gdis(self) -> bool:
@@ -714,24 +727,24 @@ class _BoundParamSelector:
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
-                self.xf = [0.4 * xf_init, xf_init, 1.6 * xf_init]
+                self._xf = [0.4 * xf_init, xf_init, 1.6 * xf_init]
             else:
-                self.xf = [0.7 * xf_init, xf_init, 1.3 * xf_init]
+                self._xf = [0.7 * xf_init, xf_init, 1.3 * xf_init]
             return True
 
         new_df = df.loc[df['xf цвет'] == self._mark_code['good']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
-                self.xf = [1 / 2 * xf_init, xf_init, 2 * xf_init]
+                self._xf = [1 / 2 * xf_init, xf_init, 2 * xf_init]
             else:
-                self.xf = [0.3 * xf_init, xf_init, 1.7 * xf_init]
+                self._xf = [0.3 * xf_init, xf_init, 1.7 * xf_init]
             return True
 
         new_df = df.loc[df['xf цвет'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
-            self.xf = [1 / 3 * xf_init, xf_init, 3 * xf_init]
+            self._xf = [1 / 3 * xf_init, xf_init, 3 * xf_init]
             return True
 
     def _get_xf_frac(self) -> bool:
@@ -742,7 +755,7 @@ class _BoundParamSelector:
             return False
         else:
             xf_frac = df.iloc[-1]['xf']
-            self.xf = [1 / 5 * xf_frac, 3 / 5 * xf_frac, xf_frac]
+            self._xf = [1 / 5 * xf_frac, 3 / 5 * xf_frac, xf_frac]
             return True
 
     def _get_bounds_dates_counting_gtms(
@@ -873,3 +886,15 @@ class _BoundParamSelector:
                 pos_min_index = i
             i += 1
         return pos_min_index
+
+    @property
+    def permeability(self) -> List[float]:
+        return self._k
+
+    @property
+    def length_hor_well_bore(self) -> List[float]:
+        return self._l_hor
+
+    @property
+    def length_half_fracture(self) -> List[float]:
+        return self._xf
