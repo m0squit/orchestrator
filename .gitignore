@@ -1,5 +1,35 @@
-/.idea
-/.vscode
-/data
-/models
-*.pyc
+### PyCharm ###
+
+.idea/
+
+### VisualStudioCode ###
+
+.vscode/
+
+### JupyterNotebooks ###
+
+.ipynb_checkpoints
+
+### Python ###
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Environments
+venv/
+
+### Data ###
+
+# Input
+*.feather
+*.xlsm
+
+# Output
+*.xlsx
+*.png
+*.html
