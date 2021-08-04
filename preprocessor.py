@@ -61,14 +61,14 @@ class Preprocessor(object):
         self._create_wells()
 
     def _check_dir_existence(self) -> None:
-        self.path_current = self._path_general / self._config.field_name
-        if not self.path_current.exists():
-            raise FileNotFoundError(f'Директория "{self.path_current}" не существует.')
+        self._path_current = self._path_general / self._config.field_name
+        if not self._path_current.exists():
+            raise FileNotFoundError(f'Директория "{self._path_current}" не существует.')
 
     def _read_data(self) -> None:
         self._data = {}
         for table in self._tables:
-            self._data[table] = pd.read_feather(self.path_current / f'{table}.feather')
+            self._data[table] = pd.read_feather(self._path_current / f'{table}.feather')
         self._read_gdis_from_xlsm()
 
     def _read_gdis_from_xlsm(self) -> None:
@@ -85,7 +85,7 @@ class Preprocessor(object):
             'Цвет Xf': int,
         }
         df = pd.read_excel(
-            io=self.path_current / 'gdis.xlsm',
+            io=self._path_current / 'gdis.xlsm',
             usecols=cols_types.keys(),
             dtype=cols_types,
         )
@@ -162,7 +162,7 @@ class Preprocessor(object):
         names_train = self._select_well_names_unique(df_train)
         names_test = self._select_well_names_unique(df_test)
         names_by_shops = self._select_well_names_unique_by_ceh()
-        self.well_names = sorted(set(names_train) & set(names_test) & set(names_by_shops))
+        self._well_names = sorted(set(names_train) & set(names_test) & set(names_by_shops))
 
     def _select_well_names_unique(self, df: pd.DataFrame) -> List[int]:
         df = df.loc[
@@ -178,14 +178,37 @@ class Preprocessor(object):
         return well_names
 
     def _create_wells(self) -> None:
-        self.wells = []
-        for well_name in self.well_names:
-            well = _CreatorWell(
+        self._wells_ftor = []
+        self._wells_wolfram = []
+        for well_name in self._well_names:
+            well_ftor = _CreatorWellFtor(
                 self._data,
                 self._config,
                 well_name,
             )
-            self.wells.append(well.well)
+            well_wolfram = _CreatorWellWolfram(
+                self._data,
+                self._config,
+                well_name,
+            )
+            self._wells_ftor.append(well_ftor.well)
+            self._wells_wolfram.append(well_wolfram.well)
+
+    @property
+    def path(self) -> pathlib.Path:
+        return self._path_current
+
+    @property
+    def well_names(self) -> List[int]:
+        return self._well_names
+
+    @property
+    def wells_ftor(self) -> List[WellFtor]:
+        return self._wells_ftor
+
+    @property
+    def wells_wolfram(self) -> List[WellWolfram]:
+        return self._wells_wolfram
 
 
 class _CreatorWell(ABC):
