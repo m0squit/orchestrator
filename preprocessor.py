@@ -12,6 +12,7 @@ from config import Config
 
 DEFAULT_WELL_KIND = 'Горизонтально'
 DEFAULT_FRAC_DATE_MIN = datetime.date(2000, 1, 1)
+DEFAULT_FRAC_DATE_MAX = datetime.date(2100, 1, 1)  # Дата индикатор отсутствия мероприятия ГРП
 DEFAULT_THICKNESS = 3
 DEFAULT_THICKNESS_MAX = 50
 DEFAULT_POROSITY = 0.2
@@ -134,8 +135,10 @@ class Preprocessor(object):
             },
             inplace=True,
         )
+        # Если в таблице столбец grpdate содержит дату, меньшую допсутимой, то предполагается,
+        # что данная дата не яляется показательной для расчета и заменяется на максимально возможную.
         self._data['troil']['grpdate'].where(
-            self._data['troil']['grpdate'] < DEFAULT_FRAC_DATE_MIN, other=None, inplace=True)
+            self._data['troil']['grpdate'] > DEFAULT_FRAC_DATE_MIN, other=DEFAULT_FRAC_DATE_MAX, inplace=True)
         self._handle_troil_by_skvtype()
 
     def _handle_troil_by_skvtype(self) -> None:
