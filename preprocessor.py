@@ -53,12 +53,17 @@ class Preprocessor(object):
         self._config = config
         self._run()
 
+    def create_wells_ftor(self, well_names_desire: List[int]) -> List[WellFtor]:
+        return self._create_wells(well_names_desire, mission='ftor')
+
+    def create_wells_wolfram(self, well_names_desire: List[int]) -> List[WellWolfram]:
+        return self._create_wells(well_names_desire, mission='wolfram')
+
     def _run(self) -> None:
         self._check_dir_existence()
         self._read_data()
         self._handle_data()
         self._select_well_names()
-        self._create_wells()
 
     def _check_dir_existence(self) -> None:
         self._path_current = self._path_general / self._config.field_name
@@ -177,22 +182,26 @@ class Preprocessor(object):
         well_names = df['ois'].unique().tolist()
         return well_names
 
-    def _create_wells(self) -> None:
-        self._wells_ftor = []
-        self._wells_wolfram = []
-        for well_name in self._well_names:
-            well_ftor = _CreatorWellFtor(
+    def _create_wells(self, well_names_desire: List[int], mission: str) -> Union[List[WellFtor], List[WellWolfram]]:
+        wells = []
+        well_names_exist = sorted(set(self._well_names) & set(well_names_desire))
+        if not well_names_exist:
+            raise AssertionError(
+                'Список скважин well_names_desire не содержит ни одной скважины, доступной для расчета согласно '
+                'заданным date_start, date_test, date_end. Проверьте список.'
+            )
+        creators_well = {
+            'ftor': _CreatorWellFtor,
+            'wolfram': _CreatorWellWolfram,
+        }
+        for well_name in well_names_exist:
+            creator_well = creators_well[mission](
                 self._data,
                 self._config,
                 well_name,
             )
-            well_wolfram = _CreatorWellWolfram(
-                self._data,
-                self._config,
-                well_name,
-            )
-            self._wells_ftor.append(well_ftor.well)
-            self._wells_wolfram.append(well_wolfram.well)
+            wells.append(creator_well.well)
+        return wells
 
     @property
     def path(self) -> pathlib.Path:
@@ -201,14 +210,6 @@ class Preprocessor(object):
     @property
     def well_names(self) -> List[int]:
         return self._well_names
-
-    @property
-    def wells_ftor(self) -> List[WellFtor]:
-        return self._wells_ftor
-
-    @property
-    def wells_wolfram(self) -> List[WellWolfram]:
-        return self._wells_wolfram
 
 
 class _CreatorWell(ABC):
