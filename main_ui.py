@@ -3,7 +3,7 @@ import streamlit as st
 from dateutil.relativedelta import relativedelta
 from ftor.calculator import Calculator as CalculatorFtor
 from wolfram.calculator import Calculator as CalculatorWolfram
-from wolfram.config import Config
+from wolfram.config import Config as ConfigWolfarm
 
 from config import Config
 from preprocessor import Preprocessor
@@ -15,7 +15,7 @@ FIELDS_SHOPS = {
     'Крайнее': ['ЦДНГ-4', 'ЦДНГ-2'],
     'Отдельное': ['ЦДНГ-1'],
     'Романовское': ['ЦДНГ-3'],
-    'Холмогороское': ['ЦДНГ-1'],
+    'Холмогорское': ['ЦДHГ-1'],  # H - латинская
 }
 
 # Диапазон дат выгрузки sh таблицы
@@ -68,6 +68,12 @@ date_end = st.sidebar.date_input(
     max_value=DATE_MAX,
     value=date_test + PERIOD_TEST_MIN,
 )
+forecast_days_number = (date_end - date_test).days
+field_name = 'Холмогорское'
+shops = ['ЦДHГ-1']
+date_start = datetime.date(2020, 1, 1)
+date_test = datetime.date(2020, 4, 1)
+date_end = datetime.date(2020, 5, 1)
 preprocessor = Preprocessor(
     Config(
         field_name,
@@ -130,3 +136,16 @@ with st.sidebar.beta_expander('Настройки модели ML'):
             max_chars=20,
         ).split()
     ]
+
+config_wolfram = ConfigWolfarm(
+    forecast_days_number,
+    estimator_name_group,
+    estimator_name_well,
+    is_deep_grid_search,
+    window_sizes,
+    quantiles,
+)
+wells_ftor = preprocessor.create_wells_ftor([well_name])
+wells_wolfram = preprocessor.create_wells_wolfram([well_name])
+calculator_ftor = CalculatorFtor(wells_ftor)
+calculator_wolfram = CalculatorWolfram(config_wolfram, wells_wolfram)

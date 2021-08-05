@@ -86,7 +86,7 @@ class Preprocessor(object):
             'Кгидр, Д*см/сПз': float,
             'Lэфф,м': float,
             'Xf': float,
-            'Цвет Кпр, мД': int,
+            'Цвет Кпр, мД': int,  # К - кириллическая
             'Цвет Lэфф,м': int,
             'Цвет Xf': int,
         }
@@ -599,11 +599,11 @@ class _BoundParamSelector:
             'Пласт ОИС',
             'Дата окончания исследования',
             'Кгидр, Д*см/сПз',
-            'Цвет Kпр, мД',
+            'Цвет Кпр, мД',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
-        df = df.loc[df['k цвет'] != self._mark_code['not count']]
+        df = df.loc[df['Цвет Кпр, мД'] != self._mark_code['not count']]
         two_years = datetime.timedelta(2 * 365)
         past_bound_date = self._date - two_years
         future_bound_date = min(self._date + two_years, self._date_test)
@@ -619,21 +619,21 @@ class _BoundParamSelector:
         df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(self._get_abs_time_interval)
         df = df.loc[df['Дата окончания исследования'] == df['Дата окончания исследования'].min()]
 
-        new_df = df.loc[df['k цвет'] == self._mark_code['excellent']].copy()
+        new_df = df.loc[df['Цвет Кпр, мД'] == self._mark_code['excellent']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
             self._k = [0.7 * k_init, k_init, 1.3 * k_init]
             return True
 
-        new_df = df.loc[df['k цвет'] == self._mark_code['good']].copy()
+        new_df = df.loc[df['Цвет Кпр, мД'] == self._mark_code['good']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
             self._k = [0.3 * k_init, k_init, 1.7 * k_init]
             return True
 
-        new_df = df.loc[df['k цвет'] == self._mark_code['bad']].copy()
+        new_df = df.loc[df['Цвет Кпр, мД'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
@@ -643,15 +643,14 @@ class _BoundParamSelector:
     def _get_k_plast(self) -> bool:
         cols = [
             'Скважина',
-            'Дата окончания исследования',
-            'Кпр, мД',
-            'Кгидр, Д*см/сПз',
-            'k цвет',
             'Пласт ОИС',
+            'Дата окончания исследования',
+            'Кгидр, Д*см/сПз',
+            'Цвет Кпр, мД',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
-        df = df.loc[df['k цвет'] != self._mark_code['not count']]
+        df = df.loc[df['Цвет Кпр, мД'] != self._mark_code['not count']]
         df = self._get_df_gdis_segment(
             df,
             past_bound_date=None,
@@ -671,14 +670,14 @@ class _BoundParamSelector:
     def _get_l_hor(self) -> bool:
         cols = [
             'Скважина',
+            'Пласт ОИС',
             'Дата окончания исследования',
             'Lэфф,м',
-            'l цвет',
-            'Пласт ОИС',
+            'Цвет Lэфф,м',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
-        df = df.loc[df['l цвет'] != self._mark_code['not count']]
+        df = df.loc[df['Цвет Lэфф,м'] != self._mark_code['not count']]
         two_years = datetime.timedelta(2 * 365)
         there_is_fracture = self._kind_code == 3
         if there_is_fracture:
@@ -700,7 +699,7 @@ class _BoundParamSelector:
         df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(self._get_abs_time_interval)
         df = df.loc[df['Дата окончания исследования'] == df['Дата окончания исследования'].min()]
 
-        new_df = df.loc[df['l цвет'] == self._mark_code['excellent']].copy()
+        new_df = df.loc[df['Цвет Lэфф,м'] == self._mark_code['excellent']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
@@ -709,7 +708,7 @@ class _BoundParamSelector:
                 self._l_hor = [0.7 * l_hor_init, l_hor_init, 1.3 * l_hor_init]
             return True
 
-        new_df = df.loc[df['l цвет'] == self._mark_code['good']].copy()
+        new_df = df.loc[df['Цвет Lэфф,м'] == self._mark_code['good']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
@@ -718,7 +717,7 @@ class _BoundParamSelector:
                 self._l_hor = [0.3 * l_hor_init, l_hor_init, 1.7 * l_hor_init]
             return True
 
-        new_df = df.loc[df['l цвет'] == self._mark_code['bad']].copy()
+        new_df = df.loc[df['Цвет Lэфф,м'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             self._l_hor = [1 / 3 * l_hor_init, l_hor_init, 3 * l_hor_init]
@@ -729,11 +728,11 @@ class _BoundParamSelector:
             'Скважина',
             'Дата окончания исследования',
             'Xf',
-            'xf цвет',
+            'Цвет Xf',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
-        df = df.loc[df['xf цвет'] != self._mark_code['not count']]
+        df = df.loc[df['Цвет Xf'] != self._mark_code['not count']]
         xf_gtms_list = self._get_changing_everything_gtms_list() + ['ГРП']
         time_bounds_list = [self._date_test]
         past_bound_date, future_bound_date = self._get_bounds_dates_counting_gtms(xf_gtms_list, time_bounds_list)
@@ -750,7 +749,7 @@ class _BoundParamSelector:
         df = df.loc[df['Дата окончания исследования'] == df['Дата окончания исследования'].min()]
         it_is_hor = self._kind_code == 3
 
-        new_df = df.loc[df['xf цвет'] == self._mark_code['excellent']].copy()
+        new_df = df.loc[df['Цвет Xf'] == self._mark_code['excellent']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
@@ -759,7 +758,7 @@ class _BoundParamSelector:
                 self._xf = [0.7 * xf_init, xf_init, 1.3 * xf_init]
             return True
 
-        new_df = df.loc[df['xf цвет'] == self._mark_code['good']].copy()
+        new_df = df.loc[df['Цвет Xf'] == self._mark_code['good']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
@@ -768,7 +767,7 @@ class _BoundParamSelector:
                 self._xf = [0.3 * xf_init, xf_init, 1.7 * xf_init]
             return True
 
-        new_df = df.loc[df['xf цвет'] == self._mark_code['bad']].copy()
+        new_df = df.loc[df['Цвет Xf'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             self._xf = [1 / 3 * xf_init, xf_init, 3 * xf_init]
@@ -837,19 +836,29 @@ class _BoundParamSelector:
 
     @staticmethod
     def _get_default_permeability(field_name: str) -> List[float]:
+        # Значения получены из таблицы gdis.xlsm для каждого месторождения отдельно.
+        # Анализировались: кватиль 0.1, медиана, квантиль 0.9.
         values = {
-            'Валынтойское': [0.01, 1, 20],
-            'Вынгаяхинское': [0.01, 2, 120],
-            'Крайнее': [0.01, 3, 80],
+            'Валынтойское': [0.1, 1, 2],
+            'Вынгаяхинское': [0.2, 2, 15],
+            'Крайнее': [0.5, 3, 15],
+            'Отдельное': [0.5, 5, 25],
+            'Романовское': [0.5, 3, 15],
+            'Холмогорское': [2, 7, 25],
         }
         return values[field_name]
 
     @staticmethod
     def _get_default_length_half_fracture(field_name: str) -> List[float]:
+        # Значения получены из таблицы gdis.xlsm для каждого месторождения отдельно.
+        # Анализировались: кватиль 0.1, медиана, квантиль 0.9.
         values = {
-            'Валынтойское': [10, 100, 210],
-            'Вынгаяхинское': [10, 100, 300],
-            'Крайнее': [10, 100, 250],
+            'Валынтойское': [60, 75, 90],
+            'Вынгаяхинское': [30, 80, 200],
+            'Крайнее': [30, 60, 150],
+            'Отдельное': [30, 60, 90],
+            'Романовское': [30, 70, 160],
+            'Холмогорское': [20, 70, 150],
         }
         return values[field_name]
 
