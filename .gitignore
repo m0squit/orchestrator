@@ -33,3 +33,5 @@ venv/
 *.xlsx
 *.png
 *.html
+
+data_notes.txt
