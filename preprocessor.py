@@ -219,8 +219,8 @@ class _CreatorWell(ABC):
 
     _NAME_RATE_LIQ = 'Дебит жидкости среднесуточный'
     _NAME_RATE_OIL = 'Дебит нефти расчетный'
-    _NAME_CUM_LIQ = 'Накопленная добыча жидкости'
-    _NAME_CUM_OIL = 'Накопленная добыча нефти'
+    _NAME_CUM_LIQ = 'Добыча жидкости накопленная'
+    _NAME_CUM_OIL = 'Добыча нефти накопленная'
     _NAME_PRESSURE = 'Давление забойное'
     _NAME_WATERCUT = 'Обводненность объемная'
 
@@ -414,7 +414,6 @@ class _CreatorWellFtor(_CreatorWell):
         df_mersum.dropna(axis=0, how='any', inplace=True)
         df_mersum.set_index(keys=['dt', df_mersum.index], inplace=True, verify_integrity=True)
         df_mersum = df_mersum.sum(axis=0, level='dt')
-        df_mersum.index = df_mersum.index.map(lambda x: x.date())
         prods_liq = df_mersum['liq']
         prods_oil = df_mersum['oilm3']
         df_mersum[self._NAME_WATERCUT] = (prods_liq - prods_oil) / prods_liq
@@ -457,6 +456,14 @@ class _CreatorWellFtor(_CreatorWell):
             WellFtor.NAME_WATERCUT,
             WellFtor.NAME_RATE_LIQ,
             WellFtor.NAME_RATE_OIL,
+        ]
+        df_flood = self._df_flood[[
+            self._NAME_CUM_OIL,
+            self._NAME_WATERCUT,
+        ]]
+        df_flood.columns = [
+            WellFtor.NAME_CUM_OIL,
+            WellFtor.NAME_WATERCUT,
         ]
         self._well = WellFtor(
             self._well_name_ois,
@@ -511,6 +518,11 @@ class _CreatorWellWolfram(_CreatorWell):
             self._NAME_RATE_LIQ,
             self._NAME_RATE_OIL,
         ]]
+        df_chess.columns = [
+            WellWolfram.NAME_PRESSURE,
+            WellWolfram.NAME_RATE_LIQ,
+            WellWolfram.NAME_RATE_OIL,
+        ]
         self._well = WellWolfram(
             self._well_name_ois,
             df_chess,

@@ -3,7 +3,7 @@ import streamlit as st
 from dateutil.relativedelta import relativedelta
 from ftor.calculator import Calculator as CalculatorFtor
 from wolfram.calculator import Calculator as CalculatorWolfram
-from wolfram.config import Config as ConfigWolfarm
+from wolfram.config import Config as ConfigWolfram
 
 from config import Config
 from preprocessor import Preprocessor
@@ -137,7 +137,7 @@ with st.sidebar.beta_expander('Настройки модели ML'):
         ).split()
     ]
 
-config_wolfram = ConfigWolfarm(
+config_wolfram = ConfigWolfram(
     forecast_days_number,
     estimator_name_group,
     estimator_name_well,
