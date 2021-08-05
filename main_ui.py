@@ -77,12 +77,10 @@ preprocessor = Preprocessor(
         date_end,
     )
 )
-
-# st.sidebar.subheader('Скважина')
-# field_name = st.sidebar.selectbox(
-#     label='Месторождение',
-#     options=FIELDS_SHOPS.keys(),
-# )
+well_name = st.sidebar.selectbox(
+    label='Скважина',
+    options=preprocessor.well_names,
+)
 
 with st.sidebar.beta_expander('Настройки модели ML'):
     estimator_name_group = ML_FULL_ABBR[
