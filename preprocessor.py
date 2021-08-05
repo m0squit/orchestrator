@@ -251,8 +251,8 @@ class _CreatorWell(ABC):
     def _set_well(self) -> None:
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def well(self) -> Union[WellFtor, WellWolfram]:
         pass
 
