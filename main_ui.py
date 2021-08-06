@@ -38,7 +38,6 @@ YES_NO = {
     'Нет': False,
 }
 
-st.sidebar.subheader('Общие настройки')
 field_name = st.sidebar.selectbox(
     label='Месторождение',
     options=FIELDS_SHOPS.keys(),
@@ -215,7 +214,7 @@ fig = make_subplots(
             hovermode='x',
             template='seaborn',
             height=650,
-            width=900,
+            width=1000,
         ),
     ),
 )
