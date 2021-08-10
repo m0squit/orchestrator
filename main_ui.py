@@ -85,7 +85,7 @@ well_name = st.sidebar.selectbox(
     options=preprocessor.well_names,
 )
 
-with st.sidebar.beta_expander('Настройки модели ML'):
+with st.sidebar.expander('Настройки модели ML'):
     estimator_name_group = ML_FULL_ABBR[
         st.selectbox(
             label='Модель на 1-ом уровне',
