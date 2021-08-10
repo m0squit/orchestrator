@@ -164,3 +164,11 @@ well_wolfram = calculator_wolfram.wells[0]  # Т.к. считается толь
 fig = create_well_plot(well_ftor, well_wolfram, date_test)
 
 st.plotly_chart(fig, use_container_width=True)
+
+with st.form('upload_CRM_form'):
+    CRM_xlsx = st.file_uploader('Загрузить результаты CRM', type='xlsx')
+    if CRM_xlsx is not None:
+        df_CRM = pd.read_excel(CRM_xlsx, engine='openpyxl')
+        if 'df_CRM' not in session:
+            session['df_CRM'] = df_CRM
+    st.form_submit_button(label='Отобразить')
