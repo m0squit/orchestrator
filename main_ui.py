@@ -12,6 +12,13 @@ from config import Config
 from preprocessor import Preprocessor
 
 
+def compute_deviations(y_true: pd.Series, y_pred: pd.Series) -> pd.Series:
+    devs = abs(y_true - y_pred) / y_true
+    return devs
+
+
+st.set_page_config(layout="wide")   # Для отображения на всю ширину браузера
+
 FIELDS_SHOPS = {
     'Валынтойское': ['ЦДНГ-12'],
     'Вынгаяхинское': ['ЦДНГ-10'],
@@ -161,12 +168,6 @@ well_ftor = calculator_ftor.wells[0]  # Т.к. считается только 1
 well_wolfram = calculator_wolfram.wells[0]  # Т.к. считается только 1 скважина
 res_ftor = well_ftor.results
 res_wolfram = well_wolfram.results
-
-
-def compute_deviations(y_true: pd.Series, y_pred: pd.Series) -> pd.Series:
-    devs = abs(y_true - y_pred) / y_true
-    return devs
-
 
 # Фактические данные для визуализации извлекаются из wolfram, т.к. он использует для вычислений максимально возможный
 # доступный ряд фактичесих данных.
