@@ -21,7 +21,7 @@ def create_well_plot(df_draw_liq,
         vertical_spacing=0.07,
         # TODO: в м3 или нет?
         subplot_titles=[
-            f'Дебит жидкости, м3',
+            'Дебит жидкости, м3',
             'Дебит нефти, м3',
             'Забойное давление, атм',
         ]
@@ -33,8 +33,8 @@ def create_well_plot(df_draw_liq,
         legend=dict(orientation="v",
                     font=dict(size=15)
                     ),
-        height=730,
-        width=1300,
+        height=630,
+        width=1100,
     )
 
     mark = dict(size=4)
