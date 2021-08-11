@@ -189,12 +189,6 @@ else:
 
     # Фактические данные для визуализации извлекаются из wolfram, т.к. он использует для вычислений максимально
     # возможный доступный ряд фактичесих данных.
-    name_rate_liq = 'q_жид'
-    name_rate_oil = 'q_неф'
-    name_pressure = 'p_заб'
-    name_dev_liq = 're_жид'
-    name_dev_oil = 're_неф'
-
     df = well_wolfram.df
     rates_liq_true = df[well_wolfram.NAME_RATE_LIQ]
     rates_oil_true = df[well_wolfram.NAME_RATE_OIL]
@@ -204,18 +198,12 @@ else:
     # Полный ряд (train + test)
     rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
     rates_liq_wolfram = pd.concat(objs=[res_wolfram.rates_liq_train, res_wolfram.rates_liq_test])
-    # test
-    rates_liq_test_ftor = res_ftor.rates_liq_test
-    rates_liq_test_wolfram = res_wolfram.rates_liq_test
-    rates_liq_test_true = rates_liq_true.loc[rates_liq_test_wolfram.index]
 
     # Нефть
     # Полный ряд (train + test)
     rates_oil_wolfram = pd.concat(objs=[res_wolfram.rates_oil_train, res_wolfram.rates_oil_test])  # Только нефть
     # test
     rates_oil_test_ftor = res_ftor.rates_oil_test
-    rates_oil_test_wolfram = res_wolfram.rates_oil_test
-    rates_oil_test_true = rates_oil_true.loc[rates_oil_test_wolfram.index]
 
     df_draw_liq = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
     df_draw_liq['ftor'] = rates_liq_ftor
