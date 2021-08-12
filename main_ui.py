@@ -120,6 +120,7 @@ with st.sidebar:
                     Подробнее о моделях см. [sklearn](https://scikit-learn.org) 
                     и [xgboost](https://xgboost.readthedocs.io).
                     """,
+                    key='estimator_name_group'
                 )
             ]
             estimator_name_well = ML_FULL_ABBR[
@@ -133,6 +134,7 @@ with st.sidebar:
                     Подробнее о моделях см. [sklearn](https://scikit-learn.org) 
                     и [xgboost](https://xgboost.readthedocs.io).
                     """,
+                    key='estimator_name_well'
                 )
             ]
             is_deep_grid_search = YES_NO[
@@ -144,6 +146,7 @@ with st.sidebar:
                     Данная процедура нацелена на предотвращение переобучения модели 2-ого уровня.
                     Подробнее см. [Cross-validation for time series](https://robjhyndman.com/hyndsight/tscv).
                     """,
+                    key='is_deep_grid_search'
                 )
             ]
             window_sizes = [
@@ -151,6 +154,7 @@ with st.sidebar:
                     label='Размеры скользящего окна',
                     value='3 5 7 15 30',
                     max_chars=20,
+                    key='window_sizes'
                 ).split()
             ]
             quantiles = [
@@ -158,6 +162,7 @@ with st.sidebar:
                     label='Квантили',
                     value='0.1 0.3',
                     max_chars=20,
+                    key='quantiles'
                 ).split()
             ]
 
@@ -182,6 +187,7 @@ else:
         preprocessor.create_wells_wolfram([well_name]),
     )
 
+    # TODO: fix 'IndexError: list index out of range'
     well_ftor = calculator_ftor.wells[0]  # Т.к. считается только 1 скважина
     well_wolfram = calculator_wolfram.wells[0]  # Т.к. считается только 1 скважина
     res_ftor = well_ftor.results
