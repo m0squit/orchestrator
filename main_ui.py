@@ -198,6 +198,7 @@ else:
     )
 
     # TODO: fix 'IndexError: list index out of range'
+    # TODO: fix 'float has no attribute "permeability"' - ошибка внутри calculator_ftor
     well_ftor = calculator_ftor.wells[0]  # Т.к. считается только 1 скважина
     well_wolfram = calculator_wolfram.wells[0]  # Т.к. считается только 1 скважина
     res_ftor = well_ftor.results
@@ -245,4 +246,3 @@ else:
 
         df_draw_liq.to_excel(results_dir / f'{well_name} liq.xlsx')
         df_draw_oil.to_excel(results_dir / f'{well_name} oil.xlsx')
-
