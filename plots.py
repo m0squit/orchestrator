@@ -6,15 +6,15 @@ from plotly.subplots import make_subplots
 
 
 _MODEL_NAMES = {
-    'ftor': 'Модель пьезо',
-    'wolfram': 'Модель ML',
-    'CRM': 'Модель CRM',
-    'true': 'Фактический дебит',
+    'ftor': 'Пьезо',
+    'wolfram': 'ML',
+    'CRM': 'CRM',
+    'true': 'Факт',
 }
 
 
 def compute_deviations(y_true: pd.Series, y_pred: pd.Series) -> pd.Series:
-    devs = np.abs(y_true - y_pred) / np.maximum(y_true, y_pred) * 100
+    devs = np.abs(y_true - y_pred) / np.maximum(np.abs(y_true), np.abs(y_pred)) * 100
     return devs
 
 
@@ -87,7 +87,7 @@ def create_well_plot(df_draw_liq,
         fig.add_trace(trace, row=3, col=1)
 
     # Забойное давление
-    trace = go.Scatter(name=f'Забойное давление', x=df_draw_oil.index, y=pressure[df_draw_oil.index],
+    trace = go.Scatter(name=f'Заб. давление', x=df_draw_oil.index, y=pressure[df_draw_oil.index],
                        mode=m, marker=dict(size=4, color=clr_pressure))
     fig.add_trace(trace, row=4, col=1)
 
