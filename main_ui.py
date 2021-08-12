@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 from dateutil.relativedelta import relativedelta
 from ftor.calculator import Calculator as CalculatorFtor
+from pathlib import Path
 from wolfram.calculator import Calculator as CalculatorWolfram
 from wolfram.config import Config as ConfigWolfram
 
@@ -53,6 +54,15 @@ if 'date_start' not in session:
 
 with st.sidebar:
     with st.form("input_form"):  # Необходимо для запуска расчетов по кнопке "Запустить расчеты"
+        autosave_results = st.checkbox(
+            label='Автоматически сохранять результаты',
+            value=True,
+            key='autosave_results',
+            help="""
+            При активации результаты вычислений по каждой скважине будут сохраняться в папку
+            results/"месторождение" в формате .xlsx
+            """
+        )
         field_name = st.selectbox(
             label='Месторождение',
             options=FIELDS_SHOPS.keys(),
@@ -103,7 +113,7 @@ with st.sidebar:
             key='well_name'
         )
 
-        CRM_xlsx = st.file_uploader('Загрузить результаты CRM', type='xlsx')
+        CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
         if CRM_xlsx is not None:
             df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
             if 'df_CRM' not in session:
@@ -227,3 +237,12 @@ else:
     fig = create_well_plot(df_draw_liq, df_draw_oil, pressure, date_test, well_name)
 
     st.plotly_chart(fig, use_container_width=True)
+
+    if autosave_results:
+        results_dir = Path.cwd() / 'results' / field_name
+        if not Path(results_dir).exists():
+            Path(results_dir).mkdir(parents=True, exist_ok=True)
+
+        df_draw_liq.to_excel(results_dir / f'{well_name} liq.xlsx')
+        df_draw_oil.to_excel(results_dir / f'{well_name} oil.xlsx')
+
