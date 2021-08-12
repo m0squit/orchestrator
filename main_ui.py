@@ -46,7 +46,7 @@ YES_NO = {
     'Нет': False,
 }
 
-# Initialize session values
+# Initialize st.session_state values
 if 'date_start' not in session:
     session.date_start = datetime.date(2018, 3, 1)
     session.date_test = datetime.date(2019, 3, 1)

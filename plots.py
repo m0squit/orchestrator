@@ -43,8 +43,8 @@ def create_well_plot(df_draw_liq,
         legend=dict(orientation="v",
                     font=dict(size=15)
                     ),
-        height=630,
-        width=1100,
+        height=760,
+        width=1300,
     )
 
     mark = dict(size=4)
