@@ -2,13 +2,14 @@ import datetime
 import pathlib
 import pandas as pd
 from abc import ABC, abstractmethod
-from ftor.well import Bounds
+import json
+import numpy as np
+
 from ftor.well import Well as WellFtor
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Set, Union, Optional
 from wolfram.well import Well as WellWolfram
 
 from config import Config
-
 
 DEFAULT_WELL_KIND = 'Горизонтально'
 DEFAULT_FRAC_DATE_MIN = datetime.date(2000, 1, 1)
@@ -26,7 +27,6 @@ DEFAULT_VOLUME_FACTOR_LIQ = 1.15
 
 
 class Preprocessor(object):
-
     _path_general = pathlib.Path.cwd() / 'data'
     _tables = [
         'fond',
@@ -54,11 +54,48 @@ class Preprocessor(object):
         self._config = config
         self._run()
 
-    def create_wells_ftor(self, well_names_desire: List[int]) -> List[WellFtor]:
-        return self._create_wells(well_names_desire, mission='ftor')
+    def create_wells_ftor(
+            self,
+            well_names_desire: List[int],
+            user_constraints_for_adap_period: Optional[Dict[
+                str, Union[float, Dict[str, Union[bool, List[float]]]]
+            ]] = None
+    ) -> List[WellFtor]:
+        wells = []
+        well_names_exist = sorted(set(self._well_names) & set(well_names_desire))
+        if not well_names_exist:
+            raise AssertionError(
+                'Список скважин well_names_desire не содержит ни одной скважины, доступной для расчета согласно '
+                'заданным date_start, date_test, date_end. Проверьте список.'
+            )
+        for well_name in well_names_exist:
+            creator_well = _CreatorWellFtor(
+                self._data,
+                self._config,
+                well_name,
+                user_constraints_for_adap_period,
+            )
+            wells.append(creator_well.well)
+            print(f'well {well_name} was prepared')
+        print()
+        return wells
 
     def create_wells_wolfram(self, well_names_desire: List[int]) -> List[WellWolfram]:
-        return self._create_wells(well_names_desire, mission='wolfram')
+        wells = []
+        well_names_exist = sorted(set(self._well_names) & set(well_names_desire))
+        if not well_names_exist:
+            raise AssertionError(
+                'Список скважин well_names_desire не содержит ни одной скважины, доступной для расчета согласно '
+                'заданным date_start, date_test, date_end. Проверьте список.'
+            )
+        for well_name in well_names_exist:
+            creator_well = _CreatorWellWolfram(
+                self._data,
+                self._config,
+                well_name,
+            )
+            wells.append(creator_well.well)
+        return wells
 
     def _run(self) -> None:
         self._check_dir_existence()
@@ -77,12 +114,18 @@ class Preprocessor(object):
             self._data[table] = pd.read_feather(self._path_current / f'{table}.feather')
         self._read_gdis_from_xlsm()
 
+        df_constrs = pd.read_excel(self._path_general / 'constraint_settings.xlsx', index_col='field_name')
+        df_events = pd.read_excel(self._path_general / 'event_settings.xlsx', index_col='event_name')
+        self._data['constr_settings'] = df_constrs
+        self._data['event_settings'] = df_events
+
     def _read_gdis_from_xlsm(self) -> None:
         cols_types = {
             'Скважина': str,
             'Тип скважины': str,
             'Пласт ОИС': str,
             'Дата окончания исследования': str,
+            'Кпр, мД': str,
             'Кгидр, Д*см/сПз': float,
             'Lэфф,м': float,
             'Xf': float,
@@ -162,11 +205,11 @@ class Preprocessor(object):
         df_train = self._data['sh_sost_fond'].loc[
             (self._data['sh_sost_fond']['dt'] >= self._config.date_start) &
             (self._data['sh_sost_fond']['dt'] < self._config.date_test)
-        ]
+            ]
         df_test = self._data['sh_sost_fond'].loc[
             (self._data['sh_sost_fond']['dt'] >= self._config.date_test) &
             (self._data['sh_sost_fond']['dt'] <= self._config.date_end)
-        ]
+            ]
         names_train = self._select_well_names_unique(df_train)
         names_test = self._select_well_names_unique(df_test)
         names_by_shops = self._select_well_names_unique_by_ceh()
@@ -176,7 +219,7 @@ class Preprocessor(object):
         df = df.loc[
             (df['charwork.name'].isin(self._fonds)) &
             (df['sost'].isin(self._sosts))
-        ]
+            ]
         well_names = df['well.ois'].unique().tolist()
         return well_names
 
@@ -184,27 +227,6 @@ class Preprocessor(object):
         df = self._data['welllist'].loc[self._data['welllist']['ceh'].isin(self._config.shops)]
         well_names = df['ois'].unique().tolist()
         return well_names
-
-    def _create_wells(self, well_names_desire: List[int], mission: str) -> Union[List[WellFtor], List[WellWolfram]]:
-        wells = []
-        well_names_exist = sorted(set(self._well_names) & set(well_names_desire))
-        if not well_names_exist:
-            raise AssertionError(
-                'Список скважин well_names_desire не содержит ни одной скважины, доступной для расчета согласно '
-                'заданным date_start, date_test, date_end. Проверьте список.'
-            )
-        creators_well = {
-            'ftor': _CreatorWellFtor,
-            'wolfram': _CreatorWellWolfram,
-        }
-        for well_name in well_names_exist:
-            creator_well = creators_well[mission](
-                self._data,
-                self._config,
-                well_name,
-            )
-            wells.append(creator_well.well)
-        return wells
 
     @property
     def path(self) -> pathlib.Path:
@@ -216,7 +238,6 @@ class Preprocessor(object):
 
 
 class _CreatorWell(ABC):
-
     _NAME_RATE_LIQ = 'Дебит жидкости среднесуточный'
     _NAME_RATE_OIL = 'Дебит нефти расчетный'
     _NAME_CUM_LIQ = 'Добыча жидкости накопленная'
@@ -262,6 +283,7 @@ class _CreatorWell(ABC):
 
 
 class _CreatorWellFtor(_CreatorWell):
+    _NAME_START_ADAP = 'Начало адаптации'
 
     _kind_codes_frac_no = {
         'Вертикально': 0,
@@ -273,18 +295,40 @@ class _CreatorWellFtor(_CreatorWell):
         'Наклонно-направленно': 2,
         'Горизонтально': 3
     }
+    _prms_poss_for_constraints = {0: (
+        'kind_code',
+        'permeability',
+        'skin',
+        'res_width',
+        'res_length',
+        'pressure_initial',
+        'boundary_code',
+    )}
+    _prms_poss_for_constraints[1] = _prms_poss_for_constraints[0] + ('length_hor_well_bore',)
+    _prms_poss_for_constraints[2] = _prms_poss_for_constraints[0] + ('length_half_fracture',)
+    _prms_poss_for_constraints[3] = _prms_poss_for_constraints[0] + (
+        'length_hor_well_bore',
+        'length_half_fracture',
+        'number_fractures',
+    )
+
+    _prms_try_to_improve_bounds = {'permeability', 'pressure_initial', 'length_hor_well_bore', 'length_half_fracture'}
 
     def __init__(
             self,
             data: Dict[str, pd.DataFrame],
             config: Config,
             well_name_ois: int,
+            user_constraints_for_adap_period: Optional[Dict[
+                str, Union[float, Dict[str, Union[bool, List[float]]]]
+            ]],
     ):
         super().__init__(
             data,
             config,
             well_name_ois,
         )
+        self._user_constrs = user_constraints_for_adap_period
         self._run()
 
     def _run(self) -> None:
@@ -311,7 +355,7 @@ class _CreatorWellFtor(_CreatorWell):
             (self._data['welllist']['ois'] == self._well_name_ois) &
             (self._data['welllist']['dtstart'] < self._date_test) &
             (self._data['welllist']['dtend'] >= self._date_test)
-        ]
+            ]
         date_start_max = df['dtstart'].max()
         self._well_name_geo = df.loc[df['dtstart'] == date_start_max]['well'].iloc[-1]
 
@@ -329,14 +373,14 @@ class _CreatorWellFtor(_CreatorWell):
             (self._data['wellplast']['well.ois'] == self._well_name_ois) &
             (self._data['wellplast']['dtstart'] < self._date_test) &
             (self._data['wellplast']['dtend'] >= self._date_start)
-        ]
+            ]
         self._formation_names = df['plast'].to_list()
 
     def _set_formation_properties_from_sppl(self) -> None:
         df = self._data['sppl'].loc[
             (self._data['sppl']['plastmer'].isin(self._formation_names)) &
             (self._data['sppl']['tk'] < self._date_test)
-        ]
+            ]
         self._porosity = df['pm'].mean()
         self._c_r = df['sp'].mean()
         self._c_w = df['sw'].mean()
@@ -351,7 +395,7 @@ class _CreatorWellFtor(_CreatorWell):
             (self._data['troil']['plastmer'].isin(self._formation_names)) &
             (self._data['troil']['dt'] >= self._date_start) &
             (self._data['troil']['dt'] < self._date_test)
-        ]
+            ]
         if not df.empty:
             kind_name = df['skvtype'].value_counts().idxmax()
             frac_date = df['grpdate'].iloc[0]
@@ -379,36 +423,28 @@ class _CreatorWellFtor(_CreatorWell):
         rates_liq = self._df_chess[self._NAME_RATE_LIQ]
         rates_oil = self._df_chess[self._NAME_RATE_OIL]
         self._df_chess[self._NAME_WATERCUT] = (rates_liq - rates_oil) / rates_liq
-        self._set_chess_bounds()
+        self._set_chess_prm_constraints()
 
-    def _set_chess_bounds(self) -> None:
-        event_dates = self._df_chess['merid.name'].dropna().index
-        event_dates = event_dates.insert(0, self._date_start)
-        for date in event_dates:
-            bound_selector = _BoundParamSelector(
-                self._data,
-                date,
-                self._date_test,
-                self._field_name,
-                self._well_name_ois,
-                self._well_name_geo,
-                self._kind_code,
-                self._formation_names,
-                self._thickness,
-                self._viscosity_liq,
-            )
-            self._df_chess.loc[date, 'bounds'] = Bounds(
-                bound_selector.permeability,
-                bound_selector.length_hor_well_bore,
-                bound_selector.length_half_fracture,
-            )
+    def _set_chess_prm_constraints(self) -> None:
+        events = self._df_chess['merid.name'].dropna()
+        start_adap = pd.Series(data=[self._NAME_START_ADAP], index=[self._date_start])
+        events = events.append(start_adap)
+        for event_date, event_name in events.iteritems():
+            if event_name == 'ГРП':
+                if self._kind_code == 0:
+                    self._kind_code = 2
+                elif self._kind_code == 1:
+                    self._kind_code = 3
+            prm_constrs = self._get_prm_constraints(event_date, event_name)
+            if len(prm_constrs) > 0:
+                self._df_chess.loc[event_date, 'prm_constraints'] = json.dumps(prm_constrs)
 
     def _set_flood(self) -> None:
         df = self._data['mersum'].loc[
             (self._data['mersum']['well.ois'] == self._well_name_ois) &
             (self._data['mersum']['plastmer'].isin(self._formation_names)) &
             (self._data['mersum']['dt'] < self._date_start)
-        ]
+            ]
         df_mersum = df.copy()
         df_mersum.drop(columns=['well.ois', 'plastmer'], inplace=True)
         df_mersum.dropna(axis=0, how='any', inplace=True)
@@ -429,7 +465,7 @@ class _CreatorWellFtor(_CreatorWell):
                        self._NAME_RATE_OIL,
                        self._NAME_WATERCUT,
                    ]
-        ]
+                   ]
         df_chess.columns = df_mersum.columns
         self._df_flood = pd.concat(objs=[df_mersum, df_chess])
         self._df_flood.fillna(value=0, inplace=True)
@@ -442,7 +478,7 @@ class _CreatorWellFtor(_CreatorWell):
         df_chess = self._df_chess[[
             'sost',
             'merid.name',
-            'bounds',
+            'prm_constraints',
             self._NAME_PRESSURE,
             self._NAME_WATERCUT,
             self._NAME_RATE_LIQ,
@@ -451,12 +487,20 @@ class _CreatorWellFtor(_CreatorWell):
         df_chess.columns = [
             WellFtor.NAME_STATUS,
             WellFtor.NAME_EVENT,
-            WellFtor.NAME_BOUNDS,
+            WellFtor.NAME_CONSTRAINTS,
             WellFtor.NAME_PRESSURE,
             WellFtor.NAME_WATERCUT,
             WellFtor.NAME_RATE_LIQ,
             WellFtor.NAME_RATE_OIL,
         ]
+        date_start = self._date_start
+        start_work_date = df_chess[df_chess[WellFtor.NAME_STATUS] == 'В работе'].index[0]
+        if start_work_date != date_start:
+            prm_constrs = df_chess.loc[date_start, WellFtor.NAME_CONSTRAINTS]
+            df_chess = df_chess[df_chess.index >= start_work_date]
+            df_chess[WellFtor.NAME_CONSTRAINTS].iloc[0] = prm_constrs
+            date_start = start_work_date
+
         df_flood = self._df_flood[[
             self._NAME_CUM_OIL,
             self._NAME_WATERCUT,
@@ -467,10 +511,9 @@ class _CreatorWellFtor(_CreatorWell):
         ]
         self._well = WellFtor(
             self._well_name_ois,
-            self._date_start,
+            date_start,
             self._date_test,
             self._date_end,
-            self._kind_code,
             self._thickness,
             self._porosity,
             self._compressibility_total,
@@ -483,6 +526,65 @@ class _CreatorWellFtor(_CreatorWell):
             df_chess,
             self._df_flood,
         )
+
+    def _get_prm_constraints(self, event_date: datetime.date, event_name: str
+                             ) -> Dict[str, Union[float, Dict[str, Union[bool, List[float]]]]]:
+        if event_name == self._NAME_START_ADAP:
+            prms_for_constraints = self._prms_poss_for_constraints[self._kind_code]
+        else:
+            if event_name not in self._data['event_settings'].index:
+                prms_for_constraints = ()
+            else:
+                prms_changed_by_event = json.loads(self._data['event_settings'].loc[event_name, 'changing params'])
+                if event_date < self._date_test:
+                    prms_for_constraints = tuple(set(self._prms_poss_for_constraints[self._kind_code]) &
+                                                 set(prms_changed_by_event['adap_period']))
+                else:
+                    prms_for_constraints = tuple(set(self._prms_poss_for_constraints[self._kind_code]) &
+                                                 set(prms_changed_by_event['test_period']))
+
+        constraints = dict()
+        prms_try_to_improve_bounds = self._prms_try_to_improve_bounds.copy()
+        user_constrs_exist = self._user_constrs is not None
+        for prm in prms_for_constraints:
+            if user_constrs_exist and prm in self._user_constrs and event_date < self._date_test:
+                prms_try_to_improve_bounds.discard(prm)
+                constraints[prm] = self._user_constrs[prm]
+            else:
+                if prm == 'kind_code':
+                    constraints[prm] = self._kind_code
+                else:
+                    use_field_name_row = False
+                    if self._field_name in self._data['constr_settings'].index:
+                        use_field_name_row = self._data['constr_settings'].loc[self._field_name, prm] is not np.nan
+                    row = self._field_name if use_field_name_row else 'По умолчанию'
+                    prm_bound_settings = json.loads(self._data['constr_settings'].loc[row, prm])
+                    if event_date < self._date_test:
+                        constraints[prm] = {'is_discrete': prm_bound_settings['is_discrete'],
+                                            'bounds': prm_bound_settings['bounds']}
+                    else:
+                        constraints[prm] = prm_bound_settings['val_test_period']
+
+        if event_date < self._date_test:
+            #  Изменяет constraints
+            _BoundsImprover(
+                self._NAME_START_ADAP,
+                prms_try_to_improve_bounds,
+                constraints,
+                event_name,
+                event_date,
+                self._data,
+                self._date_test,
+                self._field_name,
+                self._well_name_ois,
+                self._well_name_geo,
+                self._NAME_PRESSURE,
+                self._kind_code,
+                self._formation_names,
+                self._thickness,
+                self._viscosity_liq,
+            )
+        return constraints
 
     @property
     def well(self) -> WellFtor:
@@ -533,49 +635,64 @@ class _CreatorWellWolfram(_CreatorWell):
         return self._well
 
 
-class _BoundParamSelector:
-
+class _BoundsImprover:
     _mark_code = {
         'not count': 16711680,
         'bad': 0,
         'good': 32768,
         'excellent': 255,
     }
+    _NAME_K = 'permeability'
+    _NAME_PI = 'pressure_initial'
+    _NAME_XF = 'length_half_fracture'
+    _NAME_L_HOR = 'length_hor_well_bore'
 
     def __init__(
             self,
-            data: Dict[str, pd.DataFrame],
+            start_adap_name: str,
+            prms_try_to_improve_bounds: Set[str],
+            prm_constraints: Dict[str, Union[float, Dict[str, Union[bool, List[float]]]]],
+            event_name: str,
             date: datetime.date,
+            data: Dict[str, pd.DataFrame],
             date_test: datetime.date,
             field_name: str,
             well_name: int,
             well_name_geo: str,
+            name_pressure,
             kind_code: int,
             formation_names: List[str],
             thickness: float,
             viscosity_liq: float,
     ):
-        self._data = data
+        self._start_adap_name = start_adap_name
+        self._prms_try_to_improve_bounds = prms_try_to_improve_bounds
+        self._prm_constrs = prm_constraints
+        self.event_name = event_name
         self._date = date
+        self._data = data
         self._date_test = date_test
         self._field_name = field_name
         self._well_name = well_name
         self._well_name_geo = well_name_geo
+        self._name_pressure = name_pressure
         self._kind_code = kind_code
         self._formation_names = formation_names
         self._thickness = thickness
         self._viscosity_liq = viscosity_liq
-        self._run()
-
-    def _run(self) -> None:
-        self._set_gdis_merop()
-        self._set_bounds_permeability()
-        self._set_bounds_length_hor_well_bore()
-        self._set_bounds_length_half_fracture()
-
-    def _set_gdis_merop(self) -> None:
         self._df_gdis = self._data['gdis'].copy()
         self._df_merop = self._data['merop'].loc[self._data['merop']['well.ois'] == self._well_name].copy()
+        self._df_chess = self._data['sh_sost_fond'].loc[
+            (self._data['sh_sost_fond']['well.ois'] == self._well_name)].copy()
+
+        self._run()
+
+    def _run(self):
+        for prm in self._prms_try_to_improve_bounds:
+            if prm in self._prm_constrs:
+                is_prm_for_optimization = isinstance(self._prm_constrs[prm], dict)
+                if is_prm_for_optimization and not self._prm_constrs[prm]['is_discrete']:
+                    self._try_to_improve_bounds(prm)
 
     def _set_frac(self) -> None:
         self._df_frac = self._data['frac'].copy()
@@ -583,35 +700,16 @@ class _BoundParamSelector:
         self._df_frac = self._df_frac.loc[
             (self._df_frac['well.ois'] == self._well_name) &
             (self._df_frac['frac_date'] <= self._date)
-        ]
+            ]
 
-    def _set_bounds_permeability(self) -> None:
-        self._k = []
-        if not self._get_k_well_plast():
-            if not self._get_k_plast():
-                self._k = self._get_default_permeability(self._field_name)
-
-    def _set_bounds_length_hor_well_bore(self) -> None:
-        self._l_hor = []
-        if self._kind_code in [1, 3]:
-            if not self._get_l_hor():
-                self._l_hor = [100, 500, 1000]
-
-    def _set_bounds_length_half_fracture(self) -> None:
-        self._xf = []
-        if self._kind_code in [2, 3]:
-            self._set_frac()
-            if not self._get_xf_gdis():
-                if not self._get_xf_frac():
-                    self._xf = self._get_default_length_half_fracture(self._field_name)
-
-    def _get_k_well_plast(self) -> bool:
+    def _try_to_improve_k_bounds_well_plast(self) -> bool:
         cols = [
             'Скважина',
-            'Пласт ОИС',
             'Дата окончания исследования',
+            'Кпр, мД',
             'Кгидр, Д*см/сПз',
             'Цвет Кпр, мД',
+            'Пласт ОИС',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
@@ -635,30 +733,31 @@ class _BoundParamSelector:
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self._k = [0.7 * k_init, k_init, 1.3 * k_init]
+            self._prm_constrs[self._NAME_K]['bounds'] = [0.7 * k_init, 1.3 * k_init]
             return True
 
         new_df = df.loc[df['Цвет Кпр, мД'] == self._mark_code['good']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self._k = [0.3 * k_init, k_init, 1.7 * k_init]
+            self._prm_constrs[self._NAME_K]['bounds'] = [0.3 * k_init, 1.7 * k_init]
             return True
 
         new_df = df.loc[df['Цвет Кпр, мД'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             k_gidr_init = new_df.iloc[0]['Кгидр, Д*см/сПз']
             k_init = 10 * self._viscosity_liq * k_gidr_init / self._thickness
-            self._k = [1 / 3 * k_init, k_init, 3 * k_init]
+            self._prm_constrs[self._NAME_K]['bounds'] = [1 / 3 * k_init, 3 * k_init]
             return True
 
-    def _get_k_plast(self) -> bool:
+    def _try_to_improve_k_bounds_plast(self) -> bool:
         cols = [
             'Скважина',
-            'Пласт ОИС',
             'Дата окончания исследования',
+            'Кпр, мД',
             'Кгидр, Д*см/сПз',
             'Цвет Кпр, мД',
+            'Пласт ОИС',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
@@ -676,16 +775,16 @@ class _BoundParamSelector:
         k_gidr_gdis_min = df['Кгидр, Д*см/сПз'].min()
         k_max = 10 * self._viscosity_liq * k_gidr_gdis_max / self._thickness * 1.1
         k_min = 10 * self._viscosity_liq * k_gidr_gdis_min / self._thickness / 1.1
-        self._k = [k_min, (k_min + k_max) / 2, k_max]
+        self._prm_constrs[self._NAME_K]['bounds'] = [k_min, k_max]
         return True
 
-    def _get_l_hor(self) -> bool:
+    def _try_to_improve_l_hor_bounds(self) -> bool:
         cols = [
             'Скважина',
-            'Пласт ОИС',
             'Дата окончания исследования',
             'Lэфф,м',
             'Цвет Lэфф,м',
+            'Пласт ОИС',
         ]
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
@@ -715,27 +814,27 @@ class _BoundParamSelector:
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
-                self._l_hor = [0.4 * l_hor_init, l_hor_init, 1.6 * l_hor_init]
+                self._prm_constrs[self._NAME_L_HOR]['bounds'] = [0.4 * l_hor_init, 1.6 * l_hor_init]
             else:
-                self._l_hor = [0.7 * l_hor_init, l_hor_init, 1.3 * l_hor_init]
+                self._prm_constrs[self._NAME_L_HOR]['bounds'] = [0.7 * l_hor_init, 1.3 * l_hor_init]
             return True
 
         new_df = df.loc[df['Цвет Lэфф,м'] == self._mark_code['good']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
             if there_is_fracture:
-                self._l_hor = [1 / 2 * l_hor_init, l_hor_init, 2 * l_hor_init]
+                self._prm_constrs[self._NAME_L_HOR]['bounds'] = [1 / 2 * l_hor_init, 2 * l_hor_init]
             else:
-                self._l_hor = [0.3 * l_hor_init, l_hor_init, 1.7 * l_hor_init]
+                self._prm_constrs[self._NAME_L_HOR]['bounds'] = [0.3 * l_hor_init, 1.7 * l_hor_init]
             return True
 
         new_df = df.loc[df['Цвет Lэфф,м'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             l_hor_init = new_df.iloc[0]['Lэфф,м']
-            self._l_hor = [1 / 3 * l_hor_init, l_hor_init, 3 * l_hor_init]
+            self._prm_constrs[self._NAME_L_HOR]['bounds'] = [1 / 3 * l_hor_init, 3 * l_hor_init]
             return True
 
-    def _get_xf_gdis(self) -> bool:
+    def _try_to_improve_xf_bounds_gdis(self) -> bool:
         cols = [
             'Скважина',
             'Дата окончания исследования',
@@ -745,7 +844,7 @@ class _BoundParamSelector:
         df = self._df_gdis[cols].copy()
         df.dropna(inplace=True)
         df = df.loc[df['Цвет Xf'] != self._mark_code['not count']]
-        xf_gtms_list = self._get_changing_everything_gtms_list() + ['ГРП']
+        xf_gtms_list = self._get_events_changing_xf()
         time_bounds_list = [self._date_test]
         past_bound_date, future_bound_date = self._get_bounds_dates_counting_gtms(xf_gtms_list, time_bounds_list)
         df = self._get_df_gdis_segment(
@@ -765,27 +864,27 @@ class _BoundParamSelector:
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
-                self._xf = [0.4 * xf_init, xf_init, 1.6 * xf_init]
+                self._prm_constrs[self._NAME_XF]['bounds'] = [0.4 * xf_init, 1.6 * xf_init]
             else:
-                self._xf = [0.7 * xf_init, xf_init, 1.3 * xf_init]
+                self._prm_constrs[self._NAME_XF]['bounds'] = [0.7 * xf_init, 1.3 * xf_init]
             return True
 
         new_df = df.loc[df['Цвет Xf'] == self._mark_code['good']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
             if it_is_hor:
-                self._xf = [1 / 2 * xf_init, xf_init, 2 * xf_init]
+                self._prm_constrs[self._NAME_XF]['bounds'] = [1 / 2 * xf_init, 2 * xf_init]
             else:
-                self._xf = [0.3 * xf_init, xf_init, 1.7 * xf_init]
+                self._prm_constrs[self._NAME_XF]['bounds'] = [0.3 * xf_init, 1.7 * xf_init]
             return True
 
         new_df = df.loc[df['Цвет Xf'] == self._mark_code['bad']].copy()
         if not new_df.empty:
             xf_init = new_df.iloc[0]['Xf']
-            self._xf = [1 / 3 * xf_init, xf_init, 3 * xf_init]
+            self._prm_constrs[self._NAME_XF]['bounds'] = [1 / 3 * xf_init, 3 * xf_init]
             return True
 
-    def _get_xf_frac(self) -> bool:
+    def _try_to_improve_xf_bounds_frac(self) -> bool:
         df = self._df_frac.copy()
         df.dropna(subset=['xf'], inplace=True)
         df = df.loc[df['xf'] != 0]
@@ -793,7 +892,7 @@ class _BoundParamSelector:
             return False
         else:
             xf_frac = df.iloc[-1]['xf']
-            self._xf = [1 / 5 * xf_frac, 3 / 5 * xf_frac, xf_frac]
+            self._prm_constrs[self._NAME_XF]['bounds'] = [1 / 5 * xf_frac, xf_frac]
             return True
 
     def _get_bounds_dates_counting_gtms(
@@ -847,60 +946,7 @@ class _BoundParamSelector:
         return abs((table_date - self._date).days)
 
     @staticmethod
-    def _get_default_permeability(field_name: str) -> List[float]:
-        # Значения получены из таблицы gdis.xlsm для каждого месторождения отдельно.
-        # Анализировались: кватиль 0.1, медиана, квантиль 0.9.
-        values = {
-            'Валынтойское': [0.1, 1, 2],
-            'Вынгаяхинское': [0.2, 2, 15],
-            'Крайнее': [0.5, 3, 15],
-            'Отдельное': [0.5, 5, 25],
-            'Романовское': [0.5, 3, 15],
-            'Холмогорское': [2, 7, 25],
-        }
-        return values[field_name]
-
-    @staticmethod
-    def _get_default_length_half_fracture(field_name: str) -> List[float]:
-        # Значения получены из таблицы gdis.xlsm для каждого месторождения отдельно.
-        # Анализировались: кватиль 0.1, медиана, квантиль 0.9.
-        values = {
-            'Валынтойское': [60, 75, 90],
-            'Вынгаяхинское': [30, 80, 200],
-            'Крайнее': [30, 60, 150],
-            'Отдельное': [30, 60, 90],
-            'Романовское': [30, 70, 160],
-            'Холмогорское': [20, 70, 150],
-        }
-        return values[field_name]
-
-    @staticmethod
-    def _get_changing_everything_gtms_list() -> List[str]:
-        changing_everything_gtms_list = [
-            'Ввод новых ГС',
-            'Ввод новых ГС с МГРП',
-            'Ввод новых ННС из ГРР',
-            'Ввод новых ННС с ГРП',
-            'ВПП',
-            'Вывод из контрольного фонда',
-            'Дострел',
-            'Запуск скважин',
-            'Зарезка боковых горизонтальных стволов',
-            'Зарезка боковых горизонтальных стволов с МГРП',
-            'Зарезка боковых стволов',
-            'Изоляция заколонных перетоков',
-            'Ликвидация негерметичности эксплуатационной колонны',
-            'Перевод на вышележащий горизонт',
-            'Перевод на нижележащий горизонт',
-            'Перевод под закачку',
-            'Приобщение пласта',
-            'Расконсервация скважин',
-            'Реперфорация',
-        ]
-        return changing_everything_gtms_list
-
-    @staticmethod
-    def _get_negative_max_or_zero_index(array: List[int]) -> int or None:
+    def _get_negative_max_or_zero_index(array: List[int]) -> Optional[int]:
         if len(array) == 0:
             return None
         i = 0
@@ -918,7 +964,7 @@ class _BoundParamSelector:
         return neg_max_index
 
     @staticmethod
-    def _get_positive_min_index(array: List[int]) -> int or None:
+    def _get_positive_min_index(array: List[int]) -> Optional[int]:
         if len(array) == 0:
             return None
         i = 0
@@ -935,14 +981,28 @@ class _BoundParamSelector:
             i += 1
         return pos_min_index
 
-    @property
-    def permeability(self) -> List[float]:
-        return self._k
+    def _try_to_improve_bounds(self, adap_prm: str) -> None:
+        if adap_prm == self._NAME_K:
+            if not self._try_to_improve_k_bounds_well_plast():
+                self._try_to_improve_k_bounds_plast()
 
-    @property
-    def length_hor_well_bore(self) -> List[float]:
-        return self._l_hor
+        elif adap_prm == self._NAME_PI:
+            p_max = self._df_chess.loc[self._df_chess['dt'] < self._date_test][self._name_pressure].max()
+            if p_max is not np.nan:
+                self._prm_constrs[self._NAME_PI]['bounds'] = [p_max * 1.1, p_max * 3]
 
-    @property
-    def length_half_fracture(self) -> List[float]:
-        return self._xf
+        elif adap_prm == self._NAME_L_HOR:
+            self._try_to_improve_l_hor_bounds()
+
+        elif adap_prm == self._NAME_XF:
+            self._set_frac()
+            if not self._try_to_improve_xf_bounds_gdis():
+                self._try_to_improve_xf_bounds_frac()
+
+    def _get_events_changing_xf(self) -> List[str]:
+        events_changing_xf = []
+        for event, row in self._data['event_settings'].iterrows():
+            changing_prms_adap_prd = json.loads(row['changing params'])['adap_period']
+            if self._NAME_XF in changing_prms_adap_prd:
+                events_changing_xf.append(event)
+        return events_changing_xf
