@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from config import Config
-from ftor.config import Config as ConfigFtor
+from frameworks_ftor.ftor.config import Config as ConfigFtor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.plots import create_well_plot
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
@@ -90,6 +90,17 @@ def convert_to_readable(res: dict):
     return res
 
 
+def parse_well_names(well_names_ois):
+    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
+    well_names = {}
+    for name_ois in well_names_ois:
+        well_name = welllist[welllist.ois == name_ois]
+        well_name = well_name[well_name.npath == 0]
+        well_name = well_name.at[well_name.index[0], 'num']
+        well_names[well_name] = name_ois
+    return well_names
+
+
 # Инициализация значений сессии st.session_state
 if 'date_start' not in session:
     # TODO: изменить даты на DATE_MIN
@@ -159,10 +170,11 @@ with st.sidebar:
         date_end,
     )
     preprocessor = run_preprocessor(config)
-    well_name = st.selectbox(
+    well_names_parsed = parse_well_names(preprocessor.well_names)
+    well_name_parsed = st.selectbox(
         label='Скважина',
-        options=preprocessor.well_names,
-        key='well_name'
+        options=well_names_parsed.keys(),
+        key='well_name_parsed'
     )
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
