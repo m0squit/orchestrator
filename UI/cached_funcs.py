@@ -7,9 +7,9 @@ from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfra
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 
 
-@st.experimental_singleton(show_spinner=False)
-def run_preprocessor(_config):
-    _preprocessor = Preprocessor(_config)
+@st.cache(show_spinner=False)
+def run_preprocessor(config):
+    _preprocessor = Preprocessor(config)
     return _preprocessor
 
 
