@@ -4,7 +4,6 @@ import pandas as pd
 import streamlit as st
 
 from config import Config
-from frameworks_ftor.ftor.config import Config as ConfigFtor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.plots import create_well_plot
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
@@ -255,16 +254,7 @@ if submit:
     pressure = df['Давление забойное']
 
     if is_calc_ftor:
-        # TODO: убрать в будущем: если пользователем задан P_init - меняем ConfigFtor
-        config_ftor = ConfigFtor()
-        if 'pressure_initial' in session.constraints.keys():
-            if type(session.constraints['pressure_initial']) == dict:
-                config_ftor.are_param_bounds_discrete = False
-                config_ftor.param_bounds_last_points_adaptation = session.constraints['pressure_initial']['bounds']
-            else:
-                config_ftor.apply_last_points_adaptation = False
-
-        calculator_ftor = calculate_ftor(preprocessor, well_name, session.constraints, config_ftor)
+        calculator_ftor = calculate_ftor(preprocessor, well_name_ois, session.constraints)
         extract_data_ftor(calculator_ftor, df_draw_liq, df_draw_oil)
     if is_calc_wolfram:
         calculator_wolfram = calculate_wolfram(

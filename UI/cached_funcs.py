@@ -7,22 +7,30 @@ from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfra
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 
 
-@st.cache(show_spinner=False)
-def run_preprocessor(config):
-    _preprocessor = Preprocessor(config)
+@st.experimental_singleton(show_spinner=False)
+def run_preprocessor(_config):
+    _preprocessor = Preprocessor(_config)
     return _preprocessor
 
 
-@st.cache
+@st.experimental_singleton
 def calculate_ftor(
-        preprocessor,
+        _preprocessor,
         well_name,
         constraints,
-        config_ftor=ConfigFtor()
 ):
+    # TODO: убрать в будущем: если пользователем задан P_init - меняем ConfigFtor
+    config_ftor = ConfigFtor()
+    if 'pressure_initial' in constraints.keys():
+        if type(constraints['pressure_initial']) == dict:
+            config_ftor.are_param_bounds_discrete = False
+            config_ftor.param_bounds_last_points_adaptation = constraints['pressure_initial']['bounds']
+        else:
+            config_ftor.apply_last_points_adaptation = False
+
     ftor = CalculatorFtor(
         config_ftor,
-        preprocessor.create_wells_ftor(
+        _preprocessor.create_wells_ftor(
             [well_name],
             user_constraints_for_adap_period=constraints,
         )
@@ -30,9 +38,9 @@ def calculate_ftor(
     return ftor
 
 
-@st.cache
+@st.experimental_singleton
 def calculate_wolfram(
-        preprocessor,
+        _preprocessor,
         well_name,
         forecast_days_number,
         estimator_name_group,
@@ -50,12 +58,12 @@ def calculate_wolfram(
             window_sizes,
             quantiles,
         ),
-        preprocessor.create_wells_wolfram([well_name]),
+        _preprocessor.create_wells_wolfram([well_name]),
     )
     return wolfram
 
 
-@st.cache
+@st.experimental_singleton
 def calculate_ensemble(
         df,
         adaptation_days_number,
