@@ -1,10 +1,10 @@
 import streamlit as st
-from ensemble.bayesian_model import BayesianModel
-from ftor.calculator import Calculator as CalculatorFtor
-from ftor.config import Config as ConfigFtor
+from models_ensemble.bayesian_model import BayesianModel
+from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
+from frameworks_ftor.ftor.config import Config as ConfigFtor
 from preprocessor import Preprocessor
-from wolfram.calculator import Calculator as CalculatorWolfram
-from wolfram.config import Config as ConfigWolfram
+from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
+from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 
 
 @st.cache(show_spinner=False)

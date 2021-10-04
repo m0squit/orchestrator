@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 import json
 import numpy as np
 
-from ftor.well import Well as WellFtor
+from frameworks_ftor.ftor.well import Well as WellFtor
 from typing import Dict, List, Tuple, Set, Union, Optional
-from wolfram.well import Well as WellWolfram
+from frameworks_wolfram.wolfram.well import Well as WellWolfram
 
 from config import Config
 
@@ -435,9 +435,10 @@ class _CreatorWellFtor(_CreatorWell):
                     self._kind_code = 2
                 elif self._kind_code == 1:
                     self._kind_code = 3
-            prm_constrs = self._get_prm_constraints(event_date, event_name)
-            if len(prm_constrs) > 0:
-                self._df_chess.loc[event_date, 'prm_constraints'] = json.dumps(prm_constrs)
+            if self._df_chess.loc[event_date, 'sost'] == 'В работе' or event_name == self._NAME_START_ADAP:
+                prm_constrs = self._get_prm_constraints(event_date, event_name)
+                if len(prm_constrs) > 0:
+                    self._df_chess.loc[event_date, 'prm_constraints'] = json.dumps(prm_constrs)
 
     def _set_flood(self) -> None:
         df = self._data['mersum'].loc[

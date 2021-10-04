@@ -1,7 +1,7 @@
 import datetime
 import pandas as pd
-from ftor.config import Config as ConfigFtor
-from ftor.calculator import Calculator as CalculatorFtor
+from frameworks_ftor.ftor.config import Config as ConfigFtor
+from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from pathlib import Path
 import plotly
 import plotly.graph_objects as go
