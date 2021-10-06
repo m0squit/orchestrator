@@ -16,7 +16,7 @@ def run_preprocessor(config):
 @st.experimental_singleton
 def calculate_ftor(
         _preprocessor,
-        well_name,
+        well_names,
         constraints,
 ):
     # TODO: убрать в будущем: если пользователем задан P_init - меняем ConfigFtor
@@ -31,7 +31,7 @@ def calculate_ftor(
     ftor = CalculatorFtor(
         config_ftor,
         _preprocessor.create_wells_ftor(
-            [well_name],
+            well_names,
             user_constraints_for_adap_period=constraints,
         )
     )
@@ -41,7 +41,7 @@ def calculate_ftor(
 @st.experimental_singleton
 def calculate_wolfram(
         _preprocessor,
-        well_name,
+        well_names,
         forecast_days_number,
         estimator_name_group,
         estimator_name_well,
@@ -58,7 +58,7 @@ def calculate_wolfram(
             window_sizes,
             quantiles,
         ),
-        _preprocessor.create_wells_wolfram([well_name]),
+        _preprocessor.create_wells_wolfram(well_names),
     )
     return wolfram
 
