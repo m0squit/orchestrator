@@ -182,9 +182,8 @@ if submit:
 
         # Данные CRM для визуализации
         if 'df_CRM' in session:
-            for _well_name in well_names_ois:
-                if _well_name in session['df_CRM'].columns:
-                    session.df_draw_oil[_well_name]['CRM'] = session.df_CRM[_well_name]
+            if _well_name in session['df_CRM'].columns:
+                session.df_draw_oil[_well_name]['CRM'] = session.df_CRM[_well_name]
 
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, well_names_ois, session.constraints)
