@@ -54,7 +54,7 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
         df_liq[_well_name]['true'] = rates_liq_true
         df_oil[_well_name]['wolfram'] = rates_oil_wolfram
         df_oil[_well_name]['true'] = rates_oil_true
-        pressure[_well_name] = bh_pressure
+        pressure[_well_name] = bh_pressure[pressure[_well_name].index]
 
 
 def parse_well_names(well_names_ois):
