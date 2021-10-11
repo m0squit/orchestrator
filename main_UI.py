@@ -28,8 +28,7 @@ def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
         # Жидкость. Полный ряд (train + test)
         rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
         rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
-
-        # test
+        # Нефть. Только test
         rates_oil_test_ftor = res_ftor.rates_oil_test
         rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
 
@@ -215,16 +214,6 @@ if submit:
                 )
             except:
                 st.error('Ошибка при расчете ансамбля.')
-
-        session.fig[_well_name] = create_well_plot(
-            session.df_draw_liq[_well_name],
-            session.df_draw_oil[_well_name],
-            session.df_draw_ensemble[_well_name],
-            session.pressure[_well_name],
-            date_test,
-            session.events[_well_name],
-            _well_name,
-        )
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
