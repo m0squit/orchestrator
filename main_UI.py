@@ -12,7 +12,10 @@ from UI.plots import create_well_plot
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
     PERIOD_TRAIN_MIN
 
-st.set_page_config(layout="wide")  # Для отображения на всю ширину браузера
+st.set_page_config(
+    page_title='КСП',
+    layout="wide"   # Для отображения на всю ширину браузера
+)
 session = st.session_state
 
 
@@ -76,6 +79,7 @@ if 'date_start' not in session:
     session.date_end = datetime.date(2019, 5, 30)
     session.constraints = {}
     session.adapt_params = {}
+    session.selected_wells = []
 
     session.df_draw_liq = {}
     session.df_draw_oil = {}
@@ -164,7 +168,6 @@ with st.sidebar:
 
     submit = st.button(label='Запустить расчеты')
 
-
 if submit:
     session.selected_wells = wells_to_calc.copy()
     for well in preprocessor.create_wells_ftor(well_names_ois):
@@ -232,4 +235,3 @@ PAGES = {
 selection = st.radio("", list(PAGES.keys()))
 page = PAGES[selection]
 page.show()
-
