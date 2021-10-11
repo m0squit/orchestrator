@@ -8,15 +8,49 @@ import UI.pages.specific_well
 
 from config import Config
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
-from UI.plots import create_well_plot
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
     PERIOD_TRAIN_MIN
 
 st.set_page_config(
     page_title='КСП',
-    layout="wide"   # Для отображения на всю ширину браузера
+    layout="wide"  # Для отображения на всю ширину браузера
 )
+# Инициализация значений сессии st.session_state
 session = st.session_state
+if 'date_start' not in session:
+    # TODO: изменить даты на DATE_MIN
+    session.adapt_params = {}
+    session.constraints = {}
+    session.date_start = datetime.date(2018, 12, 1)
+    session.date_test = datetime.date(2019, 3, 1)
+    session.date_end = datetime.date(2019, 5, 30)
+    session.selected_wells = []
+
+    session.analytics_plots = {}
+    session.df_draw_liq = {}
+    session.df_draw_oil = {}
+    session.df_draw_ensemble = {}
+    session.events = {}
+    session.fig = {}
+    session.pressure = {}
+    session.statistics = {}
+
+    session.estimator_name_group = 'svr'
+    session.estimator_name_well = 'ela'
+    session.is_deep_grid_search = False
+    session.quantiles = [0.1, 0.3]
+    session.window_sizes = [3, 5, 7, 15, 30]
+
+
+def parse_well_names(well_names_ois):
+    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
+    well_names = {}
+    for name_ois in well_names_ois:
+        well_name = welllist[welllist.ois == name_ois]
+        well_name = well_name[well_name.npath == 0]
+        well_name = well_name.at[well_name.index[0], 'num']
+        well_names[well_name] = name_ois
+    return well_names
 
 
 def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
@@ -59,40 +93,7 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
         pressure[_well_name] = bh_pressure[pressure[_well_name].index]
 
 
-def parse_well_names(well_names_ois):
-    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
-    well_names = {}
-    for name_ois in well_names_ois:
-        well_name = welllist[welllist.ois == name_ois]
-        well_name = well_name[well_name.npath == 0]
-        well_name = well_name.at[well_name.index[0], 'num']
-        well_names[well_name] = name_ois
-    return well_names
-
-
-# Инициализация значений сессии st.session_state
-if 'date_start' not in session:
-    # TODO: изменить даты на DATE_MIN
-    session.date_start = datetime.date(2018, 12, 1)
-    session.date_test = datetime.date(2019, 3, 1)
-    session.date_end = datetime.date(2019, 5, 30)
-    session.constraints = {}
-    session.adapt_params = {}
-    session.selected_wells = []
-
-    session.df_draw_liq = {}
-    session.df_draw_oil = {}
-    session.df_draw_ensemble = {}
-    session.pressure = {}
-    session.events = {}
-    session.fig = {}
-
-    session.estimator_name_group = 'svr'
-    session.estimator_name_well = 'ela'
-    session.is_deep_grid_search = False
-    session.window_sizes = [3, 5, 7, 15, 30]
-    session.quantiles = [0.1, 0.3]
-
+# Реализация интерфейса UI
 with st.sidebar:
     is_calc_ftor = st.checkbox(
         label='Считать модель пьезопр-ти',
@@ -169,11 +170,13 @@ with st.sidebar:
 
 if submit:
     session.selected_wells = wells_to_calc.copy()
+    session.selected_wells_ois = well_names_ois.copy()
     for well in preprocessor.create_wells_ftor(well_names_ois):
         # Инициализация данных для визуализации
         _well_name = well.well_name
         session.df_draw_liq[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
         session.df_draw_oil[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
+        session.df_draw_ensemble[_well_name] = pd.DataFrame()
 
         # Фактические данные для визуализации
         df = well.df_chess
@@ -191,21 +194,23 @@ if submit:
         calculator_ftor = calculate_ftor(preprocessor, well_names_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.df_draw_liq, session.df_draw_oil)
     if is_calc_wolfram:
-        calculator_wolfram = calculate_wolfram(
-            preprocessor,
-            well_names_ois,
-            forecast_days_number,
-            session.estimator_name_group,
-            session.estimator_name_well,
-            session.is_deep_grid_search,
-            session.window_sizes,
-            session.quantiles,
-        )
-        extract_data_wolfram(calculator_wolfram, session.df_draw_liq, session.df_draw_oil, session.pressure)
+        calculator_wolfram = calculate_wolfram(preprocessor,
+                                               well_names_ois,
+                                               forecast_days_number,
+                                               session.estimator_name_group,
+                                               session.estimator_name_well,
+                                               session.is_deep_grid_search,
+                                               session.window_sizes,
+                                               session.quantiles,
+                                               )
+        extract_data_wolfram(calculator_wolfram,
+                             session.df_draw_liq,
+                             session.df_draw_oil,
+                             session.pressure,
+                             )
 
-    for _well_name in well_names_ois:
-        session.df_draw_ensemble[_well_name] = pd.DataFrame()
-        if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
+    if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
+        for _well_name in well_names_ois:
             try:
                 session.df_draw_ensemble[_well_name] = calculate_ensemble(
                     session.df_draw_oil[_well_name][date_test:],
