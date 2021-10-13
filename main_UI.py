@@ -41,6 +41,13 @@ if 'date_start' not in session:
     session.quantiles = [0.1, 0.3]
     session.window_sizes = [3, 5, 7, 15, 30]
 
+PAGES = {
+    "Настройки моделей": UI.pages.models_settings,
+    "Карта скважин": UI.pages.wells_map,
+    "Аналитика": UI.pages.analytics,
+    "Скважина": UI.pages.specific_well,
+}
+
 
 def parse_well_names(well_names_ois):
     welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
@@ -95,6 +102,7 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
 
 # Реализация интерфейса UI
 with st.sidebar:
+    selection = st.radio("", list(PAGES.keys()))
     is_calc_ftor = st.checkbox(
         label='Считать модель пьезопр-ти',
         value=True,
@@ -157,7 +165,7 @@ with st.sidebar:
     session.well_names_parsed = parse_well_names(preprocessor.well_names)
     wells_to_calc = st.multiselect(
         label='Скважина',
-        options=session.well_names_parsed.keys(),
+        options=['Все скважины'] + list(session.well_names_parsed.keys()),
         key='wells_to_calc'
     )
 
@@ -171,6 +179,9 @@ with st.sidebar:
 if submit:
     session.selected_wells = wells_to_calc.copy()
     session.selected_wells_ois = well_names_ois.copy()
+    session.was_calc_ftor = is_calc_ftor
+    session.was_calc_wolfram = is_calc_wolfram
+    session.was_calc_ensemble = is_calc_ensemble
     for well in preprocessor.create_wells_ftor(well_names_ois):
         # Инициализация данных для визуализации
         _well_name = well.well_name
@@ -220,12 +231,6 @@ if submit:
             except:
                 st.error('Ошибка при расчете ансамбля.')
 
-PAGES = {
-    "Настройки моделей": UI.pages.models_settings,
-    "Карта скважин": UI.pages.wells_map,
-    "Аналитика": UI.pages.analytics,
-    "Скважина": UI.pages.specific_well,
-}
-selection = st.radio("", list(PAGES.keys()))
+
 page = PAGES[selection]
 page.show()

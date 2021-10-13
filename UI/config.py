@@ -27,6 +27,14 @@ YES_NO = {
     'Нет': False,
 }
 
+MODEL_NAMES = {
+    'ftor': 'Пьезо',
+    'wolfram': 'ML',
+    'ensemble': 'Ансамбль',
+    'CRM': 'CRM',
+    'true': 'Факт',
+}
+
 DEFAULT_FTOR_BOUNDS = {
     'boundary_code': {
         'label': 'Тип границ',

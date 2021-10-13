@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from UI.config import MODEL_NAMES
 from UI.plots import \
     calc_relative_error, \
     draw_statistics, \
@@ -17,9 +18,12 @@ def prepare_data_for_statistics(
         df_draw_oil,
         df_draw_ensemble,
         statistics,
-        selected_wells_ois
+        selected_wells_ois,
+        was_calc_ftor,
+        was_calc_wolfram,
+        was_calc_ensemble
 ):
-    if session.is_calc_ftor:
+    if was_calc_ftor:
         statistics['ftor'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
             statistics['ftor'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
@@ -27,7 +31,7 @@ def prepare_data_for_statistics(
             statistics['ftor'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
             statistics['ftor'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['ftor']
 
-    if session.is_calc_wolfram:
+    if was_calc_wolfram:
         statistics['wolfram'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
             statistics['wolfram'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
@@ -35,7 +39,7 @@ def prepare_data_for_statistics(
             statistics['wolfram'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
             statistics['wolfram'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['wolfram']
 
-    if session.is_calc_ensemble:
+    if was_calc_ensemble:
         statistics['ensemble'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
             statistics['ensemble'][f'{_well_name}_liq_true'] = np.nan
@@ -133,25 +137,27 @@ def calculate_statistics(dfs,
         model_std_daily[model] = df_err_model[model].std(axis=1)
 
         # TODO: строится для жидкости/нефти. Если надо для жидкости, то подать "df_err_model_liq"
-        analytics_plots[f'histogram_{model}'] = draw_histogram_model(df_err_model[model],
-                                                                     bin_size,
-                                                                     session.field_name
-                                                                     )
-        analytics_plots[f'wells_{model}'] = draw_wells_model(df_err_model[model])
+        temp_name = f'Распределение ошибки: {MODEL_NAMES[model]}'
+        analytics_plots[temp_name] = draw_histogram_model(df_err_model[model],
+                                                          bin_size,
+                                                          session.field_name
+                                                          )
+        temp_name = f'Ошибка прогноза: {MODEL_NAMES[model]}'
+        analytics_plots[temp_name] = draw_wells_model(df_err_model[model])
 
     # %% Draw common statistics
-    analytics_plots['performance_oil'] = draw_performance(dfs,
-                                                          df_perf,
-                                                          df_err,
-                                                          session.field_name,
-                                                          mode='oil')
-    analytics_plots['performance_liq'] = draw_performance(dfs,
-                                                          df_perf_liq,
-                                                          df_err_liq,
-                                                          session.field_name,
-                                                          mode='liq')
+    analytics_plots['Накопленная добыча: нефть'] = draw_performance(dfs,
+                                                                    df_perf,
+                                                                    df_err,
+                                                                    session.field_name,
+                                                                    mode='oil')
+    analytics_plots['Накопленная добыча: жидкость'] = draw_performance(dfs,
+                                                                       df_perf_liq,
+                                                                       df_err_liq,
+                                                                       session.field_name,
+                                                                       mode='liq')
 
-    analytics_plots['statistics'] = draw_statistics(models,
+    analytics_plots['Статистика'] = draw_statistics(models,
                                                     model_mean,
                                                     model_std,
                                                     model_mean_daily,
@@ -166,7 +172,10 @@ def show():
                                     session.df_draw_oil,
                                     session.df_draw_ensemble,
                                     session.statistics,
-                                    session.selected_wells_ois
+                                    session.selected_wells_ois,
+                                    session.was_calc_ftor,
+                                    session.was_calc_wolfram,
+                                    session.was_calc_ensemble,
                                     )
 
         dates = pd.date_range(session.date_test, session.date_end, freq='D')
