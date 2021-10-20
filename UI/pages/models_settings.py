@@ -24,6 +24,14 @@ def update_ftor_constraints():
             constraints[param_name] = st.session_state[f'{param_name}_default']
     st.session_state.constraints = constraints
 
+    # TODO: костыль для многостраничности: приходится записывать параметры модели в st.session_state и подтягивать
+    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        st.session_state[f'{param_name}_is_adapt'] = st.session_state[f'{param_name}_is_adapt_']
+        st.session_state[f'{param_name}_lower'] = st.session_state[f'{param_name}_lower_']
+        st.session_state[f'{param_name}_default'] = st.session_state[f'{param_name}_default_']
+        st.session_state[f'{param_name}_upper'] = st.session_state[f'{param_name}_upper_']
+
 
 def update_ML_params():
     st.session_state.estimator_name_group = ML_FULL_ABBR[st.session_state.estimator_name_group_]
@@ -40,33 +48,33 @@ def show():
                 cols = st.columns([0.4, 0.2, 0.2, 0.2])
                 cols[0].checkbox(
                     label=param_dict['label'],
-                    value=True,
-                    key=f'{param_name}_is_adapt',
+                    value=st.session_state[f'{param_name}_is_adapt'],
+                    key=f'{param_name}_is_adapt_',
                     help=param_dict['help']
                 )
                 cols[1].number_input(
                     label='От',
                     min_value=param_dict['min'],
-                    value=param_dict['lower_val'],
+                    value=st.session_state[f'{param_name}_lower'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
-                    key=f'{param_name}_lower'
+                    key=f'{param_name}_lower_'
                 )
                 cols[2].number_input(
                     label='Фиксированное',
                     min_value=param_dict['min'],
-                    value=param_dict['default_val'],
+                    value=st.session_state[f'{param_name}_default'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
-                    key=f'{param_name}_default'
+                    key=f'{param_name}_default_'
                 )
                 cols[3].number_input(
                     label='До',
                     min_value=param_dict['min'],
-                    value=param_dict['upper_val'],
+                    value=st.session_state[f'{param_name}_upper'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
-                    key=f'{param_name}_upper',
+                    key=f'{param_name}_upper_',
                     help='включительно'
                 )
             submit_bounds = st.form_submit_button('Применить', on_click=update_ftor_constraints)
@@ -110,12 +118,14 @@ def show():
                 label='Размеры скользящего окна',
                 value='3 5 7 15 30',
                 max_chars=20,
+                help="""Укажите через пробел""",
                 key='window_sizes_'
             )
             st.text_input(
                 label='Квантили',
                 value='0.1 0.3',
                 max_chars=20,
+                help="""Укажите через пробел""",
                 key='quantiles_'
             )
 

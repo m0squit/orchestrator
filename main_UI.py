@@ -9,37 +9,44 @@ import UI.pages.specific_well
 from config import Config
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
-    PERIOD_TRAIN_MIN
+    PERIOD_TRAIN_MIN, DEFAULT_FTOR_BOUNDS
+
 
 st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
-# Инициализация значений сессии st.session_state
-session = st.session_state
-if 'date_start' not in session:
+
+
+def initialize_session(_session):
     # TODO: изменить даты на DATE_MIN
-    session.adapt_params = {}
-    session.constraints = {}
-    session.date_start = datetime.date(2018, 12, 1)
-    session.date_test = datetime.date(2019, 3, 1)
-    session.date_end = datetime.date(2019, 5, 30)
-    session.selected_wells = []
+    _session.adapt_params = {}
+    _session.constraints = {}
+    _session.date_start = datetime.date(2018, 12, 1)
+    _session.date_test = datetime.date(2019, 3, 1)
+    _session.date_end = datetime.date(2019, 5, 30)
+    _session.selected_wells = []
 
-    session.analytics_plots = {}
-    session.df_draw_liq = {}
-    session.df_draw_oil = {}
-    session.df_draw_ensemble = {}
-    session.events = {}
-    session.fig = {}
-    session.pressure = {}
-    session.statistics = {}
+    _session.analytics_plots = {}
+    _session.df_draw_liq = {}
+    _session.df_draw_oil = {}
+    _session.df_draw_ensemble = {}
+    _session.events = {}
+    _session.fig = {}
+    _session.pressure = {}
+    _session.statistics = {}
 
-    session.estimator_name_group = 'svr'
-    session.estimator_name_well = 'ela'
-    session.is_deep_grid_search = False
-    session.quantiles = [0.1, 0.3]
-    session.window_sizes = [3, 5, 7, 15, 30]
+    _session.estimator_name_group = 'svr'
+    _session.estimator_name_well = 'ela'
+    _session.is_deep_grid_search = False
+    _session.quantiles = [0.1, 0.3]
+    _session.window_sizes = [3, 5, 7, 15, 30]
+
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        _session[f'{param_name}_is_adapt'] = True
+        _session[f'{param_name}_lower'] = param_dict['lower_val']
+        _session[f'{param_name}_default'] = param_dict['default_val']
+        _session[f'{param_name}_upper'] = param_dict['upper_val']
 
 
 def parse_well_names(well_names_ois):
@@ -99,6 +106,11 @@ PAGES = {
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,
 }
+
+# Инициализация значений сессии st.session_state
+session = st.session_state
+if 'date_start' not in session:
+    initialize_session(session)
 
 # Реализация интерфейса UI
 with st.sidebar:
