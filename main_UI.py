@@ -41,13 +41,6 @@ if 'date_start' not in session:
     session.quantiles = [0.1, 0.3]
     session.window_sizes = [3, 5, 7, 15, 30]
 
-PAGES = {
-    "Настройки моделей": UI.pages.models_settings,
-    "Карта скважин": UI.pages.wells_map,
-    "Аналитика": UI.pages.analytics,
-    "Скважина": UI.pages.specific_well,
-}
-
 
 def parse_well_names(well_names_ois):
     welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
@@ -99,6 +92,13 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
         df_oil[_well_name]['true'] = rates_oil_true
         pressure[_well_name] = bh_pressure[pressure[_well_name].index]
 
+
+PAGES = {
+    "Настройки моделей": UI.pages.models_settings,
+    "Карта скважин": UI.pages.wells_map,
+    "Аналитика": UI.pages.analytics,
+    "Скважина": UI.pages.specific_well,
+}
 
 # Реализация интерфейса UI
 with st.sidebar:
