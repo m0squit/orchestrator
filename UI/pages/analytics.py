@@ -118,10 +118,10 @@ def calculate_statistics(dfs,
                     (Q_model_liq - Q_fact_liq) / np.maximum(Q_model_liq, Q_fact_liq) * 100
             )
 
-            df_perf[model]['факт'] += q_fact.fillna(0)
-            df_perf[model]['модель'] += q_model.fillna(0)
-            df_perf_liq[model]['факт'] += q_fact_liq.fillna(0)
-            df_perf_liq[model]['модель'] += q_model_liq.fillna(0)
+            df_perf[model]['факт'] += q_fact
+            df_perf[model]['модель'] += q_model
+            df_perf_liq[model]['факт'] += q_fact_liq
+            df_perf_liq[model]['модель'] += q_model_liq
 
     for model in models:
         df_err[model]['модель'] = calc_relative_error(df_perf[model]['факт'], df_perf[model]['модель'])
@@ -146,16 +146,16 @@ def calculate_statistics(dfs,
         analytics_plots[temp_name] = draw_wells_model(df_err_model[model])
 
     # %% Draw common statistics
-    analytics_plots['Накопленная добыча: нефть'] = draw_performance(dfs,
-                                                                    df_perf,
-                                                                    df_err,
-                                                                    session.field_name,
-                                                                    mode='oil')
-    analytics_plots['Накопленная добыча: жидкость'] = draw_performance(dfs,
-                                                                       df_perf_liq,
-                                                                       df_err_liq,
-                                                                       session.field_name,
-                                                                       mode='liq')
+    analytics_plots['Суммарная добыча: нефть'] = draw_performance(dfs,
+                                                                  df_perf,
+                                                                  df_err,
+                                                                  session.field_name,
+                                                                  mode='oil')
+    analytics_plots['Суммарная добыча: жидкость'] = draw_performance(dfs,
+                                                                     df_perf_liq,
+                                                                     df_err_liq,
+                                                                     session.field_name,
+                                                                     mode='liq')
 
     analytics_plots['Статистика'] = draw_statistics(models,
                                                     model_mean,

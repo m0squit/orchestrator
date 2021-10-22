@@ -150,7 +150,7 @@ def draw_histogram_model(df_err: pd.DataFrame,
         rows=3,
         cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.07,
+        vertical_spacing=0.1,
         subplot_titles=[
             f'За {days[0]} суток',
             f'За {days[1]} суток',
@@ -183,7 +183,7 @@ def draw_histogram_model(df_err: pd.DataFrame,
         )
 
         fig.update_xaxes(dtick=bin_size, row=ind + 1, col=1)
-        fig.update_yaxes(title_text="Количество скважин", title_font_size=15, row=ind + 1, col=1)
+        fig.update_yaxes(title_text="Скважин", title_font_size=15, row=ind + 1, col=1)
 
     fig.update_xaxes(title_text="Усредненная относительная ошибка по добыче нефти, %",
                      title_font_size=16,
@@ -255,7 +255,7 @@ def draw_performance(dfs: dict,
     for ind, model in enumerate(dfs.keys()):
         clr = colors[ind]
         x = df_perf[model].index
-        trace1 = go.Scatter(name=model, x=x, y=df_perf[model]['модель'],
+        trace1 = go.Scatter(name=f'{MODEL_NAMES[model]}', x=x, y=df_perf[model]['модель'],
                             mode=ml, marker=mark, line=dict(width=1, color=clr))
         trace2 = go.Scatter(name=f'', x=x, y=df_err[model]['модель'],
                             mode=ml, marker=mark, line=dict(width=1, color=clr),
@@ -282,9 +282,9 @@ def draw_statistics(
         shared_xaxes=True,
         vertical_spacing=0.05,
         subplot_titles=[
-            'Относит. ошибка по накопленной добыче, %',
+            'Средняя относит. ошибка по накопленной добыче, %',
             'Стандартное отклонение по накопленной добыче, %',
-            'Относит. ошибка суточной добычи, %',
+            'Средняя относит. ошибка суточной добычи, %',
             'Стандартное отклонение по суточной добыче, %',
         ],
     )
