@@ -67,11 +67,21 @@ def calculate_wolfram(
 def calculate_ensemble(
         df,
         adaptation_days_number,
+        interval_probability,
+        draws,
+        tune,
+        chains,
+        target_accept,
         name_of_y_true,
 ):
     bayesian_model = BayesianModel(
         df,
         adaptation_days_number=adaptation_days_number,
+        interval_probability=interval_probability,
+        draws=draws,
+        tune=tune,
+        chains=chains,
+        target_accept=target_accept,
         name_of_y_true=name_of_y_true
     )
     return bayesian_model.result_test

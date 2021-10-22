@@ -41,6 +41,14 @@ def update_ML_params():
     st.session_state.quantiles = [float(q) for q in st.session_state.quantiles_.split()]
 
 
+def update_ensemble_params():
+    st.session_state['interval_probability'] = st.session_state['interval_probability_']
+    st.session_state['draws'] = st.session_state['draws_']
+    st.session_state['tune'] = st.session_state['tune_']
+    st.session_state['chains'] = st.session_state['chains_']
+    st.session_state['target_accept'] = st.session_state['target_accept_']
+
+
 def show():
     with st.expander('Настройки модели пьезопроводности'):
         with st.form(key='ftor_bounds'):
@@ -130,4 +138,48 @@ def show():
             )
 
             submit_params = st.form_submit_button('Применить', on_click=update_ML_params)
+
+    with st.expander('Настройки модели ансамбля'):
+        with st.form(key='ensemble_params'):
+            st.number_input(
+                label='interval_probability',
+                min_value=0.01,
+                value=st.session_state.interval_probability,
+                max_value=1.,
+                step=0.01,
+                key='interval_probability_'
+            )
+            st.number_input(
+                label='draws',
+                min_value=100,
+                value=st.session_state.draws,
+                max_value=10000,
+                step=10,
+                key='draws_'
+            )
+            st.number_input(
+                label='tune',
+                min_value=100,
+                value=st.session_state.tune,
+                max_value=1000,
+                step=10,
+                key='tune_'
+            )
+            st.number_input(
+                label='chains',
+                min_value=1,
+                value=st.session_state.chains,
+                max_value=5,
+                step=1,
+                key='chains_'
+            )
+            st.number_input(
+                label='target_accept',
+                min_value=0.01,
+                value=st.session_state.target_accept,
+                max_value=1.,
+                step=0.01,
+                key='target_accept_'
+            )
+            submit_params = st.form_submit_button('Применить', on_click=update_ensemble_params)
 

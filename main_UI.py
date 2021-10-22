@@ -42,6 +42,12 @@ def initialize_session(_session):
     _session.quantiles = [0.1, 0.3]
     _session.window_sizes = [3, 5, 7, 15, 30]
 
+    _session.interval_probability = 0.9
+    _session.draws = 300
+    _session.tune = 200
+    _session.chains = 1
+    _session.target_accept = 0.95
+
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         _session[f'{param_name}_is_adapt'] = True
         _session[f'{param_name}_lower'] = param_dict['lower_val']
@@ -238,10 +244,15 @@ if submit:
                 session.df_draw_ensemble[_well_name] = calculate_ensemble(
                     session.df_draw_oil[_well_name][date_test:],
                     adaptation_days_number=(date_end - date_test).days // 4,
+                    interval_probability=session.interval_probability,
+                    draws=session.draws,
+                    tune=session.tune,
+                    chains=session.chains,
+                    target_accept=session.target_accept,
                     name_of_y_true='true'
                 )
             except:
-                st.error('Ошибка при расчете ансамбля.')
+                st.error(f'Ошибка при расчете ансамбля на скважине {_well_name}')
 
 
 page = PAGES[selection]
