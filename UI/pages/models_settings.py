@@ -144,7 +144,7 @@ def show():
         with st.form(key='ensemble_params'):
             st.number_input(
                 label='Количество дней обучения ансамбля',
-                min_value=1,
+                min_value=25,
                 value=st.session_state.adaptation_days_number,
                 max_value=(st.session_state.date_end - st.session_state.date_test).days - 1,
                 step=1,

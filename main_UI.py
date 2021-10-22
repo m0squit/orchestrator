@@ -19,12 +19,7 @@ st.set_page_config(
 
 
 def initialize_session(_session):
-    # TODO: изменить даты на DATE_MIN
-    _session.date_start = datetime.date(2018, 12, 1)
-    _session.date_test = datetime.date(2019, 3, 1)
-    _session.date_end = datetime.date(2019, 5, 30)
     _session.selected_wells = []
-
     _session.analytics_plots = {}
     _session.df_draw_liq = {}
     _session.df_draw_oil = {}
@@ -51,7 +46,7 @@ def initialize_session(_session):
     _session.window_sizes = [3, 5, 7, 15, 30]
 
     # Ensemble model
-    _session.adaptation_days_number = 20
+    _session.adaptation_days_number = 28
     _session.interval_probability = 0.9
     _session.draws = 300
     _session.tune = 200
@@ -155,6 +150,7 @@ with st.sidebar:
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
         min_value=DATE_MIN,
+        value=datetime.date(2018, 12, 1),
         max_value=DATE_MAX - PERIOD_TRAIN_MIN - PERIOD_TEST_MIN,
         key='date_start',
         help="""
@@ -165,12 +161,14 @@ with st.sidebar:
     date_test = st.date_input(
         label='Дата начала прогноза (с 00:00)',
         min_value=date_start + PERIOD_TRAIN_MIN,
+        value=datetime.date(2019, 3, 1),
         max_value=DATE_MAX - PERIOD_TEST_MIN,
         key='date_test',
     )
     date_end = st.date_input(
         label='Дата конца прогноза (по 23:59)',
         min_value=date_test + PERIOD_TEST_MIN,
+        value=datetime.date(2019, 5, 30),
         max_value=DATE_MAX,
         key='date_end',
     )
