@@ -20,8 +20,6 @@ st.set_page_config(
 
 def initialize_session(_session):
     # TODO: изменить даты на DATE_MIN
-    _session.adapt_params = {}
-    _session.constraints = {}
     _session.date_start = datetime.date(2018, 12, 1)
     _session.date_test = datetime.date(2019, 3, 1)
     _session.date_end = datetime.date(2019, 5, 30)
@@ -36,23 +34,29 @@ def initialize_session(_session):
     _session.pressure = {}
     _session.statistics = {}
 
+    # Ftor model
+    _session.adapt_params = {}
+    _session.constraints = {}
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        _session[f'{param_name}_is_adapt'] = True
+        _session[f'{param_name}_lower'] = param_dict['lower_val']
+        _session[f'{param_name}_default'] = param_dict['default_val']
+        _session[f'{param_name}_upper'] = param_dict['upper_val']
+
+    # ML model
     _session.estimator_name_group = 'svr'
     _session.estimator_name_well = 'ela'
     _session.is_deep_grid_search = False
     _session.quantiles = [0.1, 0.3]
     _session.window_sizes = [3, 5, 7, 15, 30]
 
+    # Ensemble model
+    _session.adaptation_days_number = 20
     _session.interval_probability = 0.9
     _session.draws = 300
     _session.tune = 200
     _session.chains = 1
     _session.target_accept = 0.95
-
-    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        _session[f'{param_name}_is_adapt'] = True
-        _session[f'{param_name}_lower'] = param_dict['lower_val']
-        _session[f'{param_name}_default'] = param_dict['default_val']
-        _session[f'{param_name}_upper'] = param_dict['upper_val']
 
 
 def parse_well_names(well_names_ois):
@@ -87,7 +91,6 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
     for _well_wolfram in _calculator_wolfram.wells:
         _well_name = _well_wolfram.well_name
         res_wolfram = _well_wolfram.results
-
         # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует для вычислений максимально
         # возможный доступный ряд фактичесих данных.
         df_true = _well_wolfram.df
@@ -243,7 +246,7 @@ if submit:
             try:
                 session.df_draw_ensemble[_well_name] = calculate_ensemble(
                     session.df_draw_oil[_well_name][date_test:],
-                    adaptation_days_number=(date_end - date_test).days // 4,
+                    adaptation_days_number=session.adaptation_days_number,
                     interval_probability=session.interval_probability,
                     draws=session.draws,
                     tune=session.tune,

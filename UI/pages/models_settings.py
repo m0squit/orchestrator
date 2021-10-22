@@ -47,6 +47,7 @@ def update_ensemble_params():
     st.session_state['tune'] = st.session_state['tune_']
     st.session_state['chains'] = st.session_state['chains_']
     st.session_state['target_accept'] = st.session_state['target_accept_']
+    st.session_state['adaptation_days_number'] = st.session_state['adaptation_days_number_']
 
 
 def show():
@@ -142,7 +143,15 @@ def show():
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
             st.number_input(
-                label='interval_probability',
+                label='Количество дней обучения ансамбля',
+                min_value=1,
+                value=st.session_state.adaptation_days_number,
+                max_value=(st.session_state.date_end - st.session_state.date_test).days - 1,
+                step=1,
+                key='adaptation_days_number_'
+            )
+            st.number_input(
+                label='Значимость доверительного интервала (от 0 до 1)',
                 min_value=0.01,
                 value=st.session_state.interval_probability,
                 max_value=1.,
@@ -150,35 +159,43 @@ def show():
                 key='interval_probability_'
             )
             st.number_input(
-                label='draws',
+                label='Draws',
                 min_value=100,
                 value=st.session_state.draws,
                 max_value=10000,
                 step=10,
+                help="""The number of samples to draw. The number of tuned samples are discarded by default.""",
                 key='draws_'
             )
             st.number_input(
-                label='tune',
+                label='Tune',
                 min_value=100,
                 value=st.session_state.tune,
                 max_value=1000,
                 step=10,
+                help="""Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
+                        similar during tuning. Tuning samples will be drawn in addition to the number specified in
+                        the ``draws`` argument.""",
                 key='tune_'
             )
             st.number_input(
-                label='chains',
+                label='Chains',
                 min_value=1,
                 value=st.session_state.chains,
                 max_value=5,
                 step=1,
+                help="""The number of chains to sample. Running independent chains is important for some
+                        convergence statistics and can also reveal multiple modes in the posterior.""",
                 key='chains_'
             )
             st.number_input(
-                label='target_accept',
+                label='Target_accept',
                 min_value=0.01,
                 value=st.session_state.target_accept,
                 max_value=1.,
                 step=0.01,
+                help="""The step size is tuned such that we approximate this acceptance rate. 
+                        Higher values like 0.9 or 0.95 often work better for problematic posteriors""",
                 key='target_accept_'
             )
             submit_params = st.form_submit_button('Применить', on_click=update_ensemble_params)
