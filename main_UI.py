@@ -28,7 +28,6 @@ def initialize_session(_session):
     _session.fig = {}
     _session.pressure = {}
     _session.statistics = {}
-
     # Ftor model
     _session.adapt_params = {}
     _session.constraints = {}
@@ -37,14 +36,12 @@ def initialize_session(_session):
         _session[f'{param_name}_lower'] = param_dict['lower_val']
         _session[f'{param_name}_default'] = param_dict['default_val']
         _session[f'{param_name}_upper'] = param_dict['upper_val']
-
     # ML model
     _session.estimator_name_group = 'svr'
     _session.estimator_name_well = 'ela'
     _session.is_deep_grid_search = False
     _session.quantiles = [0.1, 0.3]
     _session.window_sizes = [3, 5, 7, 15, 30]
-
     # Ensemble model
     _session.adaptation_days_number = 28
     _session.interval_probability = 0.9

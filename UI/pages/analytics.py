@@ -26,26 +26,29 @@ def prepare_data_for_statistics(
     if was_calc_ftor:
         statistics['ftor'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
-            statistics['ftor'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
-            statistics['ftor'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['ftor']
-            statistics['ftor'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-            statistics['ftor'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['ftor']
+            if 'ftor' in df_draw_liq[_well_name] and 'ftor' in df_draw_oil[_well_name]:
+                statistics['ftor'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
+                statistics['ftor'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['ftor']
+                statistics['ftor'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
+                statistics['ftor'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['ftor']
 
     if was_calc_wolfram:
         statistics['wolfram'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
-            statistics['wolfram'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
-            statistics['wolfram'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['wolfram']
-            statistics['wolfram'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-            statistics['wolfram'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['wolfram']
+            if 'wolfram' in df_draw_liq[_well_name] and 'wolfram' in df_draw_oil[_well_name]:
+                statistics['wolfram'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
+                statistics['wolfram'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['wolfram']
+                statistics['wolfram'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
+                statistics['wolfram'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['wolfram']
 
     if was_calc_ensemble:
         statistics['ensemble'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
         for _well_name in selected_wells_ois:
-            statistics['ensemble'][f'{_well_name}_liq_true'] = np.nan
-            statistics['ensemble'][f'{_well_name}_liq_pred'] = np.nan
-            statistics['ensemble'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-            statistics['ensemble'][f'{_well_name}_oil_pred'] = df_draw_ensemble[_well_name]['ensemble']
+            if 'ensemble' in df_draw_ensemble[_well_name]:
+                statistics['ensemble'][f'{_well_name}_liq_true'] = np.nan
+                statistics['ensemble'][f'{_well_name}_liq_pred'] = np.nan
+                statistics['ensemble'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
+                statistics['ensemble'][f'{_well_name}_oil_pred'] = df_draw_ensemble[_well_name]['ensemble']
 
     if 'df_CRM' in session:
         for _well_name in selected_wells_ois:
@@ -118,7 +121,7 @@ def calculate_statistics(dfs,
                     (Q_model_liq - Q_fact_liq) / np.maximum(Q_model_liq, Q_fact_liq) * 100
             )
 
-            df_perf[model]['факт'] += q_fact
+            df_perf[model]['факт'] += q_fact.fillna(0)
             df_perf[model]['модель'] += q_model
             df_perf_liq[model]['факт'] += q_fact_liq
             df_perf_liq[model]['модель'] += q_model_liq
