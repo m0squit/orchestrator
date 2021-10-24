@@ -60,9 +60,9 @@ def show():
             session.events[well_name_ois].to_excel(writer, sheet_name='Мероприятие')
         # Кнопка экспорта результатов
         st.download_button(
-            label="Экспорт результатов",
+            label="Экспорт результатов по скважине",
             data=buffer,
-            file_name=f'{well_name_ois}_data.xlsx',
+            file_name=f'Скважина {well_name_ois}.xlsx',
             mime='text/csv',
         )
     else:

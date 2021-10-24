@@ -1,3 +1,4 @@
+import io
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -195,5 +196,18 @@ def show():
             key='stat_to_draw'
         )
         st.plotly_chart(session.analytics_plots[stat_to_draw], use_container_width=True)
+
+        # Подготовка данных к выгрузке
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer) as writer:
+            for key in session.statistics:
+                session.statistics[key].to_excel(writer, sheet_name=key)
+        # Кнопка экспорта результатов
+        st.download_button(
+            label="Экспорт результатов по всем скважинам",
+            data=buffer,
+            file_name=f'Все результаты {session.oilfield}.xlsx',
+            mime='text/csv',
+        )
     else:
         st.info('Здесь будет отображаться статистика по выбранному набору скважин.')
