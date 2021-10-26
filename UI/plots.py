@@ -257,9 +257,8 @@ def draw_performance(dfs: dict,
         x = df_perf[model].index
         trace1 = go.Scatter(name=f'{MODEL_NAMES[model]}', x=x, y=df_perf[model]['модель'],
                             mode=ml, marker=mark, line=dict(width=1, color=clr))
-        trace2 = go.Scatter(name=f'', x=x, y=df_err[model]['модель'],
-                            mode=ml, marker=mark, line=dict(width=1, color=clr),
-                            showlegend=False)
+        trace2 = go.Scatter(name=f'ERR: {MODEL_NAMES[model]}', x=x, y=df_err[model]['модель'],
+                            mode=ml, marker=mark, line=dict(width=1, color=clr))
 
         fig.add_trace(trace1, row=1, col=1)
         fig.add_trace(trace2, row=2, col=1)
@@ -300,7 +299,7 @@ def draw_statistics(
     # Model errors
     for ind, model in enumerate(models):
         clr = colors[ind]
-        trace1 = go.Scatter(name=model, x=dates, y=model_mean[model], mode=ml,
+        trace1 = go.Scatter(name=f'{MODEL_NAMES[model]}', x=dates, y=model_mean[model], mode=ml,
                             marker=mark, line=dict(width=1, color=clr))
         trace2 = go.Scatter(name='', x=dates, y=model_std[model], mode=ml,
                             marker=mark, line=dict(width=1, color=clr))

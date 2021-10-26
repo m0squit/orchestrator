@@ -31,6 +31,9 @@ def initialize_session(_session):
     # Ftor model
     _session.adapt_params = {}
     _session.constraints = {}
+    session.was_calc_ftor = False
+    session.was_calc_wolfram = False
+    session.was_calc_ensemble = False
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         _session[f'{param_name}_is_adapt'] = True
         _session[f'{param_name}_lower'] = param_dict['lower_val']
@@ -193,6 +196,8 @@ with st.sidebar:
     submit = st.button(label='Запустить расчеты')
 
 if submit:
+    if not wells_to_calc:
+        st.error('Не выбрано ни одной скважины для расчета.')
     session.selected_wells = wells_to_calc.copy()
     session.selected_wells_ois = well_names_ois.copy()
     session.was_calc_ftor = is_calc_ftor

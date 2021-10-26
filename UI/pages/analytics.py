@@ -2,6 +2,7 @@ import io
 import numpy as np
 import pandas as pd
 import streamlit as st
+from datetime import timedelta
 
 from UI.config import MODEL_NAMES
 from UI.plots import \
@@ -24,8 +25,9 @@ def prepare_data_for_statistics(
         was_calc_wolfram,
         was_calc_ensemble
 ):
+    session.dates = pd.date_range(session.date_test, session.date_end, freq='D')
     if was_calc_ftor:
-        statistics['ftor'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
+        statistics['ftor'] = pd.DataFrame(index=session.dates)
         for _well_name in selected_wells_ois:
             if 'ftor' in df_draw_liq[_well_name] and 'ftor' in df_draw_oil[_well_name]:
                 statistics['ftor'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
@@ -34,7 +36,7 @@ def prepare_data_for_statistics(
                 statistics['ftor'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['ftor']
 
     if was_calc_wolfram:
-        statistics['wolfram'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
+        statistics['wolfram'] = pd.DataFrame(index=session.dates)
         for _well_name in selected_wells_ois:
             if 'wolfram' in df_draw_liq[_well_name] and 'wolfram' in df_draw_oil[_well_name]:
                 statistics['wolfram'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
@@ -42,26 +44,30 @@ def prepare_data_for_statistics(
                 statistics['wolfram'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
                 statistics['wolfram'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['wolfram']
 
-    if was_calc_ensemble:
-        statistics['ensemble'] = pd.DataFrame(index=pd.date_range(session.date_test, session.date_end, freq='D'))
+    if 'df_CRM' in session:
+        for _well_name in selected_wells_ois:
+            if _well_name in session['df_CRM'].columns:
+                if 'CRM' not in statistics:
+                    statistics['CRM'] = pd.DataFrame(index=session.dates)
+                statistics['CRM'][f'{_well_name}_liq_true'] = np.nan
+                statistics['CRM'][f'{_well_name}_liq_pred'] = np.nan
+                statistics['CRM'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
+                statistics['CRM'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['CRM']
+
+    if was_calc_ensemble and (was_calc_ftor or was_calc_wolfram):
+        statistics['ensemble'] = pd.DataFrame(index=session.dates)
         for _well_name in selected_wells_ois:
             if 'ensemble' in df_draw_ensemble[_well_name]:
                 statistics['ensemble'][f'{_well_name}_liq_true'] = np.nan
                 statistics['ensemble'][f'{_well_name}_liq_pred'] = np.nan
                 statistics['ensemble'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
                 statistics['ensemble'][f'{_well_name}_oil_pred'] = df_draw_ensemble[_well_name]['ensemble']
-
-    if 'df_CRM' in session:
-        for _well_name in selected_wells_ois:
-            if _well_name in session['df_CRM'].columns:
-                if 'CRM' not in statistics:
-                    statistics['CRM'] = pd.DataFrame(
-                        index=pd.date_range(session.date_test, session.date_end, freq='D')
-                    )
-                statistics['CRM'][f'{_well_name}_liq_true'] = np.nan
-                statistics['CRM'][f'{_well_name}_liq_pred'] = np.nan
-                statistics['CRM'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-                statistics['CRM'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['CRM']
+        # TODO: обрезка данных по индексу ансамбля. В будущем можно убрать.
+        date_start_ensemble = session.date_test + timedelta(days=session.adaptation_days_number)
+        session.ensemble_index = pd.date_range(date_start_ensemble, session.date_end, freq='D')
+        for key in statistics:
+            statistics[key] = statistics[key].reindex(session.ensemble_index)
+        session.dates = session.ensemble_index
 
 
 def calculate_statistics(dfs,
@@ -69,7 +75,7 @@ def calculate_statistics(dfs,
                          dates,
                          bin_size,
                          analytics_plots):
-    # %% Initialize data
+    # Initialize data
     models = list(dfs.keys())
     df_perf = {key: pd.DataFrame(data=0, index=dates, columns=['факт', 'модель']) for key in models}
     df_perf_liq = {key: pd.DataFrame(data=0, index=dates, columns=['факт', 'модель']) for key in models}
@@ -87,7 +93,7 @@ def calculate_statistics(dfs,
     model_mean_daily = dict.fromkeys(models)
     model_std_daily = dict.fromkeys(models)
 
-    # %% Calculations
+    # Calculations
     print(f'Месторождение: {session.field_name}')
     print(f'Количество различных скважин: {len(well_names_ois)}')
 
@@ -149,7 +155,7 @@ def calculate_statistics(dfs,
         temp_name = f'Ошибка прогноза: {MODEL_NAMES[model]}'
         analytics_plots[temp_name] = draw_wells_model(df_err_model[model])
 
-    # %% Draw common statistics
+    # Draw common statistics
     analytics_plots['Суммарная добыча: нефть'] = draw_performance(dfs,
                                                                   df_perf,
                                                                   df_err,
@@ -171,7 +177,8 @@ def calculate_statistics(dfs,
 
 
 def show():
-    if 'selected_wells_ois' in session:
+    if session.was_calc_ftor or session.was_calc_wolfram:
+        session.statistics = {}
         prepare_data_for_statistics(session.df_draw_liq,
                                     session.df_draw_oil,
                                     session.df_draw_ensemble,
@@ -182,11 +189,10 @@ def show():
                                     session.was_calc_ensemble,
                                     )
 
-        dates = pd.date_range(session.date_test, session.date_end, freq='D')
         bin_size = 10
         calculate_statistics(session.statistics,
                              session.selected_wells_ois,
-                             dates,
+                             session.dates,
                              bin_size,
                              session.analytics_plots)
 
@@ -206,7 +212,7 @@ def show():
         st.download_button(
             label="Экспорт результатов по всем скважинам",
             data=buffer,
-            file_name=f'Все результаты {session.oilfield}.xlsx',
+            file_name=f'Все результаты {session.field_name}.xlsx',
             mime='text/csv',
         )
     else:
