@@ -187,6 +187,9 @@ with st.sidebar:
         options=['Все скважины'] + list(session.well_names_parsed.keys()),
         key='wells_to_calc'
     )
+    if 'Все скважины' in wells_to_calc:
+        wells_to_calc = list(session.well_names_parsed.keys())
+    well_names_ois = [session.well_names_parsed[well_name_] for well_name_ in wells_to_calc]
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
     if CRM_xlsx is not None:
