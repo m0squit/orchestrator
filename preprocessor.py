@@ -418,6 +418,8 @@ class _CreatorWellFtor(_CreatorWell):
     def _set_chess(self) -> None:
         super()._set_chess()
         self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
+        self._df_chess = self._df_chess.loc[self._df_chess['charwork.name'] == 'Нефтяные']
+        self._date_start = self._df_chess.index[0]
         self._df_chess[self._NAME_RATE_OIL] = self._df_chess[self._NAME_RATE_OIL].apply(
             lambda x: x / self._density_oil)
         rates_liq = self._df_chess[self._NAME_RATE_LIQ]
@@ -435,7 +437,14 @@ class _CreatorWellFtor(_CreatorWell):
                     self._kind_code = 2
                 elif self._kind_code == 1:
                     self._kind_code = 3
-            if self._df_chess.loc[event_date, 'sost'] == 'В работе' or event_name == self._NAME_START_ADAP:
+
+            # TODO: У Фтора жесткое API в плане разбиения на периоды, нужно либо сделать
+            #  его более гибким, либо продумать четкие правила обработки данных
+            day = event_date - datetime.timedelta(days=1)
+            work_yesterday = self._df_chess.loc[day, 'sost'] == 'В работе' if day in self._df_chess.index else False
+            add_to_chess = self._df_chess.loc[event_date, 'sost'] == 'В работе' and not work_yesterday
+            # TODO: event_name == self._NAME_START_ADAP - Костыль, нужно перенести обрезку df_chess
+            if add_to_chess or event_name == self._NAME_START_ADAP:
                 prm_constrs = self._get_prm_constraints(event_date, event_name)
                 if len(prm_constrs) > 0:
                     self._df_chess.loc[event_date, 'prm_constraints'] = json.dumps(prm_constrs)
@@ -494,6 +503,7 @@ class _CreatorWellFtor(_CreatorWell):
             WellFtor.NAME_RATE_LIQ,
             WellFtor.NAME_RATE_OIL,
         ]
+        # TODO: Убрать установку date_start и обрезку df_chess в более подходящее место
         date_start = self._date_start
         start_work_date = df_chess[df_chess[WellFtor.NAME_STATUS] == 'В работе'].index[0]
         if start_work_date != date_start:
