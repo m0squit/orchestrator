@@ -67,6 +67,7 @@ def prepare_data_for_statistics(
         session.ensemble_index = pd.date_range(date_start_ensemble, session.date_end, freq='D')
         for key in statistics:
             statistics[key] = statistics[key].reindex(session.ensemble_index)
+            statistics[key] = statistics[key].fillna(0)
         session.dates = session.ensemble_index
 
 
