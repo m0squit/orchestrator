@@ -3,6 +3,14 @@ from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
 def update_ftor_constraints():
+    # TODO: костыль для многостраничности: приходится записывать параметры модели в st.session_state и подтягивать
+    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        st.session_state[f'{param_name}_is_adapt'] = st.session_state[f'{param_name}_is_adapt_']
+        st.session_state[f'{param_name}_lower'] = st.session_state[f'{param_name}_lower_']
+        st.session_state[f'{param_name}_default'] = st.session_state[f'{param_name}_default_']
+        st.session_state[f'{param_name}_upper'] = st.session_state[f'{param_name}_upper_']
+
     discrete_params = ['boundary_code', 'number_fractures']
     constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
@@ -23,14 +31,6 @@ def update_ftor_constraints():
             # Если значение параметра нужно зафиксировать
             constraints[param_name] = st.session_state[f'{param_name}_default']
     st.session_state.constraints = constraints
-
-    # TODO: костыль для многостраничности: приходится записывать параметры модели в st.session_state и подтягивать
-    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
-    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        st.session_state[f'{param_name}_is_adapt'] = st.session_state[f'{param_name}_is_adapt_']
-        st.session_state[f'{param_name}_lower'] = st.session_state[f'{param_name}_lower_']
-        st.session_state[f'{param_name}_default'] = st.session_state[f'{param_name}_default_']
-        st.session_state[f'{param_name}_upper'] = st.session_state[f'{param_name}_upper_']
 
 
 def update_ML_params():
