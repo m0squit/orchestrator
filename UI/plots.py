@@ -16,12 +16,6 @@ def compute_deviation(y_true: pd.Series, y_pred: pd.Series) -> pd.Series:
     return devs
 
 
-def calc_relative_error(y_true: pd.Series,
-                        y_pred: pd.Series) -> pd.Series:
-    err = np.abs(y_pred - y_true) / np.maximum(y_pred, y_true)
-    return err * 100
-
-
 def create_well_plot(df_liq: pd.DataFrame,
                      df_oil: pd.DataFrame,
                      df_ensemble: pd.DataFrame,

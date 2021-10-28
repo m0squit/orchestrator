@@ -6,7 +6,6 @@ from datetime import timedelta
 
 from UI.config import MODEL_NAMES
 from UI.plots import \
-    calc_relative_error, \
     draw_statistics, \
     draw_performance, \
     draw_wells_model, \
@@ -111,23 +110,15 @@ def calculate_statistics(dfs,
             q_model = dfs[model][f'{_well_name}_oil_pred']
             q_fact_liq = dfs[model][f'{_well_name}_liq_true']
             q_model_liq = dfs[model][f'{_well_name}_liq_pred']
-            df_err_model[model][f'{_well_name}'] = (
-                    np.abs(q_model - q_fact) / np.maximum(q_model, q_fact) * 100
-            )
-            df_err_model_liq[model][f'{_well_name}'] = (
-                    np.abs(q_model_liq - q_fact_liq) / np.maximum(q_model_liq, q_fact_liq) * 100
-            )
+            df_err_model[model][f'{_well_name}'] = calc_relative_error(q_fact, q_model)
+            df_err_model_liq[model][f'{_well_name}'] = calc_relative_error(q_fact_liq, q_model_liq)
 
-            # Cumulative q
             Q_model = q_model.cumsum()
             Q_fact = q_fact.cumsum()
-            df_cumerr_model[model][f'{_well_name}'] = (Q_model - Q_fact) / np.maximum(Q_model, Q_fact) * 100
-
+            df_cumerr_model[model][f'{_well_name}'] = calc_relative_error(Q_fact, Q_model, abs=False)
             Q_model_liq = q_model_liq.cumsum()
             Q_fact_liq = q_fact_liq.cumsum()
-            df_cumerr_model_liq[model][f'{_well_name}'] = (
-                    (Q_model_liq - Q_fact_liq) / np.maximum(Q_model_liq, Q_fact_liq) * 100
-            )
+            df_cumerr_model_liq[model][f'{_well_name}'] = calc_relative_error(Q_fact_liq, Q_model_liq, abs=False)
 
             df_perf[model]['факт'] += q_fact.fillna(0)
             df_perf[model]['модель'] += q_model
@@ -175,6 +166,18 @@ def calculate_statistics(dfs,
                                                     model_std_daily,
                                                     session.field_name,
                                                     dates)
+
+
+def calc_relative_error(y_true: pd.Series,
+                        y_pred: pd.Series,
+                        abs: bool = True) -> pd.Series:
+    if abs:
+        err = np.abs(y_pred - y_true) / np.maximum(y_pred, y_true)
+    else:
+        err = (y_pred - y_true) / np.maximum(y_pred, y_true)
+    # TODO: ошибка может быть больше 100%, если одно из значений отрицательное. Исключаем такие случаи.
+    err[err > 1] = 1
+    return err * 100
 
 
 def show():
