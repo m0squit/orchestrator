@@ -3,12 +3,9 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
-import streamlit as st
 from plotly.subplots import make_subplots
 
 from UI.config import MODEL_NAMES
-
-session = st.session_state
 
 
 def compute_deviation(y_true: pd.Series, y_pred: pd.Series) -> pd.Series:

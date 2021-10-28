@@ -8,8 +8,7 @@ import UI.pages.specific_well
 
 from config import Config
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
-from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, PERIOD_TEST_MIN, \
-    PERIOD_TRAIN_MIN, DEFAULT_FTOR_BOUNDS
+from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 
 
 st.set_page_config(
@@ -140,18 +139,11 @@ with st.sidebar:
         options=FIELDS_SHOPS.keys(),
         key='field_name'
     )
-    # shops = [
-    #     st.selectbox(
-    #         label='Цех добычи',
-    #         options=FIELDS_SHOPS[field_name],
-    #         key='shops'
-    #     )
-    # ]
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
         min_value=DATE_MIN,
         value=datetime.date(2018, 12, 1),
-        max_value=DATE_MAX - PERIOD_TRAIN_MIN - PERIOD_TEST_MIN,
+        max_value=DATE_MAX,
         key='date_start',
         help="""
         Данная дата используется только для модели пьезопроводности.
@@ -160,18 +152,19 @@ with st.sidebar:
     )
     date_test = st.date_input(
         label='Дата начала прогноза (с 00:00)',
-        min_value=date_start + PERIOD_TRAIN_MIN,
+        min_value=DATE_MIN,
         value=datetime.date(2019, 3, 1),
-        max_value=DATE_MAX - PERIOD_TEST_MIN,
+        max_value=DATE_MAX,
         key='date_test',
     )
     date_end = st.date_input(
         label='Дата конца прогноза (по 23:59)',
-        min_value=date_test + PERIOD_TEST_MIN,
+        min_value=DATE_MIN,
         value=datetime.date(2019, 5, 30),
         max_value=DATE_MAX,
         key='date_end',
     )
+    adaptation_days_number = (date_test - date_start).days
     forecast_days_number = (date_end - date_test).days
     config = Config(
         field_name,
@@ -261,5 +254,7 @@ if submit:
                 st.error(f'Ошибка при расчете ансамбля на скважине {_well_name}')
 
 
+if adaptation_days_number < 90 or forecast_days_number < 28:
+    st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
 page = PAGES[selection]
 page.show()
