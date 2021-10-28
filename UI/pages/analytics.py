@@ -14,6 +14,19 @@ from UI.plots import \
 session = st.session_state
 
 
+def calc_relative_error(y_true: pd.Series,
+                        y_pred: pd.Series,
+                        abs: bool = True) -> pd.Series:
+    if abs:
+        err = np.abs(y_pred - y_true) / np.maximum(y_pred, y_true)
+    else:
+        err = (y_pred - y_true) / np.maximum(y_pred, y_true)
+    # TODO: ошибка может быть больше 100%, если одно из значений отрицательное. Исключаем такие случаи.
+    err[err > 1] = 1
+    err[err < -1] = -1
+    return err * 100
+
+
 def prepare_data_for_statistics(
         df_draw_liq,
         df_draw_oil,
@@ -166,18 +179,6 @@ def calculate_statistics(dfs,
                                                     model_std_daily,
                                                     session.field_name,
                                                     dates)
-
-
-def calc_relative_error(y_true: pd.Series,
-                        y_pred: pd.Series,
-                        abs: bool = True) -> pd.Series:
-    if abs:
-        err = np.abs(y_pred - y_true) / np.maximum(y_pred, y_true)
-    else:
-        err = (y_pred - y_true) / np.maximum(y_pred, y_true)
-    # TODO: ошибка может быть больше 100%, если одно из значений отрицательное. Исключаем такие случаи.
-    err[err > 1] = 1
-    return err * 100
 
 
 def show():
