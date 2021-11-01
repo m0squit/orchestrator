@@ -7,25 +7,22 @@ import plotly
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from timeit import default_timer
+import os
 
 from config import Config
 from preprocessor import Preprocessor
 
 
-def _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_fixed_params) -> go.Figure:
+def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_params, path, is_liq):
+    name = 'liq' if is_liq else 'oil'
     figure = go.Figure(layout=go.Layout(
         font=dict(size=10),
         hovermode='x',
         template='seaborn',
-        title=dict(text=f'Скважина {well_name}', x=0.05, xanchor='left'),
+        title=dict(text=f'{well_name} {name}', x=0.05, xanchor='left'),
     ))
     fig = make_subplots(
-        rows=3,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.02,
-        row_heights=[0.05, 0.6, 0.35],
-        figure=figure,
+        rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.02, row_heights=[0.05, 0.6, 0.35], figure=figure
     )
     fig.update_xaxes(dtick='M1', tickformat="%b\n%Y")
     fig.update_yaxes(row=1, col=1, range=[0, 1], showticklabels=False)
@@ -49,77 +46,135 @@ def _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_
     fig.add_trace(trace_a, row=1, col=1)
 
     x = df_chess.index.to_list()
+    if is_liq:
+        dir_path = path / 'liq'
+        x_model = x
+        name_fact = 'Дебит жидкости'
+        name_model = 'Дебит жидкости модельный'
+        name_graph = 'liq'
+    else:
+        dir_path = path / 'oil'
+        x_model = rates.index.to_list()
+        name_fact = 'Дебит нефти'
+        name_model = 'Дебит нефти модельный'
+        name_graph = 'oil'
 
-    trace = go.Scatter(name='q_ж_факт', x=x, y=df_chess['Дебит жидкости'], mode=m, marker=mark)
-    fig.add_trace(trace, row=2, col=1)
-
-    trace = go.Scatter(name='q_ж_модель', x=x, y=rates_liq_ftor, mode=ml, marker=mark, line=line)
-    fig.add_trace(trace, row=2, col=1)
-
-    trace = go.Scatter(name='p_з_факт', x=x, y=df_chess['Давление забойное'], mode=m, marker=mark)
-    fig.add_trace(trace, row=3, col=1)
-
+    fig.add_trace(go.Scatter(name=name_fact, x=x, y=df_chess[name_fact], mode=m, marker=mark), row=2, col=1)
+    fig.add_trace(go.Scatter(name=name_model, x=x_model, y=rates, mode=ml, marker=mark, line=line), row=2, col=1)
+    fig.add_trace(go.Scatter(name='p_з_факт', x=x, y=df_chess['Давление забойное'], mode=m, marker=mark), row=3, col=1)
     fig.add_vline(x=date_test, line_width=2, line_dash='dash')
 
     text = 'params:'
-    for i in adap_and_fixed_params:
-        for name, value in i.items():
-            i[name] = round(value, 1)
-        text += f'<br>{i}'
-    fig.add_annotation(
-        showarrow=False,
-        text=text,
-        xref='paper',
-        yref='paper',
-        x=0.5,
-        y=1.175,
+    for params in adap_and_fixed_params.copy():
+        for name, value in params.items():
+            params[name] = round(value, 1)
+        text += f'<br>{params}'
+
+    fig.add_annotation(showarrow=False, text=text, xref='paper', yref='paper', x=0.5, y=1.175)
+
+    if not dir_path.exists():
+        os.mkdir(dir_path)
+    file = f'{str(dir_path)}\\{well_name} {name_graph}.png'
+    plotly.io.write_image(fig, file=file, width=1450, height=700, scale=2, engine='kaleido')
+
+
+fields = [
+    'Крайнее',
+    # 'Вынгаяхинское'
+]
+
+shops_lst = [
+    ['ЦДНГ-4'],
+    # ['ЦДНГ-10']
+]
+
+dates_start = [
+    datetime.date(2018, 1, 1),
+    # datetime.date(2018, 1, 1)
+]
+
+dates_test = [
+    datetime.date(2018, 11, 1),
+    # datetime.date(2019, 1, 1)
+]
+
+dates_end = [
+    datetime.date(2019, 1, 31),
+    # datetime.date(2019, 3, 31)
+]
+
+use_eq_t = [
+    False,
+    # True
+]
+data = zip(fields, shops_lst, dates_start, dates_test, dates_end, use_eq_t)
+
+for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
+    start = default_timer()
+    name_dir = field_name + " " + str(datetime.datetime.now()).replace(':', '-')
+    path = Path.cwd() / 'tests' / name_dir
+    if not path.exists():
+        os.mkdir(path)
+    df_hypotheses = pd.DataFrame()
+
+    preprocessor = Preprocessor(
+        Config(
+            field_name,
+            shops,
+            date_start,
+            date_test,
+            date_end,
+        )
     )
-    return fig
 
+    for well_name in preprocessor.well_names:
+        try:
+            if well_name == 2560204400:
+                data_ftor = preprocessor.create_wells_ftor(
+                    [well_name],
+                    # user_constraints_for_adap_period = {
+                    #     'permeability': 1.2,
+                    #     'skin': 1.7,
+                    #     'res_width': 636,
+                    #     'res_length': 144,
+                    #     'pressure_initial': 1000,
+                    #     'boundary_code': 3}
+                )[0]
+                calculator_ftor = CalculatorFtor(
+                    ConfigFtor(
+                        use_equal_time_algorithm=use_eq_t,
+                        apply_last_points_adaptation=False,
+                    ),
+                    [data_ftor],
+                    df_hypotheses)
+                df_chess = data_ftor.df_chess
+                res_ftor = calculator_ftor.wells[0].results
 
-start = default_timer()
-field_name = 'Крайнее'
-shops = ['ЦДНГ-4']
-date_start = datetime.date(2018, 1, 1)
-date_test = datetime.date(2018, 11, 1)
-date_end = datetime.date(2019, 1, 31)
+                adap_and_fixed_params = res_ftor.adap_and_fixed_params
+                rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
+                rates_oil_ftor = res_ftor.rates_oil_test
 
-preprocessor = Preprocessor(
-    Config(
-        field_name,
-        shops,
-        date_start,
-        date_test,
-        date_end,
-    )
-)
+                df = pd.DataFrame()
+                df[f'{well_name}_oil_true'] = df_chess['Дебит нефти'].loc[df_chess.index >= date_test]
+                df[f'{well_name}_oil_pred'] = rates_oil_ftor
+                df[f'{well_name}_liq_true'] = df_chess['Дебит жидкости'].loc[df_chess.index >= date_test]
+                df[f'{well_name}_liq_pred'] = rates_liq_ftor.loc[df_chess.index >= date_test]
+                df.to_excel(path / f'{well_name}.xlsx')
 
-for well_name in preprocessor.well_names:
-    if well_name == 2560209600:
-        data_ftor = preprocessor.create_wells_ftor(
-            [well_name],
-            {
-                # 'length_hor_well_bore': 100,
-                # "skin": 0.1,
-                # 'pressure_initial': 700,
-                # 'permeability': {'is_discrete': False, 'bounds': [0, 0.4]}
-                }
-        )[0]
-        calculator_ftor = CalculatorFtor(ConfigFtor(), [data_ftor])
-        res_ftor = calculator_ftor.wells[0].results
+                _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_fixed_params, path, is_liq=True)
+                _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test, adap_and_fixed_params, path, is_liq=False)
+        except Exception as exc:
+            file = open(path / f'{well_name} error.txt', 'w')
+            file.write(str(exc))
+            file.close()
 
-        pressure = data_ftor.df_chess['Давление забойное']
-        df_draw_liq = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        df_draw_oil = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        df_draw_liq['ftor'] = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
-        df_draw_liq['true'] = data_ftor.df_chess['Дебит жидкости']
-        df_draw_oil['ftor'] = res_ftor.rates_oil_test
-        df_draw_oil['true'] = data_ftor.df_chess['Дебит нефти']
-        rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
-        f = _create_trans_plot(well_name, data_ftor.df_chess, rates_liq_ftor, date_test, res_ftor.adap_and_fixed_params)
-
-        path_str = str(Path.cwd() / 'test_graphs')
-        time_str = str(datetime.datetime.now()).replace(':', '-')
-        file = f'{path_str}\\{well_name} new.png'
-        plotly.io.write_image(f, file=file, width=1450, height=700, scale=2, engine='kaleido')
-print('time =', default_timer() - start)
+    exec_time = default_timer() - start
+    file = open(path / 'test_data.txt', 'w')
+    print(f'{exec_time = } с', file=file)
+    print(f'{field_name = }', file=file)
+    print(f'{shops = }', file=file)
+    print(f'{date_start = }', file=file)
+    print(f'{date_test = }', file=file)
+    print(f'{date_end = }', file=file)
+    file.close()
+    df_hypotheses.to_excel(path / 'df_hypotheses.xlsx')
