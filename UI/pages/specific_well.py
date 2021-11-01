@@ -2,8 +2,9 @@ import io
 import pandas as pd
 import streamlit as st
 
+from statistics_explorer.plots import create_well_plot_UI
+from statistics_explorer.config import ConfigStatistics
 from UI.config import FTOR_DECODE
-from UI.plots import create_well_plot
 
 
 session = st.session_state
@@ -30,7 +31,7 @@ def show():
         )
         well_name_ois = session.well_names_parsed[well_to_draw]
 
-        fig = create_well_plot(
+        fig = create_well_plot_UI(
             session.df_draw_liq[well_name_ois],
             session.df_draw_oil[well_name_ois],
             session.df_draw_ensemble[well_name_ois],
@@ -38,6 +39,7 @@ def show():
             session.date_test,
             session.events[well_name_ois],
             well_to_draw,
+            ConfigStatistics.MODEL_NAMES
         )
 
         # Построение графика
