@@ -53,6 +53,15 @@ def initialize_session(_session):
     _session.target_accept = 0.95
 
 
+def clear_session():
+    st.session_state.wells_to_calc = []
+    st.session_state.selected_wells = []
+    st.session_state.selected_wells_ois = []
+    session.was_calc_ftor = False
+    session.was_calc_wolfram = False
+    session.was_calc_ensemble = False
+
+
 def parse_well_names(well_names_ois):
     welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
     well_names = {}
@@ -137,7 +146,8 @@ with st.sidebar:
     field_name = st.selectbox(
         label='Месторождение',
         options=FIELDS_SHOPS.keys(),
-        key='field_name'
+        key='field_name',
+        on_change=clear_session
     )
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
