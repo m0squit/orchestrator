@@ -161,8 +161,10 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
                 df[f'{well_name}_liq_pred'] = rates_liq_ftor.loc[df_chess.index >= date_test]
                 df.to_excel(path / f'{well_name}.xlsx')
 
-                _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_fixed_params, path, is_liq=True)
-                _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test, adap_and_fixed_params, path, is_liq=False)
+                _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test,
+                                   adap_and_fixed_params, path, is_liq=True)
+                _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test,
+                                   adap_and_fixed_params, path, is_liq=False)
         except Exception as exc:
             file = open(path / f'{well_name} error.txt', 'w')
             file.write(str(exc))

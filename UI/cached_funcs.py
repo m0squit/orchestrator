@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from models_ensemble.bayesian_model import BayesianModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
@@ -33,7 +34,8 @@ def calculate_ftor(
         _preprocessor.create_wells_ftor(
             well_names,
             user_constraints_for_adap_period=constraints,
-        )
+        ),
+        df_hypotheses=pd.DataFrame()
     )
     return ftor
 
