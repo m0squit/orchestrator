@@ -79,10 +79,16 @@ def show():
                                     session.was_calc_ensemble,
                                     )
 
+        wells_in_model = []
+        for df in session.statistics.values():
+            wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
+        session.well_names_common = tuple(set.intersection(*wells_in_model))
+        session.well_names_all = tuple(set.union(*wells_in_model))
         session.config_stat = ConfigStatistics(
             oilfield=session.field_name,
             dates=session.dates,
-            well_names=session.selected_wells_ois,
+            well_names=session.well_names_common,
+            use_abs=False,
             ignore_wells=(),
             bin_size=10,
         )
