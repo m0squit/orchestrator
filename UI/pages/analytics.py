@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from datetime import timedelta
 
+from UI.config import ignore_plots
 from statistics_explorer.config import ConfigStatistics
 from statistics_explorer.main import calculate_statistics
 
@@ -101,9 +102,11 @@ def show():
         )
         session.analytics_plots = calculate_statistics(session.statistics, session.config_stat)
 
+        available_plots = [*session.analytics_plots]
+        plots_to_draw = [plot_name for plot_name in available_plots if plot_name not in ignore_plots]
         stat_to_draw = st.selectbox(
             label='Статистика',
-            options=sorted(session.analytics_plots),
+            options=sorted(plots_to_draw),
             key='stat_to_draw'
         )
         st.plotly_chart(session.analytics_plots[stat_to_draw], use_container_width=True)
