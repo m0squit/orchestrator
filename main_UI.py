@@ -18,7 +18,8 @@ st.set_page_config(
 
 
 def initialize_session(_session):
-    _session.selected_wells = []
+    _session.selected_wells_ois = []
+    _session.selected_wells_norm = []
     _session.analytics_plots = {}
     _session.df_draw_liq = {}
     _session.df_draw_oil = {}
@@ -39,8 +40,8 @@ def initialize_session(_session):
         _session[f'{param_name}_default'] = param_dict['default_val']
         _session[f'{param_name}_upper'] = param_dict['upper_val']
     # ML model
-    _session.estimator_name_group = 'svr'
-    _session.estimator_name_well = 'ela'
+    _session.estimator_name_group = 'xgb'
+    _session.estimator_name_well = 'svr'
     _session.is_deep_grid_search = False
     _session.quantiles = [0.1, 0.3]
     _session.window_sizes = [3, 5, 7, 15, 30]
@@ -55,8 +56,8 @@ def initialize_session(_session):
 
 def clear_session():
     st.session_state.wells_to_calc = []
-    st.session_state.selected_wells = []
     st.session_state.selected_wells_ois = []
+    st.session_state.selected_wells_norm = []
     session.was_calc_ftor = False
     session.was_calc_wolfram = False
     session.was_calc_ensemble = False
@@ -64,13 +65,15 @@ def clear_session():
 
 def parse_well_names(well_names_ois):
     welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
-    well_names = {}
+    wellnames_key_normal = {}
+    wellnames_key_ois = {}
     for name_ois in well_names_ois:
-        well_name = welllist[welllist.ois == name_ois]
-        well_name = well_name[well_name.npath == 0]
-        well_name = well_name.at[well_name.index[0], 'num']
-        well_names[well_name] = name_ois
-    return well_names
+        well_name_norm = welllist[welllist.ois == name_ois]
+        well_name_norm = well_name_norm[well_name_norm.npath == 0]
+        well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+        wellnames_key_normal[well_name_norm] = name_ois
+        wellnames_key_ois[name_ois] = well_name_norm
+    return wellnames_key_normal, wellnames_key_ois
 
 
 def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
@@ -78,7 +81,6 @@ def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
         _well_name = well_ftor.well_name
         res_ftor = well_ftor.results
         session.adapt_params[_well_name] = res_ftor.adap_and_fixed_params
-
         # Жидкость. Полный ряд (train + test)
         rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
         rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
@@ -94,15 +96,13 @@ def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
     for _well_wolfram in _calculator_wolfram.wells:
         _well_name = _well_wolfram.well_name
         res_wolfram = _well_wolfram.results
-        # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует для вычислений максимально
-        # возможный доступный ряд фактичесих данных.
+        # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует
+        # для вычислений максимально возможный доступный ряд фактичесих данных.
         df_true = _well_wolfram.df
         rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
         rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
         bh_pressure = df_true[_well_wolfram.NAME_PRESSURE]
-        # Жидкость. Полный ряд (train + test)
         rates_liq_wolfram = pd.concat(objs=[res_wolfram.rates_liq_train, res_wolfram.rates_liq_test])
-        # Нефть. Полный ряд (train + test)
         rates_oil_wolfram = pd.concat(objs=[res_wolfram.rates_oil_train, res_wolfram.rates_oil_test])
 
         df_liq[_well_name]['wolfram'] = rates_liq_wolfram
@@ -184,15 +184,15 @@ with st.sidebar:
         date_end,
     )
     preprocessor = run_preprocessor(config)
-    session.well_names_parsed = parse_well_names(preprocessor.well_names)
+    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(preprocessor.well_names)
     wells_to_calc = st.multiselect(
         label='Скважина',
-        options=['Все скважины'] + list(session.well_names_parsed.keys()),
+        options=['Все скважины'] + list(session.wellnames_key_normal.keys()),
         key='wells_to_calc'
     )
     if 'Все скважины' in wells_to_calc:
-        wells_to_calc = list(session.well_names_parsed.keys())
-    well_names_ois = [session.well_names_parsed[well_name_] for well_name_ in wells_to_calc]
+        wells_to_calc = list(session.wellnames_key_normal.keys())
+    selected_wells_ois = [session.wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
     if CRM_xlsx is not None:
@@ -204,12 +204,12 @@ with st.sidebar:
 if submit:
     if not wells_to_calc:
         st.error('Не выбрано ни одной скважины для расчета.')
-    session.selected_wells = wells_to_calc.copy()
-    session.selected_wells_ois = well_names_ois.copy()
+    session.selected_wells_norm = wells_to_calc.copy()
+    session.selected_wells_ois = selected_wells_ois.copy()
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
-    for well in preprocessor.create_wells_ftor(well_names_ois):
+    for well in preprocessor.create_wells_ftor(selected_wells_ois):
         # Инициализация данных для визуализации
         _well_name = well.well_name
         session.df_draw_liq[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
@@ -229,11 +229,11 @@ if submit:
                 session.df_draw_oil[_well_name]['CRM'] = session.df_CRM[_well_name]
 
     if is_calc_ftor:
-        calculator_ftor = calculate_ftor(preprocessor, well_names_ois, session.constraints)
+        calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.df_draw_liq, session.df_draw_oil)
     if is_calc_wolfram:
         calculator_wolfram = calculate_wolfram(preprocessor,
-                                               well_names_ois,
+                                               selected_wells_ois,
                                                forecast_days_number,
                                                session.estimator_name_group,
                                                session.estimator_name_well,
@@ -248,10 +248,10 @@ if submit:
                              )
 
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
-        for _well_name in well_names_ois:
+        for well_name_ois in selected_wells_ois:
             try:
-                session.df_draw_ensemble[_well_name] = calculate_ensemble(
-                    session.df_draw_oil[_well_name][date_test:],
+                session.df_draw_ensemble[well_name_ois] = calculate_ensemble(
+                    session.df_draw_oil[well_name_ois][date_test:],
                     adaptation_days_number=session.adaptation_days_number,
                     interval_probability=session.interval_probability,
                     draws=session.draws,
@@ -261,7 +261,7 @@ if submit:
                     name_of_y_true='true'
                 )
             except:
-                st.error(f'Ошибка при расчете ансамбля на скважине {_well_name}')
+                st.error(f'Ошибка при расчете ансамбля на скважине {session.wellnames_key_ois[well_name_ois]}')
 
 
 if adaptation_days_number < 90 or forecast_days_number < 28:

@@ -23,10 +23,10 @@ def convert_to_readable(res: dict):
 
 
 def show():
-    if session.selected_wells:  # Проверка, рассчитана ли хоть одна скважина
+    if session.selected_wells_norm:  # Проверка, рассчитана ли хоть одна скважина
         well_to_draw = st.selectbox(
                 label='Скважина',
-                options=sorted(session.selected_wells),
+                options=sorted(session.selected_wells_norm),
                 key='well_to_calc'
         )
         well_name_ois = session.well_names_parsed[well_to_draw]
@@ -64,7 +64,7 @@ def show():
         st.download_button(
             label="Экспорт результатов по скважине",
             data=buffer,
-            file_name=f'Скважина {well_name_ois}.xlsx',
+            file_name=f'Скважина {session.wellnames_key_ois[well_name_ois]}.xlsx',
             mime='text/csv',
         )
     else:
