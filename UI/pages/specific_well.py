@@ -29,7 +29,7 @@ def show():
                 options=sorted(session.selected_wells_norm),
                 key='well_to_calc'
         )
-        well_name_ois = session.well_names_parsed[well_to_draw]
+        well_name_ois = session.wellnames_key_normal[well_to_draw]
 
         fig = create_well_plot_UI(
             session.df_draw_liq[well_name_ois],
