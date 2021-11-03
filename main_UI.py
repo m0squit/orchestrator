@@ -6,7 +6,7 @@ import UI.pages.wells_map
 import UI.pages.analytics
 import UI.pages.specific_well
 
-from config import Config
+from config import Config as ConfigPreprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 
@@ -176,7 +176,7 @@ with st.sidebar:
     )
     adaptation_days_number = (date_test - date_start).days
     forecast_days_number = (date_end - date_test).days
-    config = Config(
+    config = ConfigPreprocessor(
         field_name,
         FIELDS_SHOPS[field_name],
         date_start,

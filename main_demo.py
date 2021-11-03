@@ -9,7 +9,7 @@ from plotly.subplots import make_subplots
 from timeit import default_timer
 import os
 
-from config import Config
+from config import Config as ConfigPreprocessor
 from preprocessor import Preprocessor
 
 
@@ -118,7 +118,7 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
     df_hypotheses = pd.DataFrame()
 
     preprocessor = Preprocessor(
-        Config(
+        ConfigPreprocessor(
             field_name,
             shops,
             date_start,
