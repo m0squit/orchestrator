@@ -195,15 +195,16 @@ with st.sidebar:
     selected_wells_ois = [session.wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
-    if CRM_xlsx is not None:
-        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        session['df_CRM'] = df_CRM
-
     submit = st.button(label='Запустить расчеты')
 
 if submit:
     if not wells_to_calc:
         st.error('Не выбрано ни одной скважины для расчета.')
+    if CRM_xlsx is None:
+        session.pop('df_CRM', None)
+    else:
+        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
+        session['df_CRM'] = df_CRM
     session.selected_wells_norm = wells_to_calc.copy()
     session.selected_wells_ois = selected_wells_ois.copy()
     session.was_calc_ftor = is_calc_ftor
