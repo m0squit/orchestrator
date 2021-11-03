@@ -23,40 +23,44 @@ def prepare_data_for_statistics(
     session.dates = pd.date_range(session.date_test, session.date_end, freq='D')
     if was_calc_ftor:
         statistics['ftor'] = pd.DataFrame(index=session.dates)
-        for _well_name in selected_wells_ois:
-            if 'ftor' in df_draw_liq[_well_name] and 'ftor' in df_draw_oil[_well_name]:
-                statistics['ftor'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
-                statistics['ftor'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['ftor']
-                statistics['ftor'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-                statistics['ftor'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['ftor']
+        for wname_ois in selected_wells_ois:
+            if 'ftor' in df_draw_liq[wname_ois] and 'ftor' in df_draw_oil[wname_ois]:
+                well_name_normal = session.wellnames_key_ois[wname_ois]
+                statistics['ftor'][f'{well_name_normal}_liq_true'] = df_draw_liq[wname_ois]['true']
+                statistics['ftor'][f'{well_name_normal}_liq_pred'] = df_draw_liq[wname_ois]['ftor']
+                statistics['ftor'][f'{well_name_normal}_oil_true'] = df_draw_oil[wname_ois]['true']
+                statistics['ftor'][f'{well_name_normal}_oil_pred'] = df_draw_oil[wname_ois]['ftor']
 
     if was_calc_wolfram:
         statistics['wolfram'] = pd.DataFrame(index=session.dates)
-        for _well_name in selected_wells_ois:
-            if 'wolfram' in df_draw_liq[_well_name] and 'wolfram' in df_draw_oil[_well_name]:
-                statistics['wolfram'][f'{_well_name}_liq_true'] = df_draw_liq[_well_name]['true']
-                statistics['wolfram'][f'{_well_name}_liq_pred'] = df_draw_liq[_well_name]['wolfram']
-                statistics['wolfram'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-                statistics['wolfram'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['wolfram']
+        for wname_ois in selected_wells_ois:
+            if 'wolfram' in df_draw_liq[wname_ois] and 'wolfram' in df_draw_oil[wname_ois]:
+                well_name_normal = session.wellnames_key_ois[wname_ois]
+                statistics['wolfram'][f'{well_name_normal}_liq_true'] = df_draw_liq[wname_ois]['true']
+                statistics['wolfram'][f'{well_name_normal}_liq_pred'] = df_draw_liq[wname_ois]['wolfram']
+                statistics['wolfram'][f'{well_name_normal}_oil_true'] = df_draw_oil[wname_ois]['true']
+                statistics['wolfram'][f'{well_name_normal}_oil_pred'] = df_draw_oil[wname_ois]['wolfram']
 
     if 'df_CRM' in session:
-        for _well_name in selected_wells_ois:
-            if _well_name in session['df_CRM'].columns:
+        for wname_ois in selected_wells_ois:
+            if wname_ois in session['df_CRM'].columns:
                 if 'CRM' not in statistics:
                     statistics['CRM'] = pd.DataFrame(index=session.dates)
-                statistics['CRM'][f'{_well_name}_liq_true'] = np.nan
-                statistics['CRM'][f'{_well_name}_liq_pred'] = np.nan
-                statistics['CRM'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-                statistics['CRM'][f'{_well_name}_oil_pred'] = df_draw_oil[_well_name]['CRM']
+                well_name_normal = session.wellnames_key_ois[wname_ois]
+                statistics['CRM'][f'{well_name_normal}_liq_true'] = np.nan
+                statistics['CRM'][f'{well_name_normal}_liq_pred'] = np.nan
+                statistics['CRM'][f'{well_name_normal}_oil_true'] = df_draw_oil[wname_ois]['true']
+                statistics['CRM'][f'{well_name_normal}_oil_pred'] = df_draw_oil[wname_ois]['CRM']
 
     if was_calc_ensemble and (was_calc_ftor or was_calc_wolfram):
         statistics['ensemble'] = pd.DataFrame(index=session.dates)
-        for _well_name in selected_wells_ois:
-            if 'ensemble' in df_draw_ensemble[_well_name]:
-                statistics['ensemble'][f'{_well_name}_liq_true'] = np.nan
-                statistics['ensemble'][f'{_well_name}_liq_pred'] = np.nan
-                statistics['ensemble'][f'{_well_name}_oil_true'] = df_draw_oil[_well_name]['true']
-                statistics['ensemble'][f'{_well_name}_oil_pred'] = df_draw_ensemble[_well_name]['ensemble']
+        for wname_ois in selected_wells_ois:
+            if 'ensemble' in df_draw_ensemble[wname_ois]:
+                well_name_normal = session.wellnames_key_ois[wname_ois]
+                statistics['ensemble'][f'{well_name_normal}_liq_true'] = np.nan
+                statistics['ensemble'][f'{well_name_normal}_liq_pred'] = np.nan
+                statistics['ensemble'][f'{well_name_normal}_oil_true'] = df_draw_oil[wname_ois]['true']
+                statistics['ensemble'][f'{well_name_normal}_oil_pred'] = df_draw_ensemble[wname_ois]['ensemble']
         # TODO: обрезка данных по индексу ансамбля. В будущем можно убрать.
         date_start_ensemble = session.date_test + timedelta(days=session.adaptation_days_number)
         session.ensemble_index = pd.date_range(date_start_ensemble, session.date_end, freq='D')
@@ -84,6 +88,9 @@ def show():
             wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
         session.well_names_common = tuple(set.intersection(*wells_in_model))
         session.well_names_all = tuple(set.union(*wells_in_model))
+        # Можно строить статистику только для общего набора скважин (скважина рассчитана всеми моделями),
+        # либо для всех скважин (скважина рассчитана хотя бы одной моделью).
+        # Выберите, что подать в конфиг ниже: well_names_common или well_names_all.
         session.config_stat = ConfigStatistics(
             oilfield=session.field_name,
             dates=session.dates,
