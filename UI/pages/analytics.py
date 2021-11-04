@@ -4,8 +4,7 @@ import pandas as pd
 import streamlit as st
 from datetime import timedelta
 
-from statistics_explorer.config import ConfigStatistics
-from statistics_explorer.main import calculate_statistics
+from UI.cached_funcs import calculate_statistics_plots
 
 session = st.session_state
 
@@ -80,8 +79,7 @@ def show():
                                     session.selected_wells_ois,
                                     session.was_calc_ftor,
                                     session.was_calc_wolfram,
-                                    session.was_calc_ensemble,
-                                    )
+                                    session.was_calc_ensemble,)
 
         wells_in_model = []
         for df in session.statistics.values():
@@ -91,16 +89,17 @@ def show():
         # Можно строить статистику только для общего набора скважин (скважина рассчитана всеми моделями),
         # либо для всех скважин (скважина рассчитана хотя бы одной моделью).
         # Выберите, что подать в конфиг ниже: well_names_common или well_names_all.
-        session.config_stat = ConfigStatistics(
-            oilfield=session.field_name,
-            dates=session.dates,
+        analytics_plots, config_stat = calculate_statistics_plots(
+            statistics=session.statistics,
+            field_name=session.field_name,
+            date_start=session.dates[0],
+            date_end=session.dates[-1],
             well_names=session.well_names_common,
             use_abs=False,
-            ignore_wells=(),
-            bin_size=10,
+            exclude_wells=[],
+            bin_size=10
         )
-        session.analytics_plots = calculate_statistics(session.statistics, session.config_stat)
-
+        session.analytics_plots, session.config_stat = analytics_plots, config_stat
         available_plots = [*session.analytics_plots]
         plots_to_draw = [plot_name for plot_name in available_plots
                          if plot_name not in session.config_stat.ignore_plots]

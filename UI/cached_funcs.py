@@ -1,11 +1,14 @@
+import datetime
 import pandas as pd
 import streamlit as st
-from models_ensemble.bayesian_model import BayesianModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
-from preprocessor import Preprocessor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
+from models_ensemble.bayesian_model import BayesianModel
+from preprocessor import Preprocessor
+from statistics_explorer.config import ConfigStatistics
+from statistics_explorer.main import calculate_statistics
 
 
 @st.cache(show_spinner=False)
@@ -87,3 +90,24 @@ def calculate_ensemble(
         name_of_y_true=name_of_y_true
     )
     return bayesian_model.result_test
+
+
+@st.experimental_memo
+def calculate_statistics_plots(statistics: dict,
+                               field_name: str,
+                               date_start: datetime.date,
+                               date_end: datetime.date,
+                               well_names: tuple,
+                               use_abs: bool,
+                               exclude_wells: list,
+                               bin_size: int):
+    config_stat = ConfigStatistics(
+        oilfield=field_name,
+        dates=pd.date_range(date_start, date_end, freq='D').date,
+        well_names=well_names,
+        use_abs=use_abs,
+        bin_size=bin_size,
+    )
+    config_stat.exclude_wells(exclude_wells)
+    analytics_plots = calculate_statistics(statistics, config_stat)
+    return analytics_plots, config_stat
