@@ -31,6 +31,8 @@ def show():
         )
         well_name_ois = session.wellnames_key_normal[well_to_draw]
 
+        session.df_draw_liq[well_name_ois].dropna(subset=['true'], inplace=True)
+        session.df_draw_oil[well_name_ois].dropna(subset=['true'], inplace=True)
         fig = create_well_plot_UI(
             session.df_draw_liq[well_name_ois],
             session.df_draw_oil[well_name_ois],
