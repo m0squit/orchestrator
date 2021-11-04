@@ -47,9 +47,7 @@ def show():
         # Построение графика
         st.plotly_chart(fig, use_container_width=True)
         # Вывод параметров адаптации модели пьезопроводности
-        # TODO: (возможно) могут выводиться значения параметров от предыдущих расчетов,
-        #  если нынешние упали с ошибкой
-        if session.is_calc_ftor and well_name_ois in session.adapt_params:
+        if session.was_calc_ftor and well_name_ois in session.adapt_params:
             result = session.adapt_params[well_name_ois][0].copy()
             result = convert_to_readable(result)
             st.write('Результаты адаптации модели пьезопроводности:', result)
