@@ -87,6 +87,9 @@ def show(session):
                     help='включительно'
                 )
             submit_bounds = st.form_submit_button('Применить', on_click=update_ftor_constraints, args=(session,))
+        button_use_GDIS = st.button('Использовать границы из ГДИС')
+        if button_use_GDIS:
+            session.constraints = {}
 
     with st.expander('Настройки модели ML'):
         with st.form(key='ML_params'):
