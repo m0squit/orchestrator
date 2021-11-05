@@ -79,17 +79,23 @@ def calculate_ensemble(
         target_accept,
         name_of_y_true,
 ):
-    bayesian_model = BayesianModel(
-        df,
-        adaptation_days_number=adaptation_days_number,
-        interval_probability=interval_probability,
-        draws=draws,
-        tune=tune,
-        chains=chains,
-        target_accept=target_accept,
-        name_of_y_true=name_of_y_true
-    )
-    return bayesian_model.result_test
+    result = pd.DataFrame()
+    try:
+        bayesian_model = BayesianModel(
+            df,
+            adaptation_days_number=adaptation_days_number,
+            interval_probability=interval_probability,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            target_accept=target_accept,
+            name_of_y_true=name_of_y_true
+        )
+        result = bayesian_model.result_test
+    except:
+        print('Ошибка расчета ансамбля')
+        pass
+    return result
 
 
 @st.experimental_memo

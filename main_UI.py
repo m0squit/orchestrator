@@ -1,5 +1,3 @@
-import datetime
-import pandas as pd
 import streamlit as st
 import UI.pages.models_settings
 import UI.pages.wells_map
@@ -9,12 +7,7 @@ import UI.pages.specific_well
 from config import Config as ConfigPreprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
-
-
-st.set_page_config(
-    page_title='КСП',
-    layout="wide"  # Для отображения на всю ширину браузера
-)
+from UI.data_processor import *
 
 
 def initialize_session(_session):
@@ -28,6 +21,7 @@ def initialize_session(_session):
     _session.fig = {}
     _session.pressure = {}
     _session.statistics = {}
+    _session.statistics_test = {}
     # Ftor model
     _session.adapt_params = {}
     _session.constraints = {}
@@ -76,40 +70,10 @@ def parse_well_names(well_names_ois):
     return wellnames_key_normal, wellnames_key_ois
 
 
-def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
-    for well_ftor in _calculator_ftor.wells:
-        _well_name = well_ftor.well_name
-        res_ftor = well_ftor.results
-        session.adapt_params[_well_name] = res_ftor.adap_and_fixed_params
-        # Жидкость. Полный ряд (train + test)
-        rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
-        rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
-        # Нефть. Только test
-        rates_oil_test_ftor = res_ftor.rates_oil_test
-        rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
-
-        df_liq[_well_name]['ftor'] = rates_liq_ftor
-        df_oil[_well_name]['ftor'] = rates_oil_test_ftor
-
-
-def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
-    for _well_wolfram in _calculator_wolfram.wells:
-        _well_name = _well_wolfram.well_name
-        res_wolfram = _well_wolfram.results
-        # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует
-        # для вычислений максимально возможный доступный ряд фактичесих данных.
-        df_true = _well_wolfram.df
-        rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
-        rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        bh_pressure = df_true[_well_wolfram.NAME_PRESSURE]
-        rates_liq_wolfram = pd.concat(objs=[res_wolfram.rates_liq_train, res_wolfram.rates_liq_test])
-        rates_oil_wolfram = pd.concat(objs=[res_wolfram.rates_oil_train, res_wolfram.rates_oil_test])
-
-        df_liq[_well_name]['wolfram'] = rates_liq_wolfram
-        df_liq[_well_name]['true'] = rates_liq_true
-        df_oil[_well_name]['wolfram'] = rates_oil_wolfram
-        df_oil[_well_name]['true'] = rates_oil_true
-        pressure[_well_name] = bh_pressure[pressure[_well_name].index]
+st.set_page_config(
+    page_title='КСП',
+    layout="wide"  # Для отображения на всю ширину браузера
+)
 
 
 PAGES = {
@@ -205,33 +169,30 @@ if submit:
     else:
         df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
         session['df_CRM'] = df_CRM
+    session.statistics = {}
     session.selected_wells_norm = wells_to_calc.copy()
     session.selected_wells_ois = selected_wells_ois.copy()
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
-    for well in preprocessor.create_wells_ftor(selected_wells_ois):
-        # Инициализация данных для визуализации
-        _well_name = well.well_name
-        session.df_draw_liq[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        session.df_draw_oil[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        session.df_draw_ensemble[_well_name] = pd.DataFrame()
-
-        # Фактические данные для визуализации
-        df = well.df_chess
-        session.events[_well_name] = df['Мероприятие']
-        session.df_draw_liq[_well_name]['true'] = df['Дебит жидкости']
-        session.df_draw_oil[_well_name]['true'] = df['Дебит нефти']
-        session.pressure[_well_name] = df['Давление забойное']
-
-        # Данные CRM для визуализации
-        if 'df_CRM' in session:
-            if _well_name in session['df_CRM'].columns:
-                session.df_draw_oil[_well_name]['CRM'] = session.df_CRM[_well_name]
+    session.dates = pd.date_range(date_start, date_end, freq='D')
+    # for well in preprocessor.create_wells_ftor(selected_wells_ois):
+    #     # Инициализация данных для визуализации
+    #     _well_name = well.well_name
+    #     session.df_draw_liq[_well_name] = pd.DataFrame(index=session.dates)
+    #     session.df_draw_oil[_well_name] = pd.DataFrame(index=session.dates)
+    #     session.df_draw_ensemble[_well_name] = pd.DataFrame()
+    #
+    #     # Фактические данные для визуализации
+    #     df = well.df_chess
+    #     session.events[_well_name] = df['Мероприятие']
+    #     session.df_draw_liq[_well_name]['true'] = df['Дебит жидкости']
+    #     session.df_draw_oil[_well_name]['true'] = df['Дебит нефти']
+    #     session.pressure[_well_name] = df['Давление забойное']
 
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
-        extract_data_ftor(calculator_ftor, session.df_draw_liq, session.df_draw_oil)
+        extract_data_ftor(calculator_ftor, session)
     if is_calc_wolfram:
         calculator_wolfram = calculate_wolfram(preprocessor,
                                                selected_wells_ois,
@@ -242,30 +203,32 @@ if submit:
                                                session.window_sizes,
                                                session.quantiles,
                                                )
-        extract_data_wolfram(calculator_wolfram,
-                             session.df_draw_liq,
-                             session.df_draw_oil,
-                             session.pressure,
-                             )
+        extract_data_wolfram(calculator_wolfram, session)
+
+    if 'df_CRM' in session:
+        extract_data_CRM(session['df_CRM'], session, preprocessor)
 
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
+        name_of_y_true = 'true'
         for well_name_ois in selected_wells_ois:
-            try:
-                session.df_draw_ensemble[well_name_ois] = calculate_ensemble(
-                    session.df_draw_oil[well_name_ois][date_test:],
-                    adaptation_days_number=session.adaptation_days_number,
-                    interval_probability=session.interval_probability,
-                    draws=session.draws,
-                    tune=session.tune,
-                    chains=session.chains,
-                    target_accept=session.target_accept,
-                    name_of_y_true='true'
-                )
-            except:
-                st.error(f'Ошибка при расчете ансамбля на скважине {session.wellnames_key_ois[well_name_ois]}')
+            well_name_normal = session.wellnames_key_ois[well_name_ois]
+            input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
+            ensemble_result = calculate_ensemble(
+                input_df,
+                adaptation_days_number=session.adaptation_days_number,
+                interval_probability=session.interval_probability,
+                draws=session.draws,
+                tune=session.tune,
+                chains=session.chains,
+                target_accept=session.target_accept,
+                name_of_y_true=name_of_y_true
+            )
+            if not ensemble_result.empty:
+                extract_data_ensemble(ensemble_result, session, well_name_normal)
 
+    session.statistics_test, session.test_dates = create_statistics_df_test(session)
 
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
 page = PAGES[selection]
-page.show()
+page.show(session)

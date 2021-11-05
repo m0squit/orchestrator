@@ -2,69 +2,69 @@ import streamlit as st
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
-def update_ftor_constraints():
-    # TODO: костыль для многостраничности: приходится записывать параметры модели в st.session_state и подтягивать
+def update_ftor_constraints(session):
+    # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
     #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        st.session_state[f'{param_name}_is_adapt'] = st.session_state[f'{param_name}_is_adapt_']
-        st.session_state[f'{param_name}_lower'] = st.session_state[f'{param_name}_lower_']
-        st.session_state[f'{param_name}_default'] = st.session_state[f'{param_name}_default_']
-        st.session_state[f'{param_name}_upper'] = st.session_state[f'{param_name}_upper_']
+        session[f'{param_name}_is_adapt'] = session[f'{param_name}_is_adapt_']
+        session[f'{param_name}_lower'] = session[f'{param_name}_lower_']
+        session[f'{param_name}_default'] = session[f'{param_name}_default_']
+        session[f'{param_name}_upper'] = session[f'{param_name}_upper_']
 
     discrete_params = ['boundary_code', 'number_fractures']
     constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         # Если параметр нужно адаптировать
-        if st.session_state[f'{param_name}_is_adapt']:
+        if session[f'{param_name}_is_adapt']:
             if param_name in discrete_params:
                 constraints[param_name] = {
                     'is_discrete': True,
-                    'bounds': [i for i in range(st.session_state[f'{param_name}_lower'],
-                                                st.session_state[f'{param_name}_upper'] + 1)]
+                    'bounds': [i for i in range(session[f'{param_name}_lower'],
+                                                session[f'{param_name}_upper'] + 1)]
                 }
             else:
                 constraints[param_name] = {
                     'is_discrete': False,
-                    'bounds': [st.session_state[f'{param_name}_lower'], st.session_state[f'{param_name}_upper']]
+                    'bounds': [session[f'{param_name}_lower'], session[f'{param_name}_upper']]
                 }
         else:
             # Если значение параметра нужно зафиксировать
-            constraints[param_name] = st.session_state[f'{param_name}_default']
-    st.session_state.constraints = constraints
+            constraints[param_name] = session[f'{param_name}_default']
+    session.constraints = constraints
 
 
-def update_ML_params():
-    st.session_state.estimator_name_group = ML_FULL_ABBR[st.session_state.estimator_name_group_]
-    st.session_state.estimator_name_well = ML_FULL_ABBR[st.session_state.estimator_name_well_]
-    st.session_state.is_deep_grid_search = YES_NO[st.session_state.is_deep_grid_search_]
-    st.session_state.window_sizes = [int(ws) for ws in st.session_state.window_sizes_.split()]
-    st.session_state.quantiles = [float(q) for q in st.session_state.quantiles_.split()]
+def update_ML_params(session):
+    session.estimator_name_group = ML_FULL_ABBR[session.estimator_name_group_]
+    session.estimator_name_well = ML_FULL_ABBR[session.estimator_name_well_]
+    session.is_deep_grid_search = YES_NO[session.is_deep_grid_search_]
+    session.window_sizes = [int(ws) for ws in session.window_sizes_.split()]
+    session.quantiles = [float(q) for q in session.quantiles_.split()]
 
 
-def update_ensemble_params():
-    st.session_state['interval_probability'] = st.session_state['interval_probability_']
-    st.session_state['draws'] = st.session_state['draws_']
-    st.session_state['tune'] = st.session_state['tune_']
-    st.session_state['chains'] = st.session_state['chains_']
-    st.session_state['target_accept'] = st.session_state['target_accept_']
-    st.session_state['adaptation_days_number'] = st.session_state['adaptation_days_number_']
+def update_ensemble_params(session):
+    session['interval_probability'] = session['interval_probability_']
+    session['draws'] = session['draws_']
+    session['tune'] = session['tune_']
+    session['chains'] = session['chains_']
+    session['target_accept'] = session['target_accept_']
+    session['adaptation_days_number'] = session['adaptation_days_number_']
 
 
-def show():
+def show(session):
     with st.expander('Настройки модели пьезопроводности'):
         with st.form(key='ftor_bounds'):
             for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
                 cols = st.columns([0.4, 0.2, 0.2, 0.2])
                 cols[0].checkbox(
                     label=param_dict['label'],
-                    value=st.session_state[f'{param_name}_is_adapt'],
+                    value=session[f'{param_name}_is_adapt'],
                     key=f'{param_name}_is_adapt_',
                     help=param_dict['help']
                 )
                 cols[1].number_input(
                     label='От',
                     min_value=param_dict['min'],
-                    value=st.session_state[f'{param_name}_lower'],
+                    value=session[f'{param_name}_lower'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
                     key=f'{param_name}_lower_'
@@ -72,7 +72,7 @@ def show():
                 cols[2].number_input(
                     label='Фиксированное',
                     min_value=param_dict['min'],
-                    value=st.session_state[f'{param_name}_default'],
+                    value=session[f'{param_name}_default'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
                     key=f'{param_name}_default_'
@@ -80,13 +80,13 @@ def show():
                 cols[3].number_input(
                     label='До',
                     min_value=param_dict['min'],
-                    value=st.session_state[f'{param_name}_upper'],
+                    value=session[f'{param_name}_upper'],
                     max_value=param_dict['max'],
                     step=param_dict['step'],
                     key=f'{param_name}_upper_',
                     help='включительно'
                 )
-            submit_bounds = st.form_submit_button('Применить', on_click=update_ftor_constraints)
+            submit_bounds = st.form_submit_button('Применить', on_click=update_ftor_constraints, args=(session,))
 
     with st.expander('Настройки модели ML'):
         with st.form(key='ML_params'):
@@ -138,22 +138,22 @@ def show():
                 key='quantiles_'
             )
 
-            submit_params = st.form_submit_button('Применить', on_click=update_ML_params)
+            submit_params = st.form_submit_button('Применить', on_click=update_ML_params, args=(session,))
 
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
             st.number_input(
                 label='Количество дней обучения ансамбля',
                 min_value=25,
-                value=st.session_state.adaptation_days_number,
-                max_value=(st.session_state.date_end - st.session_state.date_test).days - 1,
+                value=session.adaptation_days_number,
+                max_value=(session.date_end - session.date_test).days - 1,
                 step=1,
                 key='adaptation_days_number_'
             )
             st.number_input(
                 label='Значимость доверительного интервала (от 0 до 1)',
                 min_value=0.01,
-                value=st.session_state.interval_probability,
+                value=session.interval_probability,
                 max_value=1.,
                 step=0.01,
                 key='interval_probability_'
@@ -161,7 +161,7 @@ def show():
             st.number_input(
                 label='Draws',
                 min_value=100,
-                value=st.session_state.draws,
+                value=session.draws,
                 max_value=10000,
                 step=10,
                 help="""The number of samples to draw. The number of tuned samples are discarded by default.""",
@@ -170,7 +170,7 @@ def show():
             st.number_input(
                 label='Tune',
                 min_value=100,
-                value=st.session_state.tune,
+                value=session.tune,
                 max_value=1000,
                 step=10,
                 help="""Number of iterations to tune, defaults to 1000. Samplers adjust the step sizes, scalings or
@@ -181,7 +181,7 @@ def show():
             st.number_input(
                 label='Chains',
                 min_value=1,
-                value=st.session_state.chains,
+                value=session.chains,
                 max_value=5,
                 step=1,
                 help="""The number of chains to sample. Running independent chains is important for some
@@ -191,12 +191,11 @@ def show():
             st.number_input(
                 label='Target_accept',
                 min_value=0.01,
-                value=st.session_state.target_accept,
+                value=session.target_accept,
                 max_value=1.,
                 step=0.01,
                 help="""The step size is tuned such that we approximate this acceptance rate. 
                         Higher values like 0.9 or 0.95 often work better for problematic posteriors""",
                 key='target_accept_'
             )
-            submit_params = st.form_submit_button('Применить', on_click=update_ensemble_params)
-
+            submit_params = st.form_submit_button('Применить', on_click=update_ensemble_params, args=(session,))
