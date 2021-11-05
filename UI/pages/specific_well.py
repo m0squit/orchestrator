@@ -33,19 +33,18 @@ def show(session):
     )
     well_name_ois = session.wellnames_key_normal[well_to_draw]
 
-    session.df_draw_liq[well_name_ois].dropna(subset=['true'], inplace=True)
-    session.df_draw_oil[well_name_ois].dropna(subset=['true'], inplace=True)
+    well = session.preprocessor.create_wells_ftor([well_name_ois])[0]
+    df_chess = well.df_chess
     fig = create_well_plot_UI(
-        session.df_draw_liq[well_name_ois],
-        session.df_draw_oil[well_name_ois],
-        session.df_draw_ensemble[well_name_ois],
-        session.pressure[well_name_ois],
+        session.statistics,
+        df_chess,
+        session.dates,
         session.date_test,
-        session.events[well_name_ois],
+        session.dates_test_period[0],
         well_to_draw,
-        ConfigStatistics.MODEL_NAMES
+        ConfigStatistics.MODEL_NAMES,
+        ensemble_interval=session.ensemble_interval
     )
-
     # Построение графика
     st.plotly_chart(fig, use_container_width=True)
     # Вывод параметров адаптации модели пьезопроводности
@@ -53,19 +52,18 @@ def show(session):
         result = session.adapt_params[well_name_ois][0].copy()
         result = convert_to_readable(result)
         st.write('Результаты адаптации модели пьезопроводности:', result)
-
-    # Подготовка данных к выгрузке
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer) as writer:
-        session.df_draw_liq[well_name_ois].to_excel(writer, sheet_name='Дебит жидкости')
-        session.df_draw_oil[well_name_ois].to_excel(writer, sheet_name='Дебит нефти')
-        session.df_draw_ensemble[well_name_ois].to_excel(writer, sheet_name='Дебит нефти ансамбль')
-        session.pressure[well_name_ois].to_excel(writer, sheet_name='Забойное давление')
-        session.events[well_name_ois].to_excel(writer, sheet_name='Мероприятие')
-    # Кнопка экспорта результатов
-    st.download_button(
-        label="Экспорт результатов по скважине",
-        data=buffer,
-        file_name=f'Скважина {session.wellnames_key_ois[well_name_ois]}.xlsx',
-        mime='text/csv',
-    )
+    # # Подготовка данных к выгрузке
+    # buffer = io.BytesIO()
+    # with pd.ExcelWriter(buffer) as writer:
+    #     session.df_draw_liq[well_name_ois].to_excel(writer, sheet_name='Дебит жидкости')
+    #     session.df_draw_oil[well_name_ois].to_excel(writer, sheet_name='Дебит нефти')
+    #     session.df_draw_ensemble[well_name_ois].to_excel(writer, sheet_name='Дебит нефти ансамбль')
+    #     session.pressure[well_name_ois].to_excel(writer, sheet_name='Забойное давление')
+    #     session.events[well_name_ois].to_excel(writer, sheet_name='Мероприятие')
+    # # Кнопка экспорта результатов
+    # st.download_button(
+    #     label="Экспорт результатов по скважине",
+    #     data=buffer,
+    #     file_name=f'Скважина {session.wellnames_key_ois[well_name_ois]}.xlsx',
+    #     mime='text/csv',
+    # )

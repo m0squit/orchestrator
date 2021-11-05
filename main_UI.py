@@ -21,7 +21,8 @@ def initialize_session(_session):
     _session.fig = {}
     _session.pressure = {}
     _session.statistics = {}
-    _session.statistics_test = {}
+    _session.statistics_df_test = {}
+    _session.ensemble_interval = pd.DataFrame()
     # Ftor model
     _session.adapt_params = {}
     _session.constraints = {}
@@ -74,7 +75,6 @@ st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
-
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
@@ -147,13 +147,11 @@ with st.sidebar:
         date_test,
         date_end,
     )
-    preprocessor = run_preprocessor(config)
-    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(preprocessor.well_names)
-    wells_to_calc = st.multiselect(
-        label='Скважина',
-        options=['Все скважины'] + list(session.wellnames_key_normal.keys()),
-        key='wells_to_calc'
-    )
+    session.preprocessor = run_preprocessor(config)
+    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(session.preprocessor.well_names)
+    wells_to_calc = st.multiselect(label='Скважина',
+                                   options=['Все скважины'] + list(session.wellnames_key_normal.keys()),
+                                   key='wells_to_calc')
     if 'Все скважины' in wells_to_calc:
         wells_to_calc = list(session.wellnames_key_normal.keys())
     selected_wells_ois = [session.wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
@@ -170,31 +168,19 @@ if submit:
         df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
         session['df_CRM'] = df_CRM
     session.statistics = {}
+    session.statistics_df_test = {}
+    session.ensemble_interval = pd.DataFrame()
     session.selected_wells_norm = wells_to_calc.copy()
     session.selected_wells_ois = selected_wells_ois.copy()
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
     session.dates = pd.date_range(date_start, date_end, freq='D')
-    # for well in preprocessor.create_wells_ftor(selected_wells_ois):
-    #     # Инициализация данных для визуализации
-    #     _well_name = well.well_name
-    #     session.df_draw_liq[_well_name] = pd.DataFrame(index=session.dates)
-    #     session.df_draw_oil[_well_name] = pd.DataFrame(index=session.dates)
-    #     session.df_draw_ensemble[_well_name] = pd.DataFrame()
-    #
-    #     # Фактические данные для визуализации
-    #     df = well.df_chess
-    #     session.events[_well_name] = df['Мероприятие']
-    #     session.df_draw_liq[_well_name]['true'] = df['Дебит жидкости']
-    #     session.df_draw_oil[_well_name]['true'] = df['Дебит нефти']
-    #     session.pressure[_well_name] = df['Давление забойное']
-
     if is_calc_ftor:
-        calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
+        calculator_ftor = calculate_ftor(session.preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session)
     if is_calc_wolfram:
-        calculator_wolfram = calculate_wolfram(preprocessor,
+        calculator_wolfram = calculate_wolfram(session.preprocessor,
                                                selected_wells_ois,
                                                forecast_days_number,
                                                session.estimator_name_group,
@@ -204,10 +190,8 @@ if submit:
                                                session.quantiles,
                                                )
         extract_data_wolfram(calculator_wolfram, session)
-
     if 'df_CRM' in session:
-        extract_data_CRM(session['df_CRM'], session, preprocessor)
-
+        extract_data_CRM(session['df_CRM'], session)
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
         name_of_y_true = 'true'
         for well_name_ois in selected_wells_ois:
@@ -226,7 +210,7 @@ if submit:
             if not ensemble_result.empty:
                 extract_data_ensemble(ensemble_result, session, well_name_normal)
 
-    session.statistics_test, session.test_dates = create_statistics_df_test(session)
+    session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
 
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
