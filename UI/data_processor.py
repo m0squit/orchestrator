@@ -84,6 +84,21 @@ def extract_data_ensemble(ensemble_df, session, well_name_normal):
     session.ensemble_interval[f'{well_name_normal}_lower'] = ensemble_df['interval_lower']
 
 
+def rewrite_fact_data_from_wolfram(session):
+    for _well_wolfram in session.preprocessor.create_wells_wolfram(session.selected_wells_ois):
+        df_true = _well_wolfram.df
+        rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
+        rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
+        bh_pressure = df_true[_well_wolfram.NAME_PRESSURE]
+        well_name_normal = session.wellnames_key_ois[_well_wolfram.well_name]
+        if session.was_calc_ftor and f'{well_name_normal}_oil_true' in session.statistics['ftor']:
+            session.statistics['ftor'][f'{well_name_normal}_liq_true'] = rates_liq_true
+            session.statistics['ftor'][f'{well_name_normal}_oil_true'] = rates_oil_true
+        if 'df_CRM' in session and f'{well_name_normal}_oil_true' in session.statistics['CRM']:
+            session.statistics['CRM'][f'{well_name_normal}_liq_true'] = rates_liq_true
+            session.statistics['CRM'][f'{well_name_normal}_oil_true'] = rates_oil_true
+
+
 def create_statistics_df_test(session):
     dates_test_period = pd.date_range(session.date_test, session.date_end, freq='D')
     # TODO: обрезка данных по датам(индексу) ансамбля. В будущем можно убрать.

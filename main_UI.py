@@ -196,6 +196,7 @@ if submit:
         name_of_y_true = 'true'
         for well_name_ois in selected_wells_ois:
             well_name_normal = session.wellnames_key_ois[well_name_ois]
+            rewrite_fact_data_from_wolfram(session)
             input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
@@ -210,7 +211,8 @@ if submit:
             if not ensemble_result.empty:
                 extract_data_ensemble(ensemble_result, session, well_name_normal)
 
-    session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
+    if is_calc_ftor or is_calc_wolfram:
+        session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
 
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')

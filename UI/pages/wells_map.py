@@ -1,2 +1,2 @@
-def show():
+def show(session):
     pass

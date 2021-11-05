@@ -33,14 +33,16 @@ def show(session):
     )
     well_name_ois = session.wellnames_key_normal[well_to_draw]
 
-    well = session.preprocessor.create_wells_ftor([well_name_ois])[0]
-    df_chess = well.df_chess
+    well_wolfram = session.preprocessor.create_wells_wolfram([well_name_ois])[0]
+    well_ftor = session.preprocessor.create_wells_ftor([well_name_ois])[0]
+    events = well_ftor.df_chess['Мероприятие']
     fig = create_well_plot_UI(
         session.statistics,
-        df_chess,
+        well_wolfram,
         session.dates,
         session.date_test,
         session.dates_test_period[0],
+        events,
         well_to_draw,
         ConfigStatistics.MODEL_NAMES,
         ensemble_interval=session.ensemble_interval
