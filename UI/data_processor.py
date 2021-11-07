@@ -59,19 +59,21 @@ def extract_data_wolfram(_calculator_wolfram, session):
 
 
 def extract_data_CRM(df_CRM, session):
-    for well in session.preprocessor.create_wells_ftor(session.selected_wells_ois):
+    for well in session.was_preprocessor.create_wells_wolfram(session.selected_wells_ois):
         if well.well_name in df_CRM.columns:
             if 'CRM' not in session.statistics:
                 session.statistics['CRM'] = pd.DataFrame(index=session.dates)
+            df_true = well.df
+            rates_oil_true = df_true[well.NAME_RATE_OIL]
             well_name_normal = session.wellnames_key_ois[well.well_name]
             session.statistics['CRM'][f'{well_name_normal}_liq_true'] = np.nan
             session.statistics['CRM'][f'{well_name_normal}_liq_pred'] = np.nan
-            session.statistics['CRM'][f'{well_name_normal}_oil_true'] = well.df_chess['Дебит нефти']
+            session.statistics['CRM'][f'{well_name_normal}_oil_true'] = rates_oil_true
             session.statistics['CRM'][f'{well_name_normal}_oil_pred'] = df_CRM[well.well_name]
 
 
 def rewrite_fact_data_from_wolfram(session):
-    for _well_wolfram in session.preprocessor.create_wells_wolfram(session.selected_wells_ois):
+    for _well_wolfram in session.was_preprocessor.create_wells_wolfram(session.selected_wells_ois):
         df_true = _well_wolfram.df
         rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
         rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]

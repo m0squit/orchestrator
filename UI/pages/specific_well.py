@@ -4,19 +4,6 @@ import streamlit as st
 
 from statistics_explorer.plots import create_well_plot_UI
 from statistics_explorer.config import ConfigStatistics
-from UI.config import FTOR_DECODE
-
-
-def convert_to_readable(res: dict):
-    if 'boundary_code' in res.keys():
-        # Расшифровка типа границ и типа скважины
-        res['boundary_code'] = FTOR_DECODE['boundary_code'][res['boundary_code']]
-        res['kind_code'] = FTOR_DECODE['kind_code'][res['kind_code']]
-        # Расшифровка названий параметров адаптации
-        for key in FTOR_DECODE.keys():
-            if key in res.keys():
-                res[FTOR_DECODE[key]['label']] = res.pop(key)
-    return res
 
 
 def show(session):
@@ -25,35 +12,34 @@ def show(session):
                 'На данный момент ни одна скважина не рассчитана.\n'
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
         return
-
     well_to_draw = st.selectbox(
             label='Скважина',
             options=sorted(session.selected_wells_norm),
             key='well_to_calc'
     )
     well_name_ois = session.wellnames_key_normal[well_to_draw]
-
-    well_wolfram = session.preprocessor.create_wells_wolfram([well_name_ois])[0]
-    well_ftor = session.preprocessor.create_wells_ftor([well_name_ois])[0]
-    events = well_ftor.df_chess['Мероприятие']
+    well_ftor = session.was_preprocessor.create_wells_ftor([well_name_ois])[0]
+    well_wolfram = session.was_preprocessor.create_wells_wolfram([well_name_ois])[0]
+    well_wolfram_df = well_wolfram.df.copy().reindex(session.dates)
     fig = create_well_plot_UI(
-        session.statistics,
-        well_wolfram,
-        session.dates,
-        session.date_test,
-        session.dates_test_period[0],
-        events,
-        well_to_draw,
-        ConfigStatistics.MODEL_NAMES,
+        statistics=session.statistics,
+        dates=session.dates,
+        date_test=session.date_test,
+        date_test_ensemble=session.dates_test_period[0],
+        events=well_ftor.df_chess['Мероприятие'],
+        y_liq_true=well_wolfram_df[well_wolfram.NAME_RATE_LIQ],
+        y_oil_true=well_wolfram_df[well_wolfram.NAME_RATE_OIL],
+        pressure=well_wolfram_df[well_wolfram.NAME_PRESSURE],
+        wellname=well_to_draw,
+        MODEL_NAMES=ConfigStatistics.MODEL_NAMES,
         ensemble_interval=session.ensemble_interval
     )
     # Построение графика
     st.plotly_chart(fig, use_container_width=True)
     # Вывод параметров адаптации модели пьезопроводности
     if session.was_calc_ftor and well_to_draw in session.adapt_params:
-        result = session.adapt_params[well_to_draw][0].copy()
-        result = convert_to_readable(result)
-        st.write('Результаты адаптации модели пьезопроводности:', result)
+        st.write('Результаты адаптации модели пьезопроводности:', session.adapt_params[well_to_draw])
+    st.write(session.adapt_params)
     # # Подготовка данных к выгрузке
     # buffer = io.BytesIO()
     # with pd.ExcelWriter(buffer) as writer:

@@ -5,6 +5,7 @@ import UI.pages.analytics
 import UI.pages.specific_well
 
 from config import Config as ConfigPreprocessor
+from preprocessor import Preprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
@@ -14,12 +15,6 @@ def initialize_session(_session):
     _session.selected_wells_ois = []
     _session.selected_wells_norm = []
     _session.analytics_plots = {}
-    _session.df_draw_liq = {}
-    _session.df_draw_oil = {}
-    _session.df_draw_ensemble = {}
-    _session.events = {}
-    _session.fig = {}
-    _session.pressure = {}
     _session.statistics = {}
     _session.statistics_df_test = {}
     _session.ensemble_interval = pd.DataFrame()
@@ -147,8 +142,8 @@ with st.sidebar:
         date_test,
         date_end,
     )
-    session.preprocessor = run_preprocessor(config)
-    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(session.preprocessor.well_names)
+    preprocessor = run_preprocessor(config)
+    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(preprocessor.well_names)
     wells_to_calc = st.multiselect(label='Скважина',
                                    options=['Все скважины'] + list(session.wellnames_key_normal.keys()),
                                    key='wells_to_calc')
@@ -159,44 +154,43 @@ with st.sidebar:
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
     submit = st.button(label='Запустить расчеты')
 
-if submit:
-    if not wells_to_calc:
-        st.error('Не выбрано ни одной скважины для расчета.')
-    if CRM_xlsx is None:
-        session.pop('df_CRM', None)
-    else:
-        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        session['df_CRM'] = df_CRM
+if submit and wells_to_calc:
+    session.adapt_params = {}
     session.statistics = {}
     session.statistics_df_test = {}
     session.ensemble_interval = pd.DataFrame()
     session.selected_wells_norm = wells_to_calc.copy()
     session.selected_wells_ois = selected_wells_ois.copy()
+    session.was_preprocessor = Preprocessor(config)
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
     session.dates = pd.date_range(date_start, date_end, freq='D')
     if is_calc_ftor:
-        calculator_ftor = calculate_ftor(session.preprocessor, selected_wells_ois, session.constraints)
+        calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session)
     if is_calc_wolfram:
-        calculator_wolfram = calculate_wolfram(session.preprocessor,
+        calculator_wolfram = calculate_wolfram(preprocessor,
                                                selected_wells_ois,
                                                forecast_days_number,
                                                session.estimator_name_group,
                                                session.estimator_name_well,
                                                session.is_deep_grid_search,
                                                session.window_sizes,
-                                               session.quantiles,
-                                               )
+                                               session.quantiles)
         extract_data_wolfram(calculator_wolfram, session)
-    if 'df_CRM' in session:
+    if CRM_xlsx is None:
+        session.pop('df_CRM', None)
+    else:
+        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
+        session['df_CRM'] = df_CRM
         extract_data_CRM(session['df_CRM'], session)
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
         name_of_y_true = 'true'
-        for well_name_ois in selected_wells_ois:
+        for ind, well_name_ois in enumerate(selected_wells_ois):
             well_name_normal = session.wellnames_key_ois[well_name_ois]
-            rewrite_fact_data_from_wolfram(session)
+            # rewrite_fact_data_from_wolfram(session, preprocessor)
+            print(f'\nWell {ind} out of {len(selected_wells_ois)}\n')
             input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
@@ -214,6 +208,8 @@ if submit:
     if is_calc_ftor or is_calc_wolfram:
         session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
 
+if submit and not wells_to_calc:
+    st.info('Не выбрано ни одной скважины для расчета.')
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
 page = PAGES[selection]
