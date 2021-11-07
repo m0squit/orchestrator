@@ -44,7 +44,8 @@ def show(session):
     with pd.ExcelWriter(buffer) as writer:
         for key in session.statistics:
             session.statistics[key].to_excel(writer, sheet_name=key)
-        session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
+        if not session.ensemble_interval.empty:
+            session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
     # Кнопка экспорта результатов
     st.download_button(
         label="Экспорт результатов по всем скважинам",

@@ -6,9 +6,10 @@ import pandas as pd
 def extract_data_ftor(_calculator_ftor, session):
     session.statistics['ftor'] = pd.DataFrame(index=session.dates)
     for well_ftor in _calculator_ftor.wells:
-        _well_name_ois = well_ftor.well_name
+        well_name_ois = well_ftor.well_name
+        well_name_normal = session.wellnames_key_ois[well_name_ois]
         res_ftor = well_ftor.results
-        session.adapt_params[_well_name_ois] = res_ftor.adap_and_fixed_params
+        session.adapt_params[well_name_normal] = res_ftor.adap_and_fixed_params
         # Жидкость. Полный ряд (train + test)
         rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
         rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
@@ -17,7 +18,6 @@ def extract_data_ftor(_calculator_ftor, session):
         rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
         # Фактические данные для визуализации
         df = well_ftor.df_chess
-        well_name_normal = session.wellnames_key_ois[_well_name_ois]
         session.statistics['ftor'][f'{well_name_normal}_liq_true'] = df['Дебит жидкости']
         session.statistics['ftor'][f'{well_name_normal}_liq_pred'] = rates_liq_ftor
         session.statistics['ftor'][f'{well_name_normal}_oil_true'] = df['Дебит нефти']
