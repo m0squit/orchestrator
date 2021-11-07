@@ -1,6 +1,19 @@
 import datetime
 import numpy as np
 import pandas as pd
+from UI.config import FTOR_DECODE
+
+
+def convert_params_to_readable(res: dict):
+    if 'boundary_code' in res.keys():
+        # Расшифровка типа границ и типа скважины
+        res['boundary_code'] = FTOR_DECODE['boundary_code'][res['boundary_code']]
+        res['kind_code'] = FTOR_DECODE['kind_code'][res['kind_code']]
+        # Расшифровка названий параметров адаптации
+        for key in FTOR_DECODE.keys():
+            if key in res.keys():
+                res[FTOR_DECODE[key]['label']] = res.pop(key)
+    return res
 
 
 def extract_data_ftor(_calculator_ftor, session):
@@ -9,7 +22,8 @@ def extract_data_ftor(_calculator_ftor, session):
         well_name_ois = well_ftor.well_name
         well_name_normal = session.wellnames_key_ois[well_name_ois]
         res_ftor = well_ftor.results
-        session.adapt_params[well_name_normal] = res_ftor.adap_and_fixed_params
+        adapt_params = res_ftor.adap_and_fixed_params[0]
+        session.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params.copy())
         # Жидкость. Полный ряд (train + test)
         rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
         rates_liq_ftor = pd.to_numeric(rates_liq_ftor)

@@ -46,6 +46,9 @@ def show(session):
             session.statistics[key].to_excel(writer, sheet_name=key)
         if not session.ensemble_interval.empty:
             session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
+        if session.adapt_params:
+            df_adapt_params = pd.DataFrame(session.adapt_params)
+            df_adapt_params.to_excel(writer, sheet_name='adapt_params')
     # Кнопка экспорта результатов
     st.download_button(
         label="Экспорт результатов по всем скважинам",
