@@ -34,11 +34,11 @@ def update_ftor_constraints(session):
 
 
 def update_ML_params(session):
-    session.estimator_name_group = ML_FULL_ABBR[session.estimator_name_group_]
-    session.estimator_name_well = ML_FULL_ABBR[session.estimator_name_well_]
-    session.is_deep_grid_search = YES_NO[session.is_deep_grid_search_]
-    session.window_sizes = [int(ws) for ws in session.window_sizes_.split()]
-    session.quantiles = [float(q) for q in session.quantiles_.split()]
+    session['estimator_name_group'] = ML_FULL_ABBR[session['estimator_name_group_']]
+    session['estimator_name_well'] = ML_FULL_ABBR[session['estimator_name_well_']]
+    session['is_deep_grid_search'] = YES_NO[session['is_deep_grid_search_']]
+    session['window_sizes'] = [int(ws) for ws in session['window_sizes_'].split()]
+    session['quantiles'] = [float(q) for q in session['quantiles_'].split()]
 
 
 def update_ensemble_params(session):
