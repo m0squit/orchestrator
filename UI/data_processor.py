@@ -58,8 +58,8 @@ def extract_data_wolfram(_calculator_wolfram, session):
         session.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
 
 
-def extract_data_CRM(df_CRM, session):
-    for well in session.was_preprocessor.create_wells_wolfram(session.selected_wells_ois):
+def extract_data_CRM(df_CRM, session, wells_wolfram):
+    for well in wells_wolfram:
         if well.well_name in df_CRM.columns:
             if 'CRM' not in session.statistics:
                 session.statistics['CRM'] = pd.DataFrame(index=session.dates)
@@ -72,18 +72,12 @@ def extract_data_CRM(df_CRM, session):
             session.statistics['CRM'][f'{well_name_normal}_oil_pred'] = df_CRM[well.well_name]
 
 
-def rewrite_fact_data_from_wolfram(session):
-    for _well_wolfram in session.was_preprocessor.create_wells_wolfram(session.selected_wells_ois):
-        df_true = _well_wolfram.df
-        rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
-        rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        well_name_normal = session.wellnames_key_ois[_well_wolfram.well_name]
-        if session.was_calc_ftor and f'{well_name_normal}_oil_true' in session.statistics['ftor']:
-            session.statistics['ftor'][f'{well_name_normal}_liq_true'] = rates_liq_true
-            session.statistics['ftor'][f'{well_name_normal}_oil_true'] = rates_oil_true
-        if 'df_CRM' in session and f'{well_name_normal}_oil_true' in session.statistics['CRM']:
-            session.statistics['CRM'][f'{well_name_normal}_liq_true'] = rates_liq_true
-            session.statistics['CRM'][f'{well_name_normal}_oil_true'] = rates_oil_true
+def convert_tones_to_m3_for_wolfram(session, wells_ftor):
+    for well_ftor in wells_ftor:
+        density_oil = well_ftor.density_oil
+        well_name_normal = session.wellnames_key_ois[well_ftor.well_name]
+        session.statistics['wolfram'][f'{well_name_normal}_oil_true'] /= density_oil
+        session.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
 
 
 def prepare_df_for_ensemble(session, well_name_normal, name_of_y_true):

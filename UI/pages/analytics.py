@@ -20,7 +20,7 @@ def show(session):
     # Выберите, что подать в конфиг ниже: well_names_common или well_names_all.
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=session.statistics_df_test,
-        field_name=session.field_name,
+        field_name=session.was_config.field_name,
         date_start=session.dates_test_period[0],
         date_end=session.dates_test_period[-1],
         well_names=session.well_names_all,
@@ -28,16 +28,15 @@ def show(session):
         exclude_wells=[],
         bin_size=10
     )
-    session.analytics_plots, session.config_stat = analytics_plots, config_stat
-    available_plots = [*session.analytics_plots]
+    available_plots = [*analytics_plots]
     plots_to_draw = [plot_name for plot_name in available_plots
-                     if plot_name not in session.config_stat.ignore_plots]
+                     if plot_name not in config_stat.ignore_plots]
     stat_to_draw = st.selectbox(
         label='Статистика',
         options=sorted(plots_to_draw),
         key='stat_to_draw'
     )
-    st.plotly_chart(session.analytics_plots[stat_to_draw], use_container_width=True)
+    st.plotly_chart(analytics_plots[stat_to_draw], use_container_width=True)
 
     # Подготовка данных к выгрузке
     buffer = io.BytesIO()
@@ -53,6 +52,6 @@ def show(session):
     st.download_button(
         label="Экспорт результатов по всем скважинам",
         data=buffer,
-        file_name=f'Все результаты {session.field_name}.xlsx',
+        file_name=f'Все результаты {session.was_config.field_name}.xlsx',
         mime='text/csv',
     )

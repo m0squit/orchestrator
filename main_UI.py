@@ -3,27 +3,31 @@ import UI.pages.models_settings
 import UI.pages.wells_map
 import UI.pages.analytics
 import UI.pages.specific_well
+import UI.pages.resume_app
 
 from config import Config as ConfigPreprocessor
-from preprocessor import Preprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 
 
 def initialize_session(_session):
+    _session.dates = None
+    _session.dates_test_period = None
+    _session.ensemble_interval = pd.DataFrame()
     _session.selected_wells_ois = []
     _session.selected_wells_norm = []
-    _session.analytics_plots = {}
     _session.statistics = {}
     _session.statistics_df_test = {}
-    _session.ensemble_interval = pd.DataFrame()
+    _session.was_calc_ftor = False
+    _session.was_calc_wolfram = False
+    _session.was_calc_ensemble = False
+    _session.was_config = None
+    _session.wellnames_key_normal = None
+    _session.wellnames_key_ois = None
     # Ftor model
     _session.adapt_params = {}
     _session.constraints = {}
-    session.was_calc_ftor = False
-    session.was_calc_wolfram = False
-    session.was_calc_ensemble = False
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         _session[f'{param_name}_is_adapt'] = True
         _session[f'{param_name}_lower'] = param_dict['lower_val']
@@ -44,13 +48,8 @@ def initialize_session(_session):
     _session.target_accept = 0.95
 
 
-def clear_session():
-    st.session_state.wells_to_calc = []
-    st.session_state.selected_wells_ois = []
-    st.session_state.selected_wells_norm = []
-    session.was_calc_ftor = False
-    session.was_calc_wolfram = False
-    session.was_calc_ensemble = False
+def clear_wells_to_calc(_session):
+    _session.wells_to_calc = []
 
 
 def parse_well_names(well_names_ois):
@@ -76,6 +75,7 @@ PAGES = {
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,
+    "Импорт/экспорт расчетов": UI.pages.resume_app,
 }
 
 # Инициализация значений сессии st.session_state
@@ -106,7 +106,8 @@ with st.sidebar:
         label='Месторождение',
         options=FIELDS_SHOPS.keys(),
         key='field_name',
-        on_change=clear_session
+        on_change=clear_wells_to_calc,
+        args=(session,)
     )
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
@@ -135,37 +136,35 @@ with st.sidebar:
     )
     adaptation_days_number = (date_test - date_start).days
     forecast_days_number = (date_end - date_test).days
-    config = ConfigPreprocessor(
-        field_name,
-        FIELDS_SHOPS[field_name],
-        date_start,
-        date_test,
-        date_end,
-    )
+    config = ConfigPreprocessor(field_name, FIELDS_SHOPS[field_name],
+                                date_start, date_test, date_end,)
     preprocessor = run_preprocessor(config)
-    session.wellnames_key_normal, session.wellnames_key_ois = parse_well_names(preprocessor.well_names)
+    wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names)
     wells_to_calc = st.multiselect(label='Скважина',
-                                   options=['Все скважины'] + list(session.wellnames_key_normal.keys()),
+                                   options=['Все скважины'] + list(wellnames_key_normal.keys()),
                                    key='wells_to_calc')
     if 'Все скважины' in wells_to_calc:
-        wells_to_calc = list(session.wellnames_key_normal.keys())
-    selected_wells_ois = [session.wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
+        wells_to_calc = list(wellnames_key_normal.keys())
+    selected_wells_ois = [wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
     submit = st.button(label='Запустить расчеты')
 
 if submit and wells_to_calc:
     session.adapt_params = {}
+    session.dates = pd.date_range(date_start, date_end, freq='D')
+    session.dates_test_period = None
+    session.ensemble_interval = pd.DataFrame()
     session.statistics = {}
     session.statistics_df_test = {}
-    session.ensemble_interval = pd.DataFrame()
     session.selected_wells_norm = wells_to_calc.copy()
     session.selected_wells_ois = selected_wells_ois.copy()
-    session.was_preprocessor = Preprocessor(config)
+    session.was_config = config
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
-    session.dates = pd.date_range(date_start, date_end, freq='D')
+    session.wellnames_key_normal = wellnames_key_normal.copy()
+    session.wellnames_key_ois = wellnames_key_ois.copy()
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session)
@@ -179,18 +178,18 @@ if submit and wells_to_calc:
                                                session.window_sizes,
                                                session.quantiles)
         extract_data_wolfram(calculator_wolfram, session)
+        convert_tones_to_m3_for_wolfram(session, preprocessor.create_wells_ftor(selected_wells_ois))
     if CRM_xlsx is None:
         session.pop('df_CRM', None)
     else:
         df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
         session['df_CRM'] = df_CRM
-        extract_data_CRM(session['df_CRM'], session)
+        extract_data_CRM(session['df_CRM'], session, preprocessor.create_wells_wolfram(selected_wells_ois))
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
         name_of_y_true = 'true'
         for ind, well_name_ois in enumerate(selected_wells_ois):
-            well_name_normal = session.wellnames_key_ois[well_name_ois]
-            # rewrite_fact_data_from_wolfram(session, preprocessor)
-            print(f'\nWell {ind} out of {len(selected_wells_ois)}\n')
+            print(f'\nWell {ind + 1} out of {len(selected_wells_ois)}\n')
+            well_name_normal = wellnames_key_ois[well_name_ois]
             input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,

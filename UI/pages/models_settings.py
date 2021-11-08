@@ -2,52 +2,52 @@ import streamlit as st
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
-def update_ftor_constraints(session):
+def update_ftor_constraints(write_from, write_to):
     # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
     #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        session[f'{param_name}_is_adapt'] = session[f'{param_name}_is_adapt_']
-        session[f'{param_name}_lower'] = session[f'{param_name}_lower_']
-        session[f'{param_name}_default'] = session[f'{param_name}_default_']
-        session[f'{param_name}_upper'] = session[f'{param_name}_upper_']
+        write_to[f'{param_name}_is_adapt'] = write_from[f'{param_name}_is_adapt_']
+        write_to[f'{param_name}_lower'] = write_from[f'{param_name}_lower_']
+        write_to[f'{param_name}_default'] = write_from[f'{param_name}_default_']
+        write_to[f'{param_name}_upper'] = write_from[f'{param_name}_upper_']
 
     discrete_params = ['boundary_code', 'number_fractures']
     constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         # Если параметр нужно адаптировать
-        if session[f'{param_name}_is_adapt']:
+        if write_to[f'{param_name}_is_adapt']:
             if param_name in discrete_params:
                 constraints[param_name] = {
                     'is_discrete': True,
-                    'bounds': [i for i in range(session[f'{param_name}_lower'],
-                                                session[f'{param_name}_upper'] + 1)]
+                    'bounds': [i for i in range(write_to[f'{param_name}_lower'],
+                                                write_to[f'{param_name}_upper'] + 1)]
                 }
             else:
                 constraints[param_name] = {
                     'is_discrete': False,
-                    'bounds': [session[f'{param_name}_lower'], session[f'{param_name}_upper']]
+                    'bounds': [write_to[f'{param_name}_lower'], write_to[f'{param_name}_upper']]
                 }
         else:
             # Если значение параметра нужно зафиксировать
-            constraints[param_name] = session[f'{param_name}_default']
-    session.constraints = constraints
+            constraints[param_name] = write_to[f'{param_name}_default']
+    write_to.constraints = constraints
 
 
-def update_ML_params(session):
-    session['estimator_name_group'] = ML_FULL_ABBR[session['estimator_name_group_']]
-    session['estimator_name_well'] = ML_FULL_ABBR[session['estimator_name_well_']]
-    session['is_deep_grid_search'] = YES_NO[session['is_deep_grid_search_']]
-    session['window_sizes'] = [int(ws) for ws in session['window_sizes_'].split()]
-    session['quantiles'] = [float(q) for q in session['quantiles_'].split()]
+def update_ML_params(write_from, write_to):
+    write_to['estimator_name_group'] = ML_FULL_ABBR[write_from['estimator_name_group_']]
+    write_to['estimator_name_well'] = ML_FULL_ABBR[write_from['estimator_name_well_']]
+    write_to['is_deep_grid_search'] = YES_NO[write_from['is_deep_grid_search_']]
+    write_to['window_sizes'] = [int(ws) for ws in write_from['window_sizes_'].split()]
+    write_to['quantiles'] = [float(q) for q in write_from['quantiles_'].split()]
 
 
-def update_ensemble_params(session):
-    session['interval_probability'] = session['interval_probability_']
-    session['draws'] = session['draws_']
-    session['tune'] = session['tune_']
-    session['chains'] = session['chains_']
-    session['target_accept'] = session['target_accept_']
-    session['adaptation_days_number'] = session['adaptation_days_number_']
+def update_ensemble_params(write_from, write_to):
+    write_to['interval_probability'] = write_from['interval_probability_']
+    write_to['draws'] = int(write_from['draws_'])
+    write_to['tune'] = int(write_from['tune_'])
+    write_to['chains'] = int(write_from['chains_'])
+    write_to['target_accept'] = float(write_from['target_accept_'])
+    write_to['adaptation_days_number'] = int(write_from['adaptation_days_number_'])
 
 
 def show(session):
@@ -86,7 +86,10 @@ def show(session):
                     key=f'{param_name}_upper_',
                     help='включительно'
                 )
-            submit_bounds = st.form_submit_button('Применить', on_click=update_ftor_constraints, args=(session,))
+            submit_bounds = st.form_submit_button('Применить',
+                                                  on_click=update_ftor_constraints,
+                                                  kwargs={'write_from': session,
+                                                          'write_to': session})
         button_use_GDIS = st.button('Использовать границы из ГДИС')
         if button_use_GDIS:
             session.constraints = {}
@@ -96,7 +99,7 @@ def show(session):
             st.selectbox(
                 label='Модель на 1-ом уровне',
                 options=ML_FULL_ABBR.keys(),
-                index=1,  # LinearSVR
+                index=2,  # XGBoost
                 help="""
                     Данная модель использует для обучения только входные данные.
                     Подробнее о моделях см. [sklearn](https://scikit-learn.org) 
@@ -107,7 +110,7 @@ def show(session):
             st.selectbox(
                 label='Модель на 2-ом уровне',
                 options=ML_FULL_ABBR.keys(),
-                index=0,  # ElasticNet
+                index=1,  # LinearSVR
                 help="""
                     Данная модель использует для обучения как входные данные, 
                     так и результаты работы модели 1-ого уровня.
@@ -141,7 +144,10 @@ def show(session):
                 key='quantiles_'
             )
 
-            submit_params = st.form_submit_button('Применить', on_click=update_ML_params, args=(session,))
+            submit_params = st.form_submit_button('Применить',
+                                                  on_click=update_ML_params,
+                                                  kwargs={'write_from': session,
+                                                          'write_to': session})
 
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
@@ -201,4 +207,7 @@ def show(session):
                         Higher values like 0.9 or 0.95 often work better for problematic posteriors""",
                 key='target_accept_'
             )
-            submit_params = st.form_submit_button('Применить', on_click=update_ensemble_params, args=(session,))
+            submit_params = st.form_submit_button('Применить',
+                                                  on_click=update_ensemble_params,
+                                                  kwargs={'write_from': session,
+                                                          'write_to': session})
