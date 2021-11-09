@@ -21,19 +21,10 @@ keys_to_update = [
 
 
 def show(session):
-    try:
-        session_to_save = {key: session[key] for key in session}
-        session_to_save = pickle.dumps(session_to_save)
-        st.download_button(
-            label="Экспорт состояния программы",
-            data=session_to_save,
-            file_name=f'session_to_save.pickle',
-            mime='application/octet-stream',
-        )
-    except pickle.PicklingError:
-        st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
-                 'экспортировать с вкладки "Аналитика"')
-
+    st.subheader("Импорт готового состояния программы")
+    st.write("При импорте приложение попытается восстановить данные для всех вкладок."
+             "\n\nОднако не всегда возможно восстановить данные для вкладки **Настройки моделей**. "
+             "В таких случаях вкладки **Аналитика** и **Скважина** все еще будут работать.")
     uploaded_session = st.file_uploader('Загрузить готовое состояние программы',
                                         type='pickle',
                                         help="""Входной файл должен иметь расширение **.pickle**""")
@@ -69,3 +60,17 @@ def show(session):
         except:
             st.info('Не удалось загрузить настройки ансамбля.'
                     ' Используются настройки по умолчанию.')
+
+    st.subheader("Экспорт текущего состояния программы")
+    try:
+        session_to_save = {key: session[key] for key in session}
+        session_to_save = pickle.dumps(session_to_save)
+        st.download_button(
+            label="Экспорт текущего состояния программы",
+            data=session_to_save,
+            file_name=f'session_to_save.pickle',
+            mime='application/octet-stream',
+        )
+    except pickle.PicklingError:
+        st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
+                 'экспортировать с вкладки "Аналитика"')
