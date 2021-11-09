@@ -24,7 +24,7 @@ def show(session):
         statistics=session.statistics,
         dates=session.dates,
         date_test=session.was_config.date_test,
-        date_test_ensemble=session.dates_test_period[0],
+        date_test_if_ensemble=session.dates_test_period[0],
         df_chess=df_chess,
         wellname=well_to_draw,
         MODEL_NAMES=ConfigStatistics.MODEL_NAMES,

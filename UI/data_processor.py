@@ -110,7 +110,7 @@ def extract_data_ensemble(ensemble_df, session, well_name_normal):
 
 def create_statistics_df_test(session):
     dates_test_period = pd.date_range(session.date_test, session.date_end, freq='D')
-    # TODO: обрезка данных по датам(индексу) ансамбля. В будущем можно убрать.
+    # обрезка данных по датам(индексу) ансамбля
     if session.was_calc_ensemble:
         date_start_ensemble = session.date_test + datetime.timedelta(days=session.adaptation_days_number)
         dates_test_period = pd.date_range(date_start_ensemble, session.date_end, freq='D')

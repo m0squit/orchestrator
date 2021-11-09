@@ -15,6 +15,7 @@ def initialize_session(_session):
     _session.dates = None
     _session.dates_test_period = None
     _session.ensemble_interval = pd.DataFrame()
+    _session.exclude_wells = []
     _session.selected_wells_ois = []
     _session.selected_wells_norm = []
     _session.statistics = {}
@@ -46,10 +47,6 @@ def initialize_session(_session):
     _session.tune = 200
     _session.chains = 1
     _session.target_accept = 0.95
-
-
-def clear_wells_to_calc(_session):
-    _session.wells_to_calc = []
 
 
 def parse_well_names(well_names_ois):
@@ -106,7 +103,6 @@ with st.sidebar:
         label='Месторождение',
         options=FIELDS_SHOPS.keys(),
         key='field_name',
-        on_change=clear_wells_to_calc,
         args=(session,)
     )
     date_start = st.date_input(
