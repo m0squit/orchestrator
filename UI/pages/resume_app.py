@@ -46,9 +46,9 @@ def show(session):
             for key in saved_session:
                 if key.endswith('_'):
                     session[key] = saved_session[key]
+            st.success("Расчеты обработаны успешно! Обновлены вкладки **Скважина** и **Аналитика**.")
         except pickle.UnpicklingError as err:
-            st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
-                     'экспортировать с вкладки "Аналитика"', err)
+            st.error('Не удалось восстановить расчеты.', err)
 
         # Обновление параметров моделей на странице UI.pages.models_settings.py
         try:
