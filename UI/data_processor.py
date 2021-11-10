@@ -48,8 +48,8 @@ def extract_data_wolfram(_calculator_wolfram, session):
         df_true = _well_wolfram.df
         rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
         rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        rates_liq_wolfram = pd.concat(objs=[res_wolfram.rates_liq_train, res_wolfram.rates_liq_test])
-        rates_oil_wolfram = pd.concat(objs=[res_wolfram.rates_oil_train, res_wolfram.rates_oil_test])
+        rates_liq_wolfram = res_wolfram.rates_liq_test
+        rates_oil_wolfram = res_wolfram.rates_oil_test
 
         well_name_normal = session.wellnames_key_ois[_well_name_ois]
         session.statistics['wolfram'][f'{well_name_normal}_liq_true'] = rates_liq_true
