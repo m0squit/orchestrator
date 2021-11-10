@@ -12,6 +12,7 @@ from UI.data_processor import *
 
 
 def initialize_session(_session):
+    _session.buffer = None
     _session.dates = None
     _session.dates_test_period = None
     _session.ensemble_interval = pd.DataFrame()
@@ -148,6 +149,7 @@ with st.sidebar:
 
 if submit and wells_to_calc:
     session.adapt_params = {}
+    session.buffer = None
     session.dates = pd.date_range(date_start, date_end, freq='D')
     session.dates_test_period = None
     session.ensemble_interval = pd.DataFrame()
