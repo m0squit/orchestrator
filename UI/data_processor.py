@@ -108,6 +108,21 @@ def extract_data_ensemble(ensemble_df, session, well_name_normal):
     session.ensemble_interval[f'{well_name_normal}_lower'] = ensemble_df['interval_lower']
 
 
+def make_models_stop_well(statistics, well_names):
+    # Зануление значений по моделям, когда фактический дебит равен нулю или NaN
+    for model in statistics:
+        for well_name in well_names:
+            if f'{well_name}_oil_pred' not in statistics[model]:
+                continue
+            liq_zeros = statistics[model][f'{well_name}_liq_true'] == 0
+            liq_nans = statistics[model][f'{well_name}_liq_true'].isna()
+            statistics[model][f'{well_name}_liq_pred'][liq_zeros | liq_nans] = np.nan
+
+            oil_zeros = statistics[model][f'{well_name}_oil_true'] == 0
+            oil_nans = statistics[model][f'{well_name}_oil_true'].isna()
+            statistics[model][f'{well_name}_oil_pred'][oil_zeros | oil_nans] = np.nan
+
+
 def create_statistics_df_test(session):
     dates_test_period = pd.date_range(session.date_test, session.date_end, freq='D')
     # обрезка данных по датам(индексу) ансамбля

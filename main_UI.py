@@ -183,11 +183,12 @@ if submit and wells_to_calc:
         df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
         session['df_CRM'] = df_CRM
         extract_data_CRM(session['df_CRM'], session, preprocessor.create_wells_wolfram(selected_wells_ois))
+    if is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None:
+        make_models_stop_well(session.statistics, session.selected_wells_norm)
     if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
         name_of_y_true = 'true'
-        for ind, well_name_ois in enumerate(selected_wells_ois):
-            print(f'\nWell {ind + 1} out of {len(selected_wells_ois)}\n')
-            well_name_normal = wellnames_key_ois[well_name_ois]
+        for ind, well_name_normal in enumerate(wells_to_calc):
+            print(f'\nWell {ind + 1} out of {len(wells_to_calc)}\n')
             input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
@@ -202,7 +203,7 @@ if submit and wells_to_calc:
             if not ensemble_result.empty:
                 extract_data_ensemble(ensemble_result, session, well_name_normal)
 
-    if is_calc_ftor or is_calc_wolfram:
+    if is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None:
         session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
 
 if submit and not wells_to_calc:
