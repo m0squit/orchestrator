@@ -71,6 +71,7 @@ def show(session):
             file_name=f'session_to_save.pickle',
             mime='application/octet-stream',
         )
-    except pickle.PicklingError:
+    except pickle.PicklingError as err:
         st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
                  'экспортировать с вкладки "Аналитика"')
+        print(err)
