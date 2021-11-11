@@ -1,3 +1,5 @@
+import io
+import pandas as pd
 import pickle
 import streamlit as st
 from UI.pages.models_settings import update_ftor_constraints, update_ML_params, update_ensemble_params
@@ -22,10 +24,10 @@ keys_to_update = [
 
 def show(session):
     st.subheader("Импорт готового состояния программы")
-    st.write("При импорте приложение попытается восстановить данные для всех вкладок."
+    st.write("При импорте приложение попытается восстановить данные для всех вкладок приложения."
              "\n\nОднако не всегда возможно восстановить данные для вкладки **Настройки моделей**. "
              "В таких случаях вкладки **Аналитика** и **Скважина** все еще будут работать.")
-    uploaded_session = st.file_uploader('Загрузить готовое состояние программы',
+    uploaded_session = st.file_uploader('Загрузить готовое состояние программы:',
                                         type='pickle',
                                         help="""Входной файл должен иметь расширение **.pickle**""")
     if uploaded_session is not None:
@@ -40,7 +42,6 @@ def show(session):
             st.success("Расчеты обработаны успешно! Обновлены вкладки **Скважина** и **Аналитика**.")
         except pickle.UnpicklingError as err:
             st.error('Не удалось восстановить расчеты.', err)
-
         # Обновление параметров моделей на странице UI.pages.models_settings.py
         try:
             update_ftor_constraints(write_from=saved_session, write_to=session)
@@ -73,5 +74,29 @@ def show(session):
         )
     except pickle.PicklingError as err:
         st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
-                 'экспортировать с вкладки "Аналитика"')
+                 'экспортировать по кнопке ниже.')
         print(err)
+
+    st.subheader("Экспорт результатов по всем скважинам в Excel-формате (.xlsx)")
+    st.write("""**Внимание!** Результаты, экспортированные в формате .xlsx, будет 
+    невозможно импортировать как состояние программы.""")
+    # Подготовка данных к выгрузке
+    if session.statistics:
+        if session.buffer is None:
+            session.buffer = io.BytesIO()
+            with pd.ExcelWriter(session.buffer) as writer:
+                for key in session.statistics:
+                    session.statistics[key].to_excel(writer, sheet_name=key)
+                if not session.ensemble_interval.empty:
+                    session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
+                if session.adapt_params:
+                    df_adapt_params = pd.DataFrame(session.adapt_params)
+                    df_adapt_params.to_excel(writer, sheet_name='adapt_params')
+        st.download_button(
+            label="Экспорт .xlsx",
+            data=session.buffer,
+            file_name=f'Все результаты {session.was_config.field_name}.xlsx',
+            mime='text/csv',
+        )
+    else:
+        st.info("Кнопка станет доступна, как только будет рассчитана хотя бы одна скважина.")

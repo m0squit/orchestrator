@@ -1,5 +1,3 @@
-import io
-import pandas as pd
 import streamlit as st
 
 from UI.cached_funcs import calculate_statistics_plots
@@ -50,21 +48,3 @@ def show(session):
                      default=sorted(session.exclude_wells),
                      key="mselect_exclude_wells")
     form.form_submit_button("Применить", on_click=update_exclude_wells, args=(session,))
-
-    # Подготовка данных к выгрузке
-    if session.buffer is None:
-        session.buffer = io.BytesIO()
-        with pd.ExcelWriter(session.buffer) as writer:
-            for key in session.statistics:
-                session.statistics[key].to_excel(writer, sheet_name=key)
-            if not session.ensemble_interval.empty:
-                session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
-            if session.adapt_params:
-                df_adapt_params = pd.DataFrame(session.adapt_params)
-                df_adapt_params.to_excel(writer, sheet_name='adapt_params')
-    st.download_button(
-        label="Экспорт результатов по всем скважинам",
-        data=session.buffer,
-        file_name=f'Все результаты {session.was_config.field_name}.xlsx',
-        mime='text/csv',
-    )
