@@ -2,6 +2,9 @@ import io
 import pandas as pd
 import pickle
 import streamlit as st
+from pathlib import Path
+from statistics_explorer.config import ConfigStatistics
+from UI.config import FIELDS_SHOPS
 from UI.pages.models_settings import update_ftor_constraints, update_ML_params, update_ensemble_params
 
 keys_to_update = [
@@ -20,6 +23,17 @@ keys_to_update = [
     'wellnames_key_normal',
     'wellnames_key_ois',
 ]
+
+
+def add_oilfield(oilfield_name, oilfield_shops, oilfield_files):
+    oilfield_shops = [shop.strip() for shop in oilfield_shops.strip().split(',')]
+    FIELDS_SHOPS[oilfield_name] = oilfield_shops
+    path_to_save = Path.cwd() / 'data' / oilfield_name
+    if not path_to_save.exists():
+        path_to_save.mkdir()
+    for file in oilfield_files:
+        with open(path_to_save / file.name, 'wb') as f:
+            f.write(file.getbuffer())
 
 
 def show(session):
@@ -86,17 +100,28 @@ def show(session):
             session.buffer = io.BytesIO()
             with pd.ExcelWriter(session.buffer) as writer:
                 for key in session.statistics:
-                    session.statistics[key].to_excel(writer, sheet_name=key)
+                    session.statistics[key].to_excel(writer, sheet_name=ConfigStatistics.MODEL_NAMES[key])
                 if not session.ensemble_interval.empty:
                     session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
                 if session.adapt_params:
                     df_adapt_params = pd.DataFrame(session.adapt_params)
                     df_adapt_params.to_excel(writer, sheet_name='adapt_params')
-        st.download_button(
-            label="Экспорт .xlsx",
-            data=session.buffer,
-            file_name=f'Все результаты {session.was_config.field_name}.xlsx',
-            mime='text/csv',
-        )
+        st.download_button(label="Экспорт .xlsx",
+                           data=session.buffer,
+                           file_name=f'Все результаты {session.was_config.field_name}.xlsx',
+                           mime='text/csv', )
     else:
         st.info("Кнопка станет доступна, как только будет рассчитана хотя бы одна скважина.")
+
+    st.subheader("Загрузка входных данных по месторождению")
+    oilfield_name = st.text_input('Введите название месторождения', max_chars=30)
+    oilfield_shops = st.text_input('Введите название цехов',
+                                   max_chars=30,
+                                   help="""Введите название цехов в данном месторождении через запятую. 
+                                     Например 'ЦДНГ-4', 'ЦДНГ-2' (H - латинская)""")
+    oilfield_files = st.file_uploader('Загрузить данные по месторождению:',
+                                      accept_multiple_files=True,
+                                      type=['feather', 'xlsm'])
+    button_add_oilfield = st.button('OK')
+    if button_add_oilfield:
+        add_oilfield(oilfield_name, oilfield_shops, oilfield_files)
