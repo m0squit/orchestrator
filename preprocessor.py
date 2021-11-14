@@ -274,6 +274,9 @@ class _CreatorWell(ABC):
         self._df_chess[self._NAME_RATE_LIQ].loc[self._df_chess['sost'] == 'Остановлена'] = 0
         self._df_chess[self._NAME_RATE_OIL].loc[self._df_chess['sost'] == 'Остановлена'] = 0
 
+        if any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
+            raise ValueError(f'There are missing values in input data for column "{self._NAME_PRESSURE}"')
+
     @abstractmethod
     def _set_well(self) -> None:
         pass
