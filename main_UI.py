@@ -67,6 +67,7 @@ st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
+# st.set_option(key='showErrorDetails', value=False)
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,

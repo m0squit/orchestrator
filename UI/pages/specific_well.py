@@ -22,7 +22,6 @@ def show(session):
     df_chess = well_ftor.df_chess
     fig = create_well_plot_UI(
         statistics=session.statistics,
-        dates=session.dates,
         date_test=session.was_config.date_test,
         date_test_if_ensemble=session.dates_test_period[0],
         df_chess=df_chess,

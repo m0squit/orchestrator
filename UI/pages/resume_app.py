@@ -102,10 +102,10 @@ def show(session):
                 for key in session.statistics:
                     session.statistics[key].to_excel(writer, sheet_name=ConfigStatistics.MODEL_NAMES[key])
                 if not session.ensemble_interval.empty:
-                    session.ensemble_interval.to_excel(writer, sheet_name='ensemble_interval')
+                    session.ensemble_interval.to_excel(writer, sheet_name='Доверит. интервал ансамбль')
                 if session.adapt_params:
                     df_adapt_params = pd.DataFrame(session.adapt_params)
-                    df_adapt_params.to_excel(writer, sheet_name='adapt_params')
+                    df_adapt_params.to_excel(writer, sheet_name='Параметры адаптации пьезо')
         st.download_button(label="Экспорт .xlsx",
                            data=session.buffer,
                            file_name=f'Все результаты {session.was_config.field_name}.xlsx',
