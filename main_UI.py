@@ -13,8 +13,6 @@ from UI.data_processor import *
 
 def initialize_session(_session):
     _session.buffer = None
-    _session.dates = None
-    _session.dates_test_period = None
     _session.ensemble_interval = pd.DataFrame()
     _session.exclude_wells = []
     _session.selected_wells_ois = []
@@ -25,6 +23,7 @@ def initialize_session(_session):
     _session.was_calc_wolfram = False
     _session.was_calc_ensemble = False
     _session.was_config = None
+    _session.was_date_test_if_ensemble = None
     _session.wellnames_key_normal = None
     _session.wellnames_key_ois = None
     # Ftor model
@@ -151,8 +150,6 @@ with st.sidebar:
 if submit and wells_to_calc:
     session.adapt_params = {}
     session.buffer = None
-    session.dates = pd.date_range(date_start, date_end, freq='D')
-    session.dates_test_period = None
     session.ensemble_interval = pd.DataFrame()
     session.statistics = {}
     session.statistics_df_test = {}
@@ -162,6 +159,10 @@ if submit and wells_to_calc:
     session.was_calc_ftor = is_calc_ftor
     session.was_calc_wolfram = is_calc_wolfram
     session.was_calc_ensemble = is_calc_ensemble
+    session.was_date_start = date_start
+    session.was_date_test = date_test
+    session.was_date_test_if_ensemble = date_test + datetime.timedelta(days=session.adaptation_days_number)
+    session.was_date_end = date_end
     session.wellnames_key_normal = wellnames_key_normal.copy()
     session.wellnames_key_ois = wellnames_key_ois.copy()
     if is_calc_ftor:
@@ -205,7 +206,7 @@ if submit and wells_to_calc:
                 extract_data_ensemble(ensemble_result, session, well_name_normal)
 
     if is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None:
-        session.statistics_df_test, session.dates_test_period = create_statistics_df_test(session)
+        session.statistics_df_test = create_statistics_df_test(session)
 
 if submit and not wells_to_calc:
     st.info('Не выбрано ни одной скважины для расчета.')

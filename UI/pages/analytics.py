@@ -24,8 +24,8 @@ def show(session):
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=session.statistics_df_test,
         field_name=session.was_config.field_name,
-        date_start=session.dates_test_period[0],
-        date_end=session.dates_test_period[-1],
+        date_start=session.was_date_test_if_ensemble,
+        date_end=session.was_date_end,
         well_names=well_names_for_statistics,
         use_abs=False,
         exclude_wells=session.exclude_wells,

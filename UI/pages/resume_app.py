@@ -9,8 +9,6 @@ from UI.pages.models_settings import update_ftor_constraints, update_ML_params, 
 
 keys_to_update = [
     'adapt_params',
-    'dates',
-    'dates_test_period',
     'ensemble_interval',
     'selected_wells_norm',
     'selected_wells_ois',
@@ -20,6 +18,11 @@ keys_to_update = [
     'was_calc_ftor',
     'was_calc_wolfram',
     'was_calc_ensemble',
+    'was_calc_ensemble',
+    'was_date_start',
+    'was_date_test',
+    'was_date_test_if_ensemble',
+    'was_date_end',
     'wellnames_key_normal',
     'wellnames_key_ois',
 ]

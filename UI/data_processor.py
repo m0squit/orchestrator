@@ -17,7 +17,8 @@ def convert_params_to_readable(res: dict):
 
 
 def extract_data_ftor(_calculator_ftor, session):
-    session.statistics['ftor'] = pd.DataFrame(index=session.dates)
+    dates = pd.date_range(session.was_date_start, session.was_date_end, freq='D').date
+    session.statistics['ftor'] = pd.DataFrame(index=dates)
     for well_ftor in _calculator_ftor.wells:
         well_name_ois = well_ftor.well_name
         well_name_normal = session.wellnames_key_ois[well_name_ois]
@@ -39,7 +40,8 @@ def extract_data_ftor(_calculator_ftor, session):
 
 
 def extract_data_wolfram(_calculator_wolfram, session):
-    session.statistics['wolfram'] = pd.DataFrame(index=session.dates)
+    dates = pd.date_range(session.was_date_start, session.was_date_end, freq='D').date
+    session.statistics['wolfram'] = pd.DataFrame(index=dates)
     for _well_wolfram in _calculator_wolfram.wells:
         _well_name_ois = _well_wolfram.well_name
         res_wolfram = _well_wolfram.results
@@ -59,10 +61,11 @@ def extract_data_wolfram(_calculator_wolfram, session):
 
 
 def extract_data_CRM(df_CRM, session, wells_wolfram):
+    dates = pd.date_range(session.was_date_start, session.was_date_end, freq='D').date
     for well in wells_wolfram:
         if well.well_name in df_CRM.columns:
             if 'CRM' not in session.statistics:
-                session.statistics['CRM'] = pd.DataFrame(index=session.dates)
+                session.statistics['CRM'] = pd.DataFrame(index=dates)
             df_true = well.df
             rates_oil_true = df_true[well.NAME_RATE_OIL]
             well_name_normal = session.wellnames_key_ois[well.well_name]
@@ -84,8 +87,8 @@ def prepare_df_for_ensemble(session, well_name_normal, name_of_y_true):
     models = list(session.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
-    dates_test_period = pd.date_range(session.date_test, session.date_end, freq='D').date
-    input_df_for_ensemble = pd.DataFrame(index=dates_test_period)
+    dates_test = pd.date_range(session.was_date_test, session.was_date_end, freq='D').date
+    input_df_for_ensemble = pd.DataFrame(index=dates_test)
     for model in models:
         if f'{well_name_normal}_oil_pred' in session.statistics[model]:
             input_df_for_ensemble[name_of_y_true] = session.statistics[model][f'{well_name_normal}_oil_true']
@@ -94,16 +97,16 @@ def prepare_df_for_ensemble(session, well_name_normal, name_of_y_true):
 
 
 def extract_data_ensemble(ensemble_df, session, well_name_normal):
-    # date_range_test = pd.date_range(session.date_test, session.date_end, freq='D').date
+    dates = pd.date_range(session.was_date_start, session.was_date_end, freq='D').date
     if 'ensemble' not in session.statistics:
-        session.statistics['ensemble'] = pd.DataFrame(index=session.dates)
+        session.statistics['ensemble'] = pd.DataFrame(index=dates)
     session.statistics['ensemble'][f'{well_name_normal}_liq_true'] = np.nan
     session.statistics['ensemble'][f'{well_name_normal}_liq_pred'] = np.nan
     session.statistics['ensemble'][f'{well_name_normal}_oil_true'] = ensemble_df['true']
     session.statistics['ensemble'][f'{well_name_normal}_oil_pred'] = ensemble_df['ensemble']
 
     if 'ensemble_intervals' not in session:
-        session['ensemble_intervals'] = pd.DataFrame(index=session.dates)
+        session['ensemble_intervals'] = pd.DataFrame(index=dates)
     session.ensemble_interval[f'{well_name_normal}_upper'] = ensemble_df['interval_upper']
     session.ensemble_interval[f'{well_name_normal}_lower'] = ensemble_df['interval_lower']
 
@@ -124,13 +127,12 @@ def make_models_stop_well(statistics, well_names):
 
 
 def create_statistics_df_test(session):
-    dates_test_period = pd.date_range(session.date_test, session.date_end, freq='D')
+    dates_test_if_ensemble = pd.date_range(session.was_date_test, session.was_date_end, freq='D')
     # обрезка данных по датам(индексу) ансамбля
     if session.was_calc_ensemble:
-        date_start_ensemble = session.date_test + datetime.timedelta(days=session.adaptation_days_number)
-        dates_test_period = pd.date_range(date_start_ensemble, session.date_end, freq='D')
+        dates_test_if_ensemble = pd.date_range(session.was_date_test_if_ensemble, session.was_date_end, freq='D')
 
     statistics_df_test = {}
     for key in session.statistics:
-        statistics_df_test[key] = session.statistics[key].copy().reindex(dates_test_period).fillna(0)
-    return statistics_df_test, dates_test_period
+        statistics_df_test[key] = session.statistics[key].copy().reindex(dates_test_if_ensemble).fillna(0)
+    return statistics_df_test
