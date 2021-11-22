@@ -274,9 +274,6 @@ class _CreatorWell(ABC):
         self._df_chess[self._NAME_RATE_LIQ].loc[self._df_chess['sost'] == 'Остановлена'] = 0
         self._df_chess[self._NAME_RATE_OIL].loc[self._df_chess['sost'] == 'Остановлена'] = 0
 
-        # if any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
-        #     raise ValueError(f'There are missing values in input data for column "{self._NAME_PRESSURE}"')
-
     @abstractmethod
     def _set_well(self) -> None:
         pass
@@ -591,6 +588,7 @@ class _CreatorWellFtor(_CreatorWell):
                 event_date,
                 self._data,
                 self._date_test,
+                self._date_end,
                 self._field_name,
                 self._well_name_ois,
                 self._well_name_geo,
@@ -672,6 +670,7 @@ class _BoundsImprover:
             date: datetime.date,
             data: Dict[str, pd.DataFrame],
             date_test: datetime.date,
+            date_end: datetime.date,
             field_name: str,
             well_name: int,
             well_name_geo: str,
@@ -688,6 +687,7 @@ class _BoundsImprover:
         self._date = date
         self._data = data
         self._date_test = date_test
+        self._date_end = date_end
         self._field_name = field_name
         self._well_name = well_name
         self._well_name_geo = well_name_geo
@@ -1003,7 +1003,7 @@ class _BoundsImprover:
                 self._try_to_improve_k_bounds_plast()
 
         elif adap_prm == self._NAME_PI:
-            p_max = self._df_chess.loc[self._df_chess['dt'] < self._date_test][self._name_pressure].max()
+            p_max = self._df_chess.loc[self._df_chess['dt'] < self._date_end][self._name_pressure].max()
             if p_max is not np.nan:
                 self._prm_constrs[self._NAME_PI]['bounds'] = [p_max * 1.1, p_max * 3]
 
