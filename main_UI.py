@@ -1,52 +1,88 @@
+import datetime
 import streamlit as st
-import UI.pages.models_settings
-import UI.pages.wells_map
-import UI.pages.analytics
-import UI.pages.specific_well
-import UI.pages.resume_app
 
+import UI.pages.analytics
+import UI.pages.models_settings
+import UI.pages.resume_app
+import UI.pages.specific_well
+import UI.pages.wells_map
 from config import Config as ConfigPreprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 
 
-def initialize_session(_session):
-    _session.buffer = None
-    _session.ensemble_interval = pd.DataFrame()
-    _session.exclude_wells = []
-    _session.selected_wells_ois = []
-    _session.selected_wells_norm = []
-    _session.statistics = {}
-    _session.statistics_df_test = {}
-    _session.was_calc_ftor = False
-    _session.was_calc_wolfram = False
-    _session.was_calc_ensemble = False
-    _session.was_config = None
-    _session.was_date_test_if_ensemble = None
-    _session.wellnames_key_normal = None
-    _session.wellnames_key_ois = None
+class AppState(dict):
+    """
+    Example:
+    m = Map({'first_name': 'Eduardo'}, last_name='Pool', age=24, sports=['Soccer'])
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(AppState, self).__init__(*args, **kwargs)
+        for arg in args:
+            if isinstance(arg, dict):
+                for k, v in arg.items():
+                    self[k] = v
+        if kwargs:
+            for k, v in kwargs.items():
+                self[k] = v
+
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def __setattr__(self, key, value):
+        self.__setitem__(key, value)
+
+    def __setitem__(self, key, value):
+        super(AppState, self).__setitem__(key, value)
+        self.__dict__.update({key: value})
+
+    def __delattr__(self, item):
+        self.__delitem__(item)
+
+    def __delitem__(self, key):
+        super(AppState, self).__delitem__(key)
+        del self.__dict__[key]
+
+
+def initialize_session(session):
+    # session.buffer = None
+    # session.ensemble_interval = pd.DataFrame()
+    # session.exclude_wells = []
+    # session.selected_wells_ois = []
+    # session.selected_wells_norm = []
+    # session.statistics = {}
+    # session.statistics_test_only = {}
+    session.state = AppState()
+    # session.was_calc_ftor = False
+    # session.was_calc_wolfram = False
+    # session.was_calc_ensemble = False
+    # session.was_config = None
+    # session.was_date_test_if_ensemble = None
+    # session.wellnames_key_normal = None
+    # session.wellnames_key_ois = None
     # Ftor model
-    _session.adapt_params = {}
-    _session.constraints = {}
+    # session.adapt_params = {}
+    session.constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        _session[f'{param_name}_is_adapt'] = True
-        _session[f'{param_name}_lower'] = param_dict['lower_val']
-        _session[f'{param_name}_default'] = param_dict['default_val']
-        _session[f'{param_name}_upper'] = param_dict['upper_val']
+        session[f'{param_name}_is_adapt'] = True
+        session[f'{param_name}_lower'] = param_dict['lower_val']
+        session[f'{param_name}_default'] = param_dict['default_val']
+        session[f'{param_name}_upper'] = param_dict['upper_val']
     # ML model
-    _session.estimator_name_group = 'xgb'
-    _session.estimator_name_well = 'svr'
-    _session.is_deep_grid_search = False
-    _session.quantiles = [0.1, 0.3]
-    _session.window_sizes = [3, 5, 7, 15, 30]
+    session.estimator_name_group = 'xgb'
+    session.estimator_name_well = 'svr'
+    session.is_deep_grid_search = False
+    session.quantiles = [0.1, 0.3]
+    session.window_sizes = [3, 5, 7, 15, 30]
     # Ensemble model
-    _session.adaptation_days_number = 28
-    _session.interval_probability = 0.9
-    _session.draws = 300
-    _session.tune = 200
-    _session.chains = 1
-    _session.target_accept = 0.95
+    session.adaptation_days_number = 28
+    session.interval_probability = 0.9
+    session.draws = 300
+    session.tune = 200
+    session.chains = 1
+    session.target_accept = 0.95
 
 
 def parse_well_names(well_names_ois):
@@ -62,11 +98,37 @@ def parse_well_names(well_names_ois):
     return wellnames_key_normal, wellnames_key_ois
 
 
+def get_current_state(state: AppState, session: st.session_state) -> None:
+    # Функция сохраняет состояние программы с выбранным набором параметров
+    state['adapt_params'] = {}
+    state['buffer'] = None
+    state['ensemble_interval'] = pd.DataFrame()
+    state['exclude_wells'] = []
+    state['statistics'] = {}
+    state['statistics_test_only'] = {}
+    state['selected_wells_norm'] = wells_to_calc.copy()
+    state['selected_wells_ois'] = selected_wells_ois.copy()
+    state['was_config'] = config
+    state['was_calc_ftor'] = is_calc_ftor
+    state['was_calc_wolfram'] = is_calc_wolfram
+    state['was_calc_ensemble'] = is_calc_ensemble
+    state['was_date_start'] = date_start
+    state['was_date_test'] = date_test
+    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.adaptation_days_number)
+    state['was_date_end'] = date_end
+    state['wellnames_key_normal'] = wellnames_key_normal.copy()
+    state['wellnames_key_ois'] = wellnames_key_ois.copy()
+
+
 st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
 # st.set_option(key='showErrorDetails', value=False)
+# Инициализация значений сессии st.session_state
+session = st.session_state
+if 'date_start' not in session:
+    initialize_session(session)
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
@@ -75,11 +137,6 @@ PAGES = {
     "Скважина": UI.pages.specific_well,
     "Импорт/экспорт расчетов": UI.pages.resume_app,
 }
-
-# Инициализация значений сессии st.session_state
-session = st.session_state
-if 'date_start' not in session:
-    initialize_session(session)
 
 # Реализация интерфейса UI
 with st.sidebar:
@@ -104,7 +161,6 @@ with st.sidebar:
         label='Месторождение',
         options=FIELDS_SHOPS.keys(),
         key='field_name',
-        args=(session,)
     )
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
@@ -148,26 +204,12 @@ with st.sidebar:
     submit = st.button(label='Запустить расчеты')
 
 if submit and wells_to_calc:
-    session.adapt_params = {}
-    session.buffer = None
-    session.ensemble_interval = pd.DataFrame()
-    session.statistics = {}
-    session.statistics_df_test = {}
-    session.selected_wells_norm = wells_to_calc.copy()
-    session.selected_wells_ois = selected_wells_ois.copy()
-    session.was_config = config
-    session.was_calc_ftor = is_calc_ftor
-    session.was_calc_wolfram = is_calc_wolfram
-    session.was_calc_ensemble = is_calc_ensemble
-    session.was_date_start = date_start
-    session.was_date_test = date_test
-    session.was_date_test_if_ensemble = date_test + datetime.timedelta(days=session.adaptation_days_number)
-    session.was_date_end = date_end
-    session.wellnames_key_normal = wellnames_key_normal.copy()
-    session.wellnames_key_ois = wellnames_key_ois.copy()
+    session.state = AppState()
+    get_current_state(session.state, session)
+    at_least_one_model = is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
-        extract_data_ftor(calculator_ftor, session)
+        extract_data_ftor(calculator_ftor, session.state)
     if is_calc_wolfram:
         calculator_wolfram = calculate_wolfram(preprocessor,
                                                selected_wells_ois,
@@ -177,21 +219,20 @@ if submit and wells_to_calc:
                                                session.is_deep_grid_search,
                                                session.window_sizes,
                                                session.quantiles)
-        extract_data_wolfram(calculator_wolfram, session)
-        convert_tones_to_m3_for_wolfram(session, preprocessor.create_wells_ftor(selected_wells_ois))
+        extract_data_wolfram(calculator_wolfram, session.state)
+        convert_tones_to_m3_for_wolfram(session.state, preprocessor.create_wells_ftor(selected_wells_ois))
     if CRM_xlsx is None:
         session.pop('df_CRM', None)
     else:
-        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        session['df_CRM'] = df_CRM
-        extract_data_CRM(session['df_CRM'], session, preprocessor.create_wells_wolfram(selected_wells_ois))
-    if is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None:
-        make_models_stop_well(session.statistics, session.selected_wells_norm)
-    if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
+        session['df_CRM'] = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
+        extract_data_CRM(session['df_CRM'], session.state, preprocessor.create_wells_wolfram(selected_wells_ois))
+    if at_least_one_model:
+        make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
+    if at_least_one_model and is_calc_ensemble:
         name_of_y_true = 'true'
         for ind, well_name_normal in enumerate(wells_to_calc):
             print(f'\nWell {ind + 1} out of {len(wells_to_calc)}\n')
-            input_df = prepare_df_for_ensemble(session, well_name_normal, name_of_y_true)
+            input_df = prepare_df_for_ensemble(session.state, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
                 adaptation_days_number=session.adaptation_days_number,
@@ -203,10 +244,9 @@ if submit and wells_to_calc:
                 name_of_y_true=name_of_y_true
             )
             if not ensemble_result.empty:
-                extract_data_ensemble(ensemble_result, session, well_name_normal)
-
-    if is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None:
-        session.statistics_df_test = create_statistics_df_test(session)
+                extract_data_ensemble(ensemble_result, session.state, well_name_normal)
+    if at_least_one_model:
+        session.state.statistics_test_only = cut_statistics_test_only(session.state)
 
 if submit and not wells_to_calc:
     st.info('Не выбрано ни одной скважины для расчета.')

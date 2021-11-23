@@ -3,17 +3,18 @@ import streamlit as st
 from UI.cached_funcs import calculate_statistics_plots
 
 
-def update_exclude_wells(session):
-    session.exclude_wells = session.mselect_exclude_wells
+def update_exclude_wells(state):
+    state.exclude_wells = st.session_state.mselect_exclude_wells
 
 
 def show(session):
-    if not session.statistics_df_test:
+    state = session.state
+    if not state.statistics_test_only:
         st.info('Здесь будет отображаться статистика по выбранному набору скважин.')
         return
 
     wells_in_model = []
-    for df in session.statistics_df_test.values():
+    for df in state.statistics_test_only.values():
         wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
     # Можно строить статистику только для общего набора скважин (скважина рассчитана всеми моделями),
     # либо для всех скважин (скважина рассчитана хотя бы одной моделью).
@@ -22,13 +23,13 @@ def show(session):
     well_names_common = tuple(set.intersection(*wells_in_model))
     well_names_for_statistics = well_names_all
     analytics_plots, config_stat = calculate_statistics_plots(
-        statistics=session.statistics_df_test,
-        field_name=session.was_config.field_name,
-        date_start=session.was_date_test_if_ensemble,
-        date_end=session.was_date_end,
+        statistics=state.statistics_test_only,
+        field_name=state.was_config.field_name,
+        date_start=state.was_date_test_if_ensemble,
+        date_end=state.was_date_end,
         well_names=well_names_for_statistics,
         use_abs=False,
-        exclude_wells=session.exclude_wells,
+        exclude_wells=state.exclude_wells,
         bin_size=10
     )
     available_plots = [*analytics_plots]
@@ -45,6 +46,6 @@ def show(session):
     form = st.form("form_exclude_wells")
     form.multiselect("Исключить скважины из статистики:",
                      options=sorted(well_names_for_statistics),
-                     default=sorted(session.exclude_wells),
+                     default=sorted(state.exclude_wells),
                      key="mselect_exclude_wells")
-    form.form_submit_button("Применить", on_click=update_exclude_wells, args=(session,))
+    form.form_submit_button("Применить", on_click=update_exclude_wells, args=(state,))
