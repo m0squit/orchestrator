@@ -126,12 +126,12 @@ def make_models_stop_well(statistics, well_names):
 
 
 def cut_statistics_test_only(state):
-    dates_test_if_ensemble = pd.date_range(state.was_date_test, state.was_date_end, freq='D')
+    statistics_test_index = pd.date_range(state.was_date_test, state.was_date_end, freq='D')
     # обрезка данных по датам(индексу) ансамбля
     if state.was_calc_ensemble:
-        dates_test_if_ensemble = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D')
+        statistics_test_index = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D')
 
     statistics_test_only = {}
     for key in state.statistics:
-        statistics_test_only[key] = state.statistics[key].copy().reindex(dates_test_if_ensemble).fillna(0)
-    return statistics_test_only
+        statistics_test_only[key] = state.statistics[key].copy().reindex(statistics_test_index).fillna(0)
+    return statistics_test_only, statistics_test_index

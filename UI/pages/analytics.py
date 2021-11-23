@@ -16,7 +16,7 @@ def show(session):
     wells_in_model = []
     for df in state.statistics_test_only.values():
         wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
-    # Можно строить статистику только для общего набора скважин (скважина рассчитана всеми моделями),
+    # Можно строить статистику либо для общего набора скважин (скважина рассчитана всеми моделями),
     # либо для всех скважин (скважина рассчитана хотя бы одной моделью).
     # Выберите, что подать в конфиг ниже: well_names_common или well_names_all.
     well_names_all = tuple(set.union(*wells_in_model))
@@ -25,8 +25,8 @@ def show(session):
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=state.statistics_test_only,
         field_name=state.was_config.field_name,
-        date_start=state.was_date_test_if_ensemble,
-        date_end=state.was_date_end,
+        date_start=state.statistics_test_index[0],
+        date_end=state.statistics_test_index[-1],
         well_names=well_names_for_statistics,
         use_abs=False,
         exclude_wells=state.exclude_wells,

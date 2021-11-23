@@ -197,7 +197,8 @@ if submit and wells_to_calc:
             if not ensemble_result.empty:
                 extract_data_ensemble(ensemble_result, session.state, well_name_normal)
     if at_least_one_model:
-        session.state.statistics_test_only = cut_statistics_test_only(session.state)
+        dfs, dates = cut_statistics_test_only(session.state)
+        session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
 
 if submit and not wells_to_calc:
     st.info('Не выбрано ни одной скважины для расчета.')
