@@ -16,6 +16,17 @@ def show(session):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def create_df_treemap(statistics_test_only: dict, selected_wells_norm: list):
+    df = pd.DataFrame(columns=['well', 'cumulative_q'])
+    df['well'] = selected_wells_norm
+    for well_name in selected_wells_norm:
+        for model in statistics_test_only:
+            if f'{well_name}_oil_true' in statistics_test_only[model]:
+                df['cumulative_q'][df.well == well_name] = np.sum(statistics_test_only[model][f'{well_name}_oil_true'])
+                break
+    return df
+
+
 def create_tree_plot(df_treemap: pd.DataFrame):
     fig = go.Figure()
     fig.update_layout(font=dict(size=15),
@@ -31,17 +42,3 @@ def create_tree_plot(df_treemap: pd.DataFrame):
                              ))
     fig.update_traces(root_color="lightgrey")
     return fig
-
-
-def create_df_treemap(statistics_test_only: dict, selected_wells_norm: list):
-    df = pd.DataFrame(columns=['well', 'cumulative_q'])
-    df['well'] = selected_wells_norm
-    for well_name in selected_wells_norm:
-        for model in statistics_test_only:
-            if f'{well_name}_oil_true' in statistics_test_only[model]:
-                if well_name == '2012':
-                    st.write(statistics_test_only[model][f'{well_name}_oil_true'])
-                df['cumulative_q'][df.well == well_name] = np.sum(statistics_test_only[model][f'{well_name}_oil_true'])
-                break
-    st.write(df)
-    return df

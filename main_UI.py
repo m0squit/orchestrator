@@ -47,23 +47,7 @@ class AppState(dict):
 
 
 def initialize_session(session):
-    # session.buffer = None
-    # session.ensemble_interval = pd.DataFrame()
-    # session.exclude_wells = []
-    # session.selected_wells_ois = []
-    # session.selected_wells_norm = []
-    # session.statistics = {}
-    # session.statistics_test_only = {}
     session.state = AppState()
-    # session.was_calc_ftor = False
-    # session.was_calc_wolfram = False
-    # session.was_calc_ensemble = False
-    # session.was_config = None
-    # session.was_date_test_if_ensemble = None
-    # session.wellnames_key_normal = None
-    # session.wellnames_key_ois = None
-    # Ftor model
-    # session.adapt_params = {}
     session.constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         session[f'{param_name}_is_adapt'] = True
