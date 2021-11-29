@@ -2,55 +2,13 @@ import streamlit as st
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
-def update_ftor_constraints(write_from, write_to):
-    # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
-    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (4 квартал 2021)
-    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        write_to[f'{param_name}_is_adapt'] = write_from[f'{param_name}_is_adapt_']
-        write_to[f'{param_name}_lower'] = write_from[f'{param_name}_lower_']
-        write_to[f'{param_name}_default'] = write_from[f'{param_name}_default_']
-        write_to[f'{param_name}_upper'] = write_from[f'{param_name}_upper_']
-
-    discrete_params = ['boundary_code', 'number_fractures']
-    constraints = {}
-    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        # Если параметр нужно адаптировать
-        if write_to[f'{param_name}_is_adapt']:
-            if param_name in discrete_params:
-                constraints[param_name] = {
-                    'is_discrete': True,
-                    'bounds': [i for i in range(write_to[f'{param_name}_lower'],
-                                                write_to[f'{param_name}_upper'] + 1)]
-                }
-            else:
-                constraints[param_name] = {
-                    'is_discrete': False,
-                    'bounds': [write_to[f'{param_name}_lower'], write_to[f'{param_name}_upper']]
-                }
-        else:
-            # Если значение параметра нужно зафиксировать
-            constraints[param_name] = write_to[f'{param_name}_default']
-    write_to.constraints = constraints
-
-
-def update_ML_params(write_from, write_to):
-    write_to['estimator_name_group'] = ML_FULL_ABBR[write_from['estimator_name_group_']]
-    write_to['estimator_name_well'] = ML_FULL_ABBR[write_from['estimator_name_well_']]
-    write_to['is_deep_grid_search'] = YES_NO[write_from['is_deep_grid_search_']]
-    write_to['window_sizes'] = [int(ws) for ws in write_from['window_sizes_'].split()]
-    write_to['quantiles'] = [float(q) for q in write_from['quantiles_'].split()]
-
-
-def update_ensemble_params(write_from, write_to):
-    write_to['interval_probability'] = write_from['interval_probability_']
-    write_to['draws'] = int(write_from['draws_'])
-    write_to['tune'] = int(write_from['tune_'])
-    write_to['chains'] = int(write_from['chains_'])
-    write_to['target_accept'] = float(write_from['target_accept_'])
-    write_to['adaptation_days_number'] = int(write_from['adaptation_days_number_'])
-
-
 def show(session):
+    draw_ftor_settings(session)
+    draw_wolfram_settings(session)
+    draw_ensemble_settings(session)
+
+
+def draw_ftor_settings(session):
     with st.expander('Настройки модели пьезопроводности'):
         with st.form(key='ftor_bounds'):
             for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
@@ -94,6 +52,8 @@ def show(session):
         if button_use_GDIS:
             session.constraints = {}
 
+
+def draw_wolfram_settings(session):
     with st.expander('Настройки модели ML'):
         with st.form(key='ML_params'):
             st.selectbox(
@@ -149,6 +109,8 @@ def show(session):
                                                   kwargs={'write_from': session,
                                                           'write_to': session})
 
+
+def draw_ensemble_settings(session):
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
             st.number_input(
@@ -211,3 +173,51 @@ def show(session):
                                                   on_click=update_ensemble_params,
                                                   kwargs={'write_from': session,
                                                           'write_to': session})
+
+
+def update_ftor_constraints(write_from, write_to):
+    # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
+    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (~4 квартал 2021)
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        write_to[f'{param_name}_is_adapt'] = write_from[f'{param_name}_is_adapt_']
+        write_to[f'{param_name}_lower'] = write_from[f'{param_name}_lower_']
+        write_to[f'{param_name}_default'] = write_from[f'{param_name}_default_']
+        write_to[f'{param_name}_upper'] = write_from[f'{param_name}_upper_']
+
+    discrete_params = ['boundary_code', 'number_fractures']
+    constraints = {}
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        # Если параметр нужно адаптировать
+        if write_to[f'{param_name}_is_adapt']:
+            if param_name in discrete_params:
+                constraints[param_name] = {
+                    'is_discrete': True,
+                    'bounds': [i for i in range(write_to[f'{param_name}_lower'],
+                                                write_to[f'{param_name}_upper'] + 1)]
+                }
+            else:
+                constraints[param_name] = {
+                    'is_discrete': False,
+                    'bounds': [write_to[f'{param_name}_lower'], write_to[f'{param_name}_upper']]
+                }
+        else:
+            # Если значение параметра нужно зафиксировать
+            constraints[param_name] = write_to[f'{param_name}_default']
+    write_to.constraints = constraints
+
+
+def update_ML_params(write_from, write_to):
+    write_to['estimator_name_group'] = ML_FULL_ABBR[write_from['estimator_name_group_']]
+    write_to['estimator_name_well'] = ML_FULL_ABBR[write_from['estimator_name_well_']]
+    write_to['is_deep_grid_search'] = YES_NO[write_from['is_deep_grid_search_']]
+    write_to['window_sizes'] = [int(ws) for ws in write_from['window_sizes_'].split()]
+    write_to['quantiles'] = [float(q) for q in write_from['quantiles_'].split()]
+
+
+def update_ensemble_params(write_from, write_to):
+    write_to['interval_probability'] = write_from['interval_probability_']
+    write_to['draws'] = int(write_from['draws_'])
+    write_to['tune'] = int(write_from['tune_'])
+    write_to['chains'] = int(write_from['chains_'])
+    write_to['target_accept'] = float(write_from['target_accept_'])
+    write_to['adaptation_days_number'] = int(write_from['adaptation_days_number_'])
