@@ -17,6 +17,13 @@ def show(session):
                 'На данный момент ни одна скважина не рассчитана.\n'
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
         return
+    well_to_draw = draw_well_plot(state)
+    # Вывод параметров адаптации модели пьезопроводности
+    if well_to_draw in state.adapt_params:
+        st.write('Результаты адаптации модели пьезопроводности:', state.adapt_params[well_to_draw])
+
+
+def draw_well_plot(state):
     well_to_draw = st.selectbox(label='Скважина',
                                 options=sorted(state.selected_wells_norm),
                                 key='well_to_calc')
@@ -33,9 +40,7 @@ def show(session):
                               ensemble_interval=state.ensemble_interval)
     # Построение графика
     st.plotly_chart(fig, use_container_width=True)
-    # Вывод параметров адаптации модели пьезопроводности
-    if well_to_draw in state.adapt_params:
-        st.write('Результаты адаптации модели пьезопроводности:', state.adapt_params[well_to_draw])
+    return well_to_draw
 
 
 def create_well_plot_UI(statistics: dict,
