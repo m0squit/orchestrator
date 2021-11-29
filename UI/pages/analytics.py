@@ -3,16 +3,17 @@ import streamlit as st
 from UI.cached_funcs import calculate_statistics_plots
 
 
-def update_exclude_wells(state):
-    state.exclude_wells = st.session_state.mselect_exclude_wells
-
-
 def show(session):
     state = session.state
     if not state.statistics_test_only:
         st.info('Здесь будет отображаться статистика по выбранному набору скважин.')
         return
+    selected_wells_set = select_wells_set(state)
+    draw_statistics_plots(state, selected_wells_set)
+    draw_form_exclude_wells(state, selected_wells_set)
 
+
+def select_wells_set(state):
     wells_in_model = []
     for df in state.statistics_test_only.values():
         wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
@@ -22,30 +23,37 @@ def show(session):
     well_names_all = tuple(set.union(*wells_in_model))
     well_names_common = tuple(set.intersection(*wells_in_model))
     well_names_for_statistics = well_names_all
+    return well_names_for_statistics
+
+
+def draw_statistics_plots(state, selected_wells_set):
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=state.statistics_test_only,
         field_name=state.was_config.field_name,
         date_start=state.statistics_test_index[0],
         date_end=state.statistics_test_index[-1],
-        well_names=well_names_for_statistics,
+        well_names=selected_wells_set,
         use_abs=False,
         exclude_wells=state.exclude_wells,
         bin_size=10
     )
     available_plots = [*analytics_plots]
-    plots_to_draw = [plot_name for plot_name in available_plots
-                     if plot_name not in config_stat.ignore_plots]
-    stat_to_draw = st.selectbox(
-        label='Статистика',
-        options=sorted(plots_to_draw),
-        key='stat_to_draw'
-    )
+    plots_to_draw = [plot_name for plot_name in available_plots if plot_name not in config_stat.ignore_plots]
+    stat_to_draw = st.selectbox(label='Выбор графика:',
+                                options=sorted(plots_to_draw),
+                                key='stat_to_draw')
     st.plotly_chart(analytics_plots[stat_to_draw], use_container_width=True)
 
+
+def draw_form_exclude_wells(state, selected_wells_set):
     # Форма "Исключить скважины из статистики"
     form = st.form("form_exclude_wells")
     form.multiselect("Исключить скважины из статистики:",
-                     options=sorted(well_names_for_statistics),
+                     options=sorted(selected_wells_set),
                      default=sorted(state.exclude_wells),
                      key="mselect_exclude_wells")
     form.form_submit_button("Применить", on_click=update_exclude_wells, args=(state,))
+
+
+def update_exclude_wells(state):
+    state.exclude_wells = st.session_state.mselect_exclude_wells

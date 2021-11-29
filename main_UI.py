@@ -15,6 +15,7 @@ from UI.data_processor import *
 
 def initialize_session(session):
     session.state = AppState()
+    # Ftor model
     session.constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         session[f'{param_name}_is_adapt'] = True
@@ -37,6 +38,7 @@ def initialize_session(session):
 
 
 def parse_well_names(well_names_ois):
+    # Функция сопоставляет имена скважин OIS и (ГРАД?)
     welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
     wellnames_key_normal = {}
     wellnames_key_ois = {}
