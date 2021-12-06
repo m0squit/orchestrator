@@ -65,26 +65,26 @@ def create_well_plot_UI(statistics: dict,
                                   traceorder='normal'),
                       height=630, width=1300)
     df_chess = df_chess.copy().dropna(subset=['Дебит жидкости', 'Дебит нефти'], how='any')
-    statistics_test_only = {key: df[date_test:] for key, df in statistics.items()}
     df_chess_test_only = df_chess[date_test:]
+    statistics_test_only = {key: df[date_test:] for key, df in statistics.items()}
     ensemble_interval_test_only = ensemble_interval[date_test:]
     # Адаптация + прогноз
-    fig = add_traces_to_column(fig, statistics, df_chess,
-                               wellname, MODEL_NAMES, ensemble_interval,
-                               column=1, showlegend=False, marker_size=3)
+    fig = add_traces_to_specific_column(fig, statistics, df_chess,
+                                        wellname, MODEL_NAMES, ensemble_interval,
+                                        column=1, showlegend=False, marker_size=3)
     # Прогноз
-    fig = add_traces_to_column(fig, statistics_test_only, df_chess_test_only,
-                               wellname, MODEL_NAMES, ensemble_interval_test_only,
-                               column=2, showlegend=True, marker_size=3)
+    fig = add_traces_to_specific_column(fig, statistics_test_only, df_chess_test_only,
+                                        wellname, MODEL_NAMES, ensemble_interval_test_only,
+                                        column=2, showlegend=True, marker_size=3)
     if not ensemble_interval.empty and f'{wellname}_lower' in ensemble_interval.columns:
         fig.add_vline(x=date_test_if_ensemble, line_width=1, line_dash='dash', exclude_empty_subplots=False)
     fig.add_vline(x=date_test, line_width=1, line_dash='dash')
     return fig
 
 
-def add_traces_to_column(fig, statistics, df_chess,
-                         wellname, MODEL_NAMES, ensemble_interval,
-                         column, showlegend, marker_size):
+def add_traces_to_specific_column(fig, statistics, df_chess,
+                                  wellname, MODEL_NAMES, ensemble_interval,
+                                  column, showlegend, marker_size):
     mark, m = dict(size=marker_size), 'markers'
     colors = {'ftor': px.colors.qualitative.Pastel[1],
               'wolfram': 'rgba(248, 156, 116, 0.8)',

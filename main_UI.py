@@ -77,11 +77,11 @@ st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
-# st.set_option(key='showErrorDetails', value=False)
+# Инициализация значений сессии st.session_state
 session = st.session_state
 if 'date_start' not in session:
-    # Инициализация значений сессии st.session_state
     initialize_session(session)
+
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
     "Карта скважин": UI.pages.wells_map,
