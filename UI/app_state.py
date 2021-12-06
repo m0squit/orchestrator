@@ -1,7 +1,13 @@
 class AppState(dict):
-    """
+    """Модифицированный словарь.
+
+    К атрибутам можно обращаться как через object.attr, так и через object['attr'].
+
     Example:
-    m = Map({'first_name': 'Eduardo'}, last_name='Pool', age=24, sports=['Soccer'])
+        m = AppState({'first_name': 'Eduardo'}, last_name='Pool', age=24, sports=['Soccer'])
+
+        f_name = m.first_name
+        f_name = m['first_name'] # То же самое
     """
 
     def __init__(self, *args, **kwargs):
