@@ -52,7 +52,7 @@ def parse_well_names(well_names_ois):
 
 
 def get_current_state(state: AppState, session: st.session_state) -> None:
-    # Функция сохраняет состояние программы с выбранным набором параметров
+    # Функция сохраняет состояние программы с текущим набором параметров
     state['adapt_params'] = {}
     state['buffer'] = None
     state['ensemble_interval'] = pd.DataFrame()
@@ -140,8 +140,6 @@ with st.sidebar:
         max_value=DATE_MAX,
         key='date_end',
     )
-    adaptation_days_number = (date_test - date_start).days
-    forecast_days_number = (date_end - date_test).days
     config = ConfigPreprocessor(field_name, FIELDS_SHOPS[field_name],
                                 date_start, date_test, date_end,)
     preprocessor = run_preprocessor(config)
@@ -164,6 +162,7 @@ if submit and wells_to_calc:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.state)
     if is_calc_wolfram:
+        forecast_days_number = (date_end - date_test).days
         calculator_wolfram = calculate_wolfram(preprocessor,
                                                selected_wells_ois,
                                                forecast_days_number,
@@ -178,7 +177,7 @@ if submit and wells_to_calc:
         session.pop('df_CRM', None)
     else:
         session['df_CRM'] = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        extract_data_CRM(session['df_CRM'], session.state, preprocessor.create_wells_wolfram(selected_wells_ois))
+        extract_data_CRM(session['df_CRM'], session.state, session.state.wells_wolfram)
     if at_least_one_model:
         make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
     if at_least_one_model and is_calc_ensemble:
@@ -202,9 +201,11 @@ if submit and wells_to_calc:
         dfs, dates = cut_statistics_test_only(session.state)
         session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
 
-if submit and not wells_to_calc:
-    st.info('Не выбрано ни одной скважины для расчета.')
+adaptation_days_number = (date_test - date_start).days
+forecast_days_number = (date_end - date_test).days
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
+if submit and not wells_to_calc:
+    st.info('Не выбрано ни одной скважины для расчета.')
 page = PAGES[selection]
 page.show(session)
