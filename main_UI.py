@@ -71,6 +71,7 @@ def get_current_state(state: AppState, session: st.session_state) -> None:
     state['was_date_end'] = date_end
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
+    state['wells_wolfram'] = preprocessor.create_wells_wolfram(selected_wells_ois)
 
 
 st.set_page_config(
