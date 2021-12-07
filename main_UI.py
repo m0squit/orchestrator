@@ -29,7 +29,7 @@ def initialize_session(session):
     session.quantiles = [0.1, 0.3]
     session.window_sizes = [3, 5, 7, 15, 30]
     # Ensemble model
-    session.adaptation_days_number = 28
+    session.ensemble_adapt_period = 28
     session.interval_probability = 0.9
     session.draws = 300
     session.tune = 200
@@ -67,7 +67,7 @@ def get_current_state(state: AppState, session: st.session_state) -> None:
     state['was_calc_ensemble'] = is_calc_ensemble
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
-    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.adaptation_days_number)
+    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.ensemble_adapt_period)
     state['was_date_end'] = date_end
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
@@ -187,7 +187,7 @@ if submit and wells_to_calc:
             input_df = prepare_df_for_ensemble(session.state, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
-                adaptation_days_number=session.adaptation_days_number,
+                adaptation_days_number=session.ensemble_adapt_period,
                 interval_probability=session.interval_probability,
                 draws=session.draws,
                 tune=session.tune,
