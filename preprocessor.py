@@ -1,15 +1,15 @@
 import datetime
+import json
 import pathlib
+import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
-import json
-import numpy as np
-
-from frameworks_ftor.ftor.well import Well as WellFtor
 from typing import Dict, List, Tuple, Set, Union, Optional
-from frameworks_wolfram.wolfram.well import Well as WellWolfram
 
 from config import Config
+from frameworks_ftor.ftor.well import Well as WellFtor
+from frameworks_wolfram.wolfram.well import Well as WellWolfram
+
 
 DEFAULT_WELL_KIND = 'Горизонтально'
 DEFAULT_FRAC_DATE_MIN = datetime.date(2000, 1, 1)
@@ -27,12 +27,15 @@ DEFAULT_VOLUME_FACTOR_LIQ = 1.15
 
 
 class Preprocessor(object):
+
     _path_general = pathlib.Path.cwd() / 'data'
     _tables = [
+        'coord',
         'fond',
         'frac',
         'merop',
         'mersum',
+        'projectcoord',
         'sh_sost_fond',
         'sost',
         'sppl',
@@ -178,8 +181,8 @@ class Preprocessor(object):
             },
             inplace=True,
         )
-        # Если в таблице столбец grpdate содержит дату, меньшую допсутимой, то предполагается,
-        # что данная дата не яляется показательной для расчета и заменяется на максимально возможную.
+        # Если в таблице столбец grpdate содержит дату, меньшую допустимой, то предполагается,
+        # что данная дата не является показательной для расчета и заменяется на максимально возможную.
         self._data['troil']['grpdate'].where(
             self._data['troil']['grpdate'] > DEFAULT_FRAC_DATE_MIN, other=DEFAULT_FRAC_DATE_MAX, inplace=True)
         self._handle_troil_by_skvtype()
@@ -205,11 +208,11 @@ class Preprocessor(object):
         df_train = self._data['sh_sost_fond'].loc[
             (self._data['sh_sost_fond']['dt'] >= self._config.date_start) &
             (self._data['sh_sost_fond']['dt'] < self._config.date_test)
-            ]
+        ]
         df_test = self._data['sh_sost_fond'].loc[
             (self._data['sh_sost_fond']['dt'] >= self._config.date_test) &
             (self._data['sh_sost_fond']['dt'] <= self._config.date_end)
-            ]
+        ]
         names_train = self._select_well_names_unique(df_train)
         names_test = self._select_well_names_unique(df_test)
         names_by_shops = self._select_well_names_unique_by_ceh()
@@ -219,7 +222,7 @@ class Preprocessor(object):
         df = df.loc[
             (df['charwork.name'].isin(self._fonds)) &
             (df['sost'].isin(self._sosts))
-            ]
+        ]
         well_names = df['well.ois'].unique().tolist()
         return well_names
 
@@ -238,6 +241,7 @@ class Preprocessor(object):
 
 
 class _CreatorWell(ABC):
+
     _NAME_RATE_LIQ = 'Дебит жидкости среднесуточный'
     _NAME_RATE_OIL = 'Дебит нефти расчетный'
     _NAME_CUM_LIQ = 'Добыча жидкости накопленная'
@@ -285,6 +289,7 @@ class _CreatorWell(ABC):
 
 
 class _CreatorWellFtor(_CreatorWell):
+
     _NAME_START_ADAP = 'Начало адаптации'
 
     _kind_codes_frac_no = {
@@ -338,6 +343,7 @@ class _CreatorWellFtor(_CreatorWell):
         self._set_formation_names()
         self._set_formation_properties_from_sppl()
         self._set_formation_properties_from_troil()
+        self._set_formation_cross_coords()
         self._set_chess()
         self._set_flood()
         self._set_well()
@@ -350,14 +356,14 @@ class _CreatorWellFtor(_CreatorWell):
             ствола скважины. Данный ствол должен быть активным на момент
             date_test.
         """
-        # TODO: Понять, надо ли сдигать date_start для случая, когда скважина имеет несколько стволов.
+        # TODO: Понять, надо ли сдвигать date_start для случая, когда скважина имеет несколько стволов.
         #  Пример 1: на скважине появляется новый ствол в период с date_start до date_test.
         #  Пример 2: на скважине есть 2 активных ствола, в период с date_start до date_test один из них отключается.
         df = self._data['welllist'].loc[
             (self._data['welllist']['ois'] == self._well_name_ois) &
             (self._data['welllist']['dtstart'] < self._date_test) &
             (self._data['welllist']['dtend'] >= self._date_test)
-            ]
+        ]
         date_start_max = df['dtstart'].max()
         self._well_name_geo = df.loc[df['dtstart'] == date_start_max]['well'].iloc[-1]
 
@@ -368,21 +374,21 @@ class _CreatorWellFtor(_CreatorWell):
             Определяются названия пластов, которые имели хоть одну активную дату
             в пределах date_start и date_test.
         """
-        # TODO: Понять, надо ли сдигать date_start для случая, когда скважина имеет несколько пластов.
+        # TODO: Понять, надо ли сдвигать date_start для случая, когда скважина имеет несколько пластов.
         #  Пример 1: к скважине последовательно подключаются 2 пласта до date_test.
         #  Пример 2: скважина работает на 2 пластах, один пласт отключается до date_test.
         df = self._data['wellplast'].loc[
             (self._data['wellplast']['well.ois'] == self._well_name_ois) &
             (self._data['wellplast']['dtstart'] < self._date_test) &
             (self._data['wellplast']['dtend'] >= self._date_start)
-            ]
+        ]
         self._formation_names = df['plast'].to_list()
 
     def _set_formation_properties_from_sppl(self) -> None:
         df = self._data['sppl'].loc[
             (self._data['sppl']['plastmer'].isin(self._formation_names)) &
             (self._data['sppl']['tk'] < self._date_test)
-            ]
+        ]
         self._porosity = df['pm'].mean()
         self._c_r = df['sp'].mean()
         self._c_w = df['sw'].mean()
@@ -397,7 +403,7 @@ class _CreatorWellFtor(_CreatorWell):
             (self._data['troil']['plastmer'].isin(self._formation_names)) &
             (self._data['troil']['dt'] >= self._date_start) &
             (self._data['troil']['dt'] < self._date_test)
-            ]
+        ]
         if not df.empty:
             kind_name = df['skvtype'].value_counts().idxmax()
             frac_date = df['grpdate'].iloc[0]
@@ -416,6 +422,20 @@ class _CreatorWellFtor(_CreatorWell):
             self._thickness = DEFAULT_THICKNESS
             self._viscosity_liq = DEFAULT_VISCOSITY_LIQ
             self._volume_factor_liq = DEFAULT_VOLUME_FACTOR_LIQ
+
+    def _set_formation_cross_coords(self) -> None:
+        df_projectcoord = self._data['projectcoord']
+        df_coord = self._data['coord'].loc[self._data['coord']['well.ois'] == self._well_name_ois]
+        layer_names = df_projectcoord.loc[df_projectcoord['idproject'].isin(self._formation_names)]['id'].to_list()
+        # TODO: Найти причину отсутствия layer_names.
+        #  Пример: Крайнее, 256000610, пласт БС9/1 был записан как БС9%2F1.
+        if not layer_names:
+            self._x_coord = df_coord['x'].mean()
+            self._y_coord = df_coord['y'].mean()
+        else:
+            self._x_coord = df_coord.loc[df_coord['plastcoord'].isin(layer_names)]['x'].mean()
+            self._y_coord = df_coord.loc[df_coord['plastcoord'].isin(layer_names)]['y'].mean()
+        print(self._well_name_geo, f'x={self._x_coord}', f'x={self._y_coord}', sep='\t')
 
     def _set_chess(self) -> None:
         super()._set_chess()
@@ -456,7 +476,7 @@ class _CreatorWellFtor(_CreatorWell):
             (self._data['mersum']['well.ois'] == self._well_name_ois) &
             (self._data['mersum']['plastmer'].isin(self._formation_names)) &
             (self._data['mersum']['dt'] < self._date_start)
-            ]
+        ]
         df_mersum = df.copy()
         df_mersum.drop(columns=['well.ois', 'plastmer'], inplace=True)
         df_mersum.dropna(axis=0, how='any', inplace=True)
@@ -539,6 +559,9 @@ class _CreatorWellFtor(_CreatorWell):
             df_chess,
             self._df_flood,
         )
+        # TODO: Внести новые аттрибуты в API Ftor.
+        self._well.x_coord = self._x_coord
+        self._well.y_coord = self._y_coord
 
     def _get_prm_constraints(self, event_date: datetime.date, event_name: str
                              ) -> Dict[str, Union[float, Dict[str, Union[bool, List[float]]]]]:
