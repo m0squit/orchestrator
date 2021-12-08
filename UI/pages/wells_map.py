@@ -1,5 +1,4 @@
 import datetime
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -22,7 +21,7 @@ def prepare_data_for_plots(state) -> pd.DataFrame:
     df = pd.DataFrame(columns=columns)
     models_without_ensemble = [model for model in state.statistics.keys() if model != 'ensemble']
     any_model_not_ensemble = models_without_ensemble[0]
-    for well in state.wells_wolfram:
+    for well in state.wells_ftor:
         wellname_norm = state.wellnames_key_ois[well.well_name]
         cum_q_liq, cum_q_oil = None, None
         if f'{wellname_norm}_oil_true' in state.statistics[any_model_not_ensemble]:
@@ -30,8 +29,7 @@ def prepare_data_for_plots(state) -> pd.DataFrame:
             df_adapt_period = state.statistics[any_model_not_ensemble][:adapt_end_date]
             q_adapt_period = df_adapt_period[[f'{wellname_norm}_liq_true', f'{wellname_norm}_oil_true']]
             cum_q_liq, cum_q_oil = q_adapt_period.sum()
-        # new_row = name_norm, well.coord_x, well.coord_y, cum_q_liq, cum_q_oil
-        new_row = wellname_norm, np.random.randint(1, 10000), np.random.randint(1, 10000), cum_q_liq, cum_q_oil
+        new_row = wellname_norm, well.x_coord, well.y_coord, cum_q_liq, cum_q_oil
         df.loc[len(df)] = new_row
     return df
 

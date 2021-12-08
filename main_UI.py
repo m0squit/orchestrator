@@ -71,7 +71,7 @@ def get_current_state(state: AppState, session: st.session_state) -> None:
     state['was_date_end'] = date_end
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
-    state['wells_wolfram'] = preprocessor.create_wells_wolfram(selected_wells_ois)
+    state['wells_ftor'] = preprocessor.create_wells_ftor(selected_wells_ois)
 
 
 st.set_page_config(
@@ -172,12 +172,12 @@ if submit and wells_to_calc:
                                                session.window_sizes,
                                                session.quantiles)
         extract_data_wolfram(calculator_wolfram, session.state)
-        convert_tones_to_m3_for_wolfram(session.state, preprocessor.create_wells_ftor(selected_wells_ois))
+        convert_tones_to_m3_for_wolfram(session.state, session.state.wells_ftor)
     if CRM_xlsx is None:
         session.pop('df_CRM', None)
     else:
         session['df_CRM'] = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        extract_data_CRM(session['df_CRM'], session.state, session.state.wells_wolfram)
+        extract_data_CRM(session['df_CRM'], session.state, preprocessor.create_wells_wolfram(selected_wells_ois))
     if at_least_one_model:
         make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
     if at_least_one_model and is_calc_ensemble:
