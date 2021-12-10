@@ -11,7 +11,7 @@ def show(session):
                 'На данный момент ни одна скважина не рассчитана.\n'
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
         return
-    df = prepare_data_for_plots(session.state)
+    df = prepare_data_for_plots(state)
     fig = select_plot(df)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -28,7 +28,7 @@ def prepare_data_for_plots(state) -> pd.DataFrame:
             adapt_end_date = state.was_date_test - datetime.timedelta(days=1)
             df_adapt_period = state.statistics[any_model_not_ensemble][:adapt_end_date]
             q_adapt_period = df_adapt_period[[f'{wellname_norm}_liq_true', f'{wellname_norm}_oil_true']]
-            cum_q_liq, cum_q_oil = q_adapt_period.sum()
+            cum_q_liq, cum_q_oil = q_adapt_period.sum().round(1)
         new_row = wellname_norm, well.x_coord, well.y_coord, cum_q_liq, cum_q_oil
         df.loc[len(df)] = new_row
     return df
@@ -49,14 +49,15 @@ def create_wells_map_plot(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(font=dict(size=15),
                       title_text=f'Карта скважин',
                       height=630,
-                      width=1300, )
+                      width=1300,
+                      separators='. ')
     fig.add_trace(go.Scatter(
-        x=df['coord_x'].tolist(),
-        y=df['coord_y'].tolist(),
+        x=df['coord_x'],
+        y=df['coord_y'],
         mode='markers+text',
-        text=df['wellname'].tolist(),
+        text=df['wellname'],
         textposition='top center',
-        hovertext=df['cum_q_oil'].tolist(),
+        hovertext=df['cum_q_oil'],
         hoverinfo='all',
         # marker=m_inj,
         showlegend=False, ))
@@ -68,7 +69,8 @@ def create_tree_plot(df: pd.DataFrame, mode: str) -> go.Figure:
     fig.update_layout(font=dict(size=15),
                       title_text=f'Накопленная добыча на периоде адаптации: {mode}, м3',
                       height=630,
-                      width=1300, )
+                      width=1300,
+                      separators='. ')
     values = df.cum_q_liq
     if mode == 'Нефть':
         values = df.cum_q_oil
