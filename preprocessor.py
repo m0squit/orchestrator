@@ -136,24 +136,26 @@ class Preprocessor(object):
             'Цвет Lэфф,м': int,
             'Цвет Xf': int,
         }
-        df = pd.read_excel(
-            io=self._path_current / 'gdis.xlsm',
-            usecols=cols_types.keys(),
-            dtype=cols_types,
-        )
-        df = df.loc[df['Тип скважины'].isin([
-            'доб',
-            'добыв.',
-            'Добывающая',
-            'Фонт.',
-            'мех.фонд',
-        ])]
-        df.dropna(subset=['Скважина', 'Дата окончания исследования', 'Пласт ОИС'], inplace=True)
-        df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(
-            lambda date: datetime.datetime.strptime(date, '%d.%m.%Y').date())
-        df['Пласт ОИС'] = df['Пласт ОИС'].apply(
-            lambda string: set(string.split()))
-        self._data['gdis'] = df
+
+        if (self._path_current / 'gdis.xlsm').exists():
+            df = pd.read_excel(
+                io=self._path_current / 'gdis.xlsm',
+                usecols=cols_types.keys(),
+                dtype=cols_types,
+            )
+            df = df.loc[df['Тип скважины'].isin([
+                'доб',
+                'добыв.',
+                'Добывающая',
+                'Фонт.',
+                'мех.фонд',
+            ])]
+            df.dropna(subset=['Скважина', 'Дата окончания исследования', 'Пласт ОИС'], inplace=True)
+            df['Дата окончания исследования'] = df['Дата окончания исследования'].apply(
+                lambda date: datetime.datetime.strptime(date, '%d.%m.%Y').date())
+            df['Пласт ОИС'] = df['Пласт ОИС'].apply(
+                lambda string: set(string.split()))
+            self._data['gdis'] = df
 
     def _handle_data(self) -> None:
         self._handle_sppl()
@@ -601,7 +603,7 @@ class _CreatorWellFtor(_CreatorWell):
                     else:
                         constraints[prm] = prm_bound_settings['val_test_period']
 
-        if event_date < self._date_test:
+        if event_date < self._date_test and 'gdis' in self._data:
             #  Изменяет constraints
             _BoundsImprover(
                 self._NAME_START_ADAP,
