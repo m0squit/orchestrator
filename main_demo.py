@@ -11,6 +11,7 @@ import os
 
 from config import Config as ConfigPreprocessor
 from preprocessor import Preprocessor
+from frameworks_ftor.ftor.well import Well as WellFtor
 
 
 def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_params, path, is_liq):
@@ -32,9 +33,9 @@ def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_par
     mark = dict(size=3)
     line = dict(width=1)
 
-    s = df_chess['Мероприятие'].dropna()
+    s = df_chess[WellFtor.NAME_EVENT].dropna()
     trace_a = go.Scatter(
-        name='Мероприятие',
+        name=WellFtor.NAME_EVENT,
         x=s.index,
         y=[0.2] * len(s),
         mode='markers+text',
@@ -49,26 +50,24 @@ def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_par
     if is_liq:
         dir_path = path / 'liq'
         x_model = x
-        name_fact = 'Дебит жидкости'
+        name_fact = WellFtor.NAME_RATE_LIQ
         name_model = 'Дебит жидкости модельный'
         name_graph = 'liq'
     else:
         dir_path = path / 'oil'
         x_model = rates.index.to_list()
-        name_fact = 'Дебит нефти'
+        name_fact = WellFtor.NAME_RATE_OIL
         name_model = 'Дебит нефти модельный'
         name_graph = 'oil'
 
     fig.add_trace(go.Scatter(name=name_fact, x=x, y=df_chess[name_fact], mode=m, marker=mark), row=2, col=1)
     fig.add_trace(go.Scatter(name=name_model, x=x_model, y=rates, mode=ml, marker=mark, line=line), row=2, col=1)
-    fig.add_trace(go.Scatter(name='p_з_факт', x=x, y=df_chess['Давление забойное'], mode=m, marker=mark), row=3, col=1)
+    fig.add_trace(go.Scatter(name='Pз', x=x, y=df_chess[WellFtor.NAME_PRESSURE], mode=m, marker=mark), row=3, col=1)
     fig.add_vline(x=date_test, line_width=2, line_dash='dash')
 
     text = 'params:'
-    for params in adap_and_fixed_params.copy():
-        for name, value in params.items():
-            params[name] = round(value, 1)
-        text += f'<br>{params}'
+    for ad_prd_prms in adap_and_fixed_params.copy():
+        text += '<br>' + str({name: round(ad_prd_prms[name], 1) for name in ad_prd_prms})
 
     fig.add_annotation(showarrow=False, text=text, xref='paper', yref='paper', x=0.5, y=1.175)
 
