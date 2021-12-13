@@ -102,15 +102,12 @@ dates_end = [
     # datetime.date(2019, 3, 31)
 ]
 
-use_eq_t = [
-    False,
-    # True
-]
-data = zip(fields, shops_lst, dates_start, dates_test, dates_end, use_eq_t)
+data = zip(fields, shops_lst, dates_start, dates_test, dates_end)
 
-for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
+for field_name, shops, date_start, date_test, date_end in data:
+    time_calc_started = str(datetime.datetime.now()).replace(':', '-')
     start = default_timer()
-    name_dir = field_name + " " + str(datetime.datetime.now()).replace(':', '-')
+    name_dir = field_name + " " + time_calc_started
     path = Path.cwd() / 'tests' / name_dir
     if not path.exists():
         os.mkdir(path)
@@ -128,21 +125,27 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
 
     for well_name in preprocessor.well_names:
         try:
-            if well_name == 2560204400:
+            # if well_name in [
+            #     2860203200,
+            # ]:
                 data_ftor = preprocessor.create_wells_ftor(
                     [well_name],
-                    # user_constraints_for_adap_period = {
-                    #     'permeability': 1.2,
-                    #     'skin': 1.7,
-                    #     'res_width': 636,
-                    #     'res_length': 144,
-                    #     'pressure_initial': 1000,
-                    #     'boundary_code': 3}
+                    # user_constraints_for_adap_period={
+                    #     'kind_code': 2,
+                    #     'permeability': 58.6,
+                    #     'skin': 2,
+                    #     'res_width': 986.7,
+                    #     'res_length': 958.6,
+                    #     'pressure_initial': 197.9,
+                    #     'length_half_fracture': 20.1,
+                    #     'length_hor_well_bore': 145.1,
+                    #     'number_fractures': 2,
+                    #     'boundary_code': 0
+                    # }
                 )[0]
                 calculator_ftor = CalculatorFtor(
                     ConfigFtor(
-                        use_equal_time_algorithm=use_eq_t,
-                        apply_last_points_adaptation=False,
+                        # apply_last_points_adaptation=False,
                     ),
                     [data_ftor],
                     df_hypotheses)
@@ -160,10 +163,8 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
                 df[f'{well_name}_liq_pred'] = rates_liq_ftor.loc[df_chess.index >= date_test]
                 df.to_excel(path / f'{well_name}.xlsx')
 
-                _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test,
-                                   adap_and_fixed_params, path, is_liq=True)
-                _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test,
-                                   adap_and_fixed_params, path, is_liq=False)
+                _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_fixed_params, path, is_liq=True)
+                _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test, adap_and_fixed_params, path, is_liq=False)
         except Exception as exc:
             file = open(path / f'{well_name} error.txt', 'w')
             file.write(str(exc))
@@ -171,6 +172,7 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
 
     exec_time = default_timer() - start
     file = open(path / 'test_data.txt', 'w')
+    print(f'{time_calc_started = }', file=file)
     print(f'{exec_time = } с', file=file)
     print(f'{field_name = }', file=file)
     print(f'{shops = }', file=file)
@@ -178,4 +180,15 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
     print(f'{date_test = }', file=file)
     print(f'{date_end = }', file=file)
     file.close()
-    df_hypotheses.to_excel(path / 'df_hypotheses.xlsx')
+
+    hypo_table = path / 'df_hypotheses.xlsx'
+    df_hypotheses.to_excel(hypo_table)
+
+    results_table = path / 'aggregated_results.xlsx'
+    well_tables = {*path.glob('*.xlsx')} - {hypo_table}
+    df_results = pd.DataFrame()
+    for table in well_tables:
+        df = pd.read_excel(table, index_col='dt')
+        for col in df:
+            df_results[col] = df[col]
+    df_results.to_excel(results_table)
