@@ -12,7 +12,7 @@ FIELDS_SHOPS = {
 
 # Диапазон дат выгрузки sh таблицы
 DATE_MIN = datetime.date(2018, 1, 1)
-DATE_MAX = datetime.date(2021, 4, 30)
+DATE_MAX = datetime.date(2021, 8, 30)
 
 PERIOD_TRAIN_MIN = relativedelta(months=3)
 PERIOD_TEST_MIN = relativedelta(months=1)
