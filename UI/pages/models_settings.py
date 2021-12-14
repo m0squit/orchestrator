@@ -116,10 +116,10 @@ def draw_ensemble_settings(session):
             st.number_input(
                 label='Количество дней обучения ансамбля',
                 min_value=25,
-                value=session.adaptation_days_number,
+                value=session.ensemble_adapt_period,
                 max_value=(session.date_end - session.date_test).days - 1,
                 step=1,
-                key='adaptation_days_number_'
+                key='ensemble_adapt_period_'
             )
             st.number_input(
                 label='Значимость доверительного интервала (от 0 до 1)',
@@ -220,4 +220,4 @@ def update_ensemble_params(write_from, write_to):
     write_to['tune'] = int(write_from['tune_'])
     write_to['chains'] = int(write_from['chains_'])
     write_to['target_accept'] = float(write_from['target_accept_'])
-    write_to['adaptation_days_number'] = int(write_from['adaptation_days_number_'])
+    write_to['ensemble_adapt_period'] = int(write_from['ensemble_adapt_period_'])

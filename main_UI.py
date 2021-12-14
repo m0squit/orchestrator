@@ -29,7 +29,7 @@ def initialize_session(session):
     session.quantiles = [0.1, 0.3]
     session.window_sizes = [3, 5, 7, 15, 30]
     # Ensemble model
-    session.adaptation_days_number = 28
+    session.ensemble_adapt_period = 28
     session.interval_probability = 0.9
     session.draws = 300
     session.tune = 200
@@ -52,7 +52,7 @@ def parse_well_names(well_names_ois):
 
 
 def get_current_state(state: AppState, session: st.session_state) -> None:
-    # Функция сохраняет состояние программы с выбранным набором параметров
+    # Функция сохраняет состояние программы с текущим набором параметров
     state['adapt_params'] = {}
     state['buffer'] = None
     state['ensemble_interval'] = pd.DataFrame()
@@ -67,10 +67,11 @@ def get_current_state(state: AppState, session: st.session_state) -> None:
     state['was_calc_ensemble'] = is_calc_ensemble
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
-    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.adaptation_days_number)
+    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.ensemble_adapt_period)
     state['was_date_end'] = date_end
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
+    state['wells_ftor'] = preprocessor.create_wells_ftor(selected_wells_ois)
 
 
 st.set_page_config(
@@ -139,8 +140,6 @@ with st.sidebar:
         max_value=DATE_MAX,
         key='date_end',
     )
-    adaptation_days_number = (date_test - date_start).days
-    forecast_days_number = (date_end - date_test).days
     config = ConfigPreprocessor(field_name, FIELDS_SHOPS[field_name],
                                 date_start, date_test, date_end,)
     preprocessor = run_preprocessor(config)
@@ -163,6 +162,7 @@ if submit and wells_to_calc:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.state)
     if is_calc_wolfram:
+        forecast_days_number = (date_end - date_test).days
         calculator_wolfram = calculate_wolfram(preprocessor,
                                                selected_wells_ois,
                                                forecast_days_number,
@@ -172,7 +172,7 @@ if submit and wells_to_calc:
                                                session.window_sizes,
                                                session.quantiles)
         extract_data_wolfram(calculator_wolfram, session.state)
-        convert_tones_to_m3_for_wolfram(session.state, preprocessor.create_wells_ftor(selected_wells_ois))
+        convert_tones_to_m3_for_wolfram(session.state, session.state.wells_ftor)
     if CRM_xlsx is None:
         session.pop('df_CRM', None)
     else:
@@ -187,7 +187,7 @@ if submit and wells_to_calc:
             input_df = prepare_df_for_ensemble(session.state, well_name_normal, name_of_y_true)
             ensemble_result = calculate_ensemble(
                 input_df,
-                adaptation_days_number=session.adaptation_days_number,
+                adaptation_days_number=session.ensemble_adapt_period,
                 interval_probability=session.interval_probability,
                 draws=session.draws,
                 tune=session.tune,
@@ -201,9 +201,11 @@ if submit and wells_to_calc:
         dfs, dates = cut_statistics_test_only(session.state)
         session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
 
-if submit and not wells_to_calc:
-    st.info('Не выбрано ни одной скважины для расчета.')
+adaptation_days_number = (date_test - date_start).days
+forecast_days_number = (date_end - date_test).days
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
+if submit and not wells_to_calc:
+    st.info('Не выбрано ни одной скважины для расчета.')
 page = PAGES[selection]
 page.show(session)
