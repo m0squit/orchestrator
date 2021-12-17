@@ -72,15 +72,18 @@ class Preprocessor(object):
                 'заданным date_start, date_test, date_end. Проверьте список.'
             )
         for well_name in well_names_exist:
-            creator_well = _CreatorWellFtor(
-                self._data,
-                self._config,
-                well_name,
-                user_constraints_for_adap_period,
-            )
-            wells.append(creator_well.well)
-            print(f'well {well_name} was prepared')
-        print()
+            try:
+                creator_well = _CreatorWellFtor(
+                    self._data,
+                    self._config,
+                    well_name,
+                    user_constraints_for_adap_period,
+                )
+                wells.append(creator_well.well)
+                print(f'well {well_name} was prepared\n')
+            except Exception as exc:
+                print(exc)
+                continue
         return wells
 
     def create_wells_wolfram(self, well_names_desire: List[int]) -> List[WellWolfram]:
@@ -444,6 +447,9 @@ class _CreatorWellFtor(_CreatorWell):
         self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
         self._df_chess = self._df_chess.loc[self._df_chess['charwork.name'] == 'Нефтяные']
         self._date_start = self._df_chess.index[0]
+        if any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
+            raise ValueError(f'There are missing values in input data for column "{self._NAME_PRESSURE}"')
+
         self._df_chess[self._NAME_RATE_OIL] = self._df_chess[self._NAME_RATE_OIL].apply(
             lambda x: x / self._density_oil)
         rates_liq = self._df_chess[self._NAME_RATE_LIQ]
