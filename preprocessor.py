@@ -1051,5 +1051,5 @@ class _BoundsImprover:
         for event, row in self._data['event_settings'].iterrows():
             changing_prms_adap_prd = json.loads(row['changing params'])['adap_period']
             if self._NAME_XF in changing_prms_adap_prd:
-                events_changing_xf.append(event)
+                events_changing_xf.append(str(event))
         return events_changing_xf
