@@ -9,8 +9,9 @@ from plotly.subplots import make_subplots
 from timeit import default_timer
 import os
 
-from config import Config
+from config import Config as ConfigPreprocessor
 from preprocessor import Preprocessor
+from frameworks_ftor.ftor.well import Well as WellFtor
 
 
 def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_params, path, is_liq):
@@ -32,9 +33,9 @@ def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_par
     mark = dict(size=3)
     line = dict(width=1)
 
-    s = df_chess['Мероприятие'].dropna()
+    s = df_chess[WellFtor.NAME_EVENT].dropna()
     trace_a = go.Scatter(
-        name='Мероприятие',
+        name=WellFtor.NAME_EVENT,
         x=s.index,
         y=[0.2] * len(s),
         mode='markers+text',
@@ -49,26 +50,24 @@ def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_par
     if is_liq:
         dir_path = path / 'liq'
         x_model = x
-        name_fact = 'Дебит жидкости'
+        name_fact = WellFtor.NAME_RATE_LIQ
         name_model = 'Дебит жидкости модельный'
         name_graph = 'liq'
     else:
         dir_path = path / 'oil'
         x_model = rates.index.to_list()
-        name_fact = 'Дебит нефти'
+        name_fact = WellFtor.NAME_RATE_OIL
         name_model = 'Дебит нефти модельный'
         name_graph = 'oil'
 
     fig.add_trace(go.Scatter(name=name_fact, x=x, y=df_chess[name_fact], mode=m, marker=mark), row=2, col=1)
     fig.add_trace(go.Scatter(name=name_model, x=x_model, y=rates, mode=ml, marker=mark, line=line), row=2, col=1)
-    fig.add_trace(go.Scatter(name='p_з_факт', x=x, y=df_chess['Давление забойное'], mode=m, marker=mark), row=3, col=1)
+    fig.add_trace(go.Scatter(name='Pз', x=x, y=df_chess[WellFtor.NAME_PRESSURE], mode=m, marker=mark), row=3, col=1)
     fig.add_vline(x=date_test, line_width=2, line_dash='dash')
 
     text = 'params:'
-    for params in adap_and_fixed_params.copy():
-        for name, value in params.items():
-            params[name] = round(value, 1)
-        text += f'<br>{params}'
+    for ad_prd_prms in adap_and_fixed_params.copy():
+        text += '<br>' + str({name: round(ad_prd_prms[name], 1) for name in ad_prd_prms})
 
     fig.add_annotation(showarrow=False, text=text, xref='paper', yref='paper', x=0.5, y=1.175)
 
@@ -103,22 +102,19 @@ dates_end = [
     # datetime.date(2019, 3, 31)
 ]
 
-use_eq_t = [
-    False,
-    # True
-]
-data = zip(fields, shops_lst, dates_start, dates_test, dates_end, use_eq_t)
+data = zip(fields, shops_lst, dates_start, dates_test, dates_end)
 
-for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
+for field_name, shops, date_start, date_test, date_end in data:
+    time_calc_started = str(datetime.datetime.now()).replace(':', '-')
     start = default_timer()
-    name_dir = field_name + " " + str(datetime.datetime.now()).replace(':', '-')
+    name_dir = field_name + " " + time_calc_started
     path = Path.cwd() / 'tests' / name_dir
     if not path.exists():
         os.mkdir(path)
     df_hypotheses = pd.DataFrame()
 
     preprocessor = Preprocessor(
-        Config(
+        ConfigPreprocessor(
             field_name,
             shops,
             date_start,
@@ -129,21 +125,27 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
 
     for well_name in preprocessor.well_names:
         try:
-            if well_name == 2560204400:
+            # if well_name in [
+            #     2860203200,
+            # ]:
                 data_ftor = preprocessor.create_wells_ftor(
                     [well_name],
-                    # user_constraints_for_adap_period = {
-                    #     'permeability': 1.2,
-                    #     'skin': 1.7,
-                    #     'res_width': 636,
-                    #     'res_length': 144,
-                    #     'pressure_initial': 1000,
-                    #     'boundary_code': 3}
+                    # user_constraints_for_adap_period={
+                    #     'kind_code': 2,
+                    #     'permeability': 58.6,
+                    #     'skin': 2,
+                    #     'res_width': 986.7,
+                    #     'res_length': 958.6,
+                    #     'pressure_initial': 197.9,
+                    #     'length_half_fracture': 20.1,
+                    #     'length_hor_well_bore': 145.1,
+                    #     'number_fractures': 2,
+                    #     'boundary_code': 0
+                    # }
                 )[0]
                 calculator_ftor = CalculatorFtor(
                     ConfigFtor(
-                        use_equal_time_algorithm=use_eq_t,
-                        apply_last_points_adaptation=False,
+                        # apply_last_points_adaptation=False,
                     ),
                     [data_ftor],
                     df_hypotheses)
@@ -170,6 +172,7 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
 
     exec_time = default_timer() - start
     file = open(path / 'test_data.txt', 'w')
+    print(f'{time_calc_started = }', file=file)
     print(f'{exec_time = } с', file=file)
     print(f'{field_name = }', file=file)
     print(f'{shops = }', file=file)
@@ -177,4 +180,15 @@ for field_name, shops, date_start, date_test, date_end, use_eq_t in data:
     print(f'{date_test = }', file=file)
     print(f'{date_end = }', file=file)
     file.close()
-    df_hypotheses.to_excel(path / 'df_hypotheses.xlsx')
+
+    hypo_table = path / 'df_hypotheses.xlsx'
+    df_hypotheses.to_excel(hypo_table)
+
+    results_table = path / 'aggregated_results.xlsx'
+    well_tables = {*path.glob('*.xlsx')} - {hypo_table}
+    df_results = pd.DataFrame()
+    for table in well_tables:
+        df = pd.read_excel(table, index_col='dt')
+        for col in df:
+            df_results[col] = df[col]
+    df_results.to_excel(results_table)

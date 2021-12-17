@@ -1,119 +1,94 @@
 import datetime
-import pandas as pd
 import streamlit as st
-import UI.pages.models_settings
-import UI.pages.wells_map
-import UI.pages.analytics
-import UI.pages.specific_well
 
-from config import Config
+import UI.pages.analytics
+import UI.pages.models_settings
+import UI.pages.resume_app
+import UI.pages.specific_well
+import UI.pages.wells_map
+from config import Config as ConfigPreprocessor
+from UI.app_state import AppState
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
+from UI.data_processor import *
+
+
+def initialize_session(session):
+    session.state = AppState()
+    # Ftor model
+    session.constraints = {}
+    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
+        session[f'{param_name}_is_adapt'] = True
+        session[f'{param_name}_lower'] = param_dict['lower_val']
+        session[f'{param_name}_default'] = param_dict['default_val']
+        session[f'{param_name}_upper'] = param_dict['upper_val']
+    # ML model
+    session.estimator_name_group = 'xgb'
+    session.estimator_name_well = 'svr'
+    session.is_deep_grid_search = False
+    session.quantiles = [0.1, 0.3]
+    session.window_sizes = [3, 5, 7, 15, 30]
+    # Ensemble model
+    session.adaptation_days_number = 28
+    session.interval_probability = 0.9
+    session.draws = 300
+    session.tune = 200
+    session.chains = 1
+    session.target_accept = 0.95
+
+
+def parse_well_names(well_names_ois):
+    # Функция сопоставляет имена скважин OIS и (ГРАД?)
+    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
+    wellnames_key_normal = {}
+    wellnames_key_ois = {}
+    for name_ois in well_names_ois:
+        well_name_norm = welllist[welllist.ois == name_ois]
+        well_name_norm = well_name_norm[well_name_norm.npath == 0]
+        well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+        wellnames_key_normal[well_name_norm] = name_ois
+        wellnames_key_ois[name_ois] = well_name_norm
+    return wellnames_key_normal, wellnames_key_ois
+
+
+def get_current_state(state: AppState, session: st.session_state) -> None:
+    # Функция сохраняет состояние программы с выбранным набором параметров
+    state['adapt_params'] = {}
+    state['buffer'] = None
+    state['ensemble_interval'] = pd.DataFrame()
+    state['exclude_wells'] = []
+    state['statistics'] = {}
+    state['statistics_test_only'] = {}
+    state['selected_wells_norm'] = wells_to_calc.copy()
+    state['selected_wells_ois'] = selected_wells_ois.copy()
+    state['was_config'] = config
+    state['was_calc_ftor'] = is_calc_ftor
+    state['was_calc_wolfram'] = is_calc_wolfram
+    state['was_calc_ensemble'] = is_calc_ensemble
+    state['was_date_start'] = date_start
+    state['was_date_test'] = date_test
+    state['was_date_test_if_ensemble'] = date_test + datetime.timedelta(days=session.adaptation_days_number)
+    state['was_date_end'] = date_end
+    state['wellnames_key_normal'] = wellnames_key_normal.copy()
+    state['wellnames_key_ois'] = wellnames_key_ois.copy()
 
 
 st.set_page_config(
     page_title='КСП',
     layout="wide"  # Для отображения на всю ширину браузера
 )
-
-
-def initialize_session(_session):
-    _session.selected_wells = []
-    _session.analytics_plots = {}
-    _session.df_draw_liq = {}
-    _session.df_draw_oil = {}
-    _session.df_draw_ensemble = {}
-    _session.events = {}
-    _session.fig = {}
-    _session.pressure = {}
-    _session.statistics = {}
-    # Ftor model
-    _session.adapt_params = {}
-    _session.constraints = {}
-    session.was_calc_ftor = False
-    session.was_calc_wolfram = False
-    session.was_calc_ensemble = False
-    for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
-        _session[f'{param_name}_is_adapt'] = True
-        _session[f'{param_name}_lower'] = param_dict['lower_val']
-        _session[f'{param_name}_default'] = param_dict['default_val']
-        _session[f'{param_name}_upper'] = param_dict['upper_val']
-    # ML model
-    _session.estimator_name_group = 'svr'
-    _session.estimator_name_well = 'ela'
-    _session.is_deep_grid_search = False
-    _session.quantiles = [0.1, 0.3]
-    _session.window_sizes = [3, 5, 7, 15, 30]
-    # Ensemble model
-    _session.adaptation_days_number = 28
-    _session.interval_probability = 0.9
-    _session.draws = 300
-    _session.tune = 200
-    _session.chains = 1
-    _session.target_accept = 0.95
-
-
-def parse_well_names(well_names_ois):
-    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
-    well_names = {}
-    for name_ois in well_names_ois:
-        well_name = welllist[welllist.ois == name_ois]
-        well_name = well_name[well_name.npath == 0]
-        well_name = well_name.at[well_name.index[0], 'num']
-        well_names[well_name] = name_ois
-    return well_names
-
-
-def extract_data_ftor(_calculator_ftor, df_liq, df_oil):
-    for well_ftor in _calculator_ftor.wells:
-        _well_name = well_ftor.well_name
-        res_ftor = well_ftor.results
-        session.adapt_params[_well_name] = res_ftor.adap_and_fixed_params
-
-        # Жидкость. Полный ряд (train + test)
-        rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
-        rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
-        # Нефть. Только test
-        rates_oil_test_ftor = res_ftor.rates_oil_test
-        rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
-
-        df_liq[_well_name]['ftor'] = rates_liq_ftor
-        df_oil[_well_name]['ftor'] = rates_oil_test_ftor
-
-
-def extract_data_wolfram(_calculator_wolfram, df_liq, df_oil, pressure):
-    for _well_wolfram in _calculator_wolfram.wells:
-        _well_name = _well_wolfram.well_name
-        res_wolfram = _well_wolfram.results
-        # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует для вычислений максимально
-        # возможный доступный ряд фактичесих данных.
-        df_true = _well_wolfram.df
-        rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
-        rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        bh_pressure = df_true[_well_wolfram.NAME_PRESSURE]
-        # Жидкость. Полный ряд (train + test)
-        rates_liq_wolfram = pd.concat(objs=[res_wolfram.rates_liq_train, res_wolfram.rates_liq_test])
-        # Нефть. Полный ряд (train + test)
-        rates_oil_wolfram = pd.concat(objs=[res_wolfram.rates_oil_train, res_wolfram.rates_oil_test])
-
-        df_liq[_well_name]['wolfram'] = rates_liq_wolfram
-        df_liq[_well_name]['true'] = rates_liq_true
-        df_oil[_well_name]['wolfram'] = rates_oil_wolfram
-        df_oil[_well_name]['true'] = rates_oil_true
-        pressure[_well_name] = bh_pressure[pressure[_well_name].index]
-
+# Инициализация значений сессии st.session_state
+session = st.session_state
+if 'date_start' not in session:
+    initialize_session(session)
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,
+    "Импорт/экспорт расчетов": UI.pages.resume_app,
 }
-
-# Инициализация значений сессии st.session_state
-session = st.session_state
-if 'date_start' not in session:
-    initialize_session(session)
 
 # Реализация интерфейса UI
 with st.sidebar:
@@ -137,7 +112,7 @@ with st.sidebar:
     field_name = st.selectbox(
         label='Месторождение',
         options=FIELDS_SHOPS.keys(),
-        key='field_name'
+        key='field_name',
     )
     date_start = st.date_input(
         label='Дата начала адаптации (с 00:00)',
@@ -166,95 +141,69 @@ with st.sidebar:
     )
     adaptation_days_number = (date_test - date_start).days
     forecast_days_number = (date_end - date_test).days
-    config = Config(
-        field_name,
-        FIELDS_SHOPS[field_name],
-        date_start,
-        date_test,
-        date_end,
-    )
+    config = ConfigPreprocessor(field_name, FIELDS_SHOPS[field_name],
+                                date_start, date_test, date_end,)
     preprocessor = run_preprocessor(config)
-    session.well_names_parsed = parse_well_names(preprocessor.well_names)
-    wells_to_calc = st.multiselect(
-        label='Скважина',
-        options=['Все скважины'] + list(session.well_names_parsed.keys()),
-        key='wells_to_calc'
-    )
+    wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names)
+    wells_to_calc = st.multiselect(label='Скважина',
+                                   options=['Все скважины'] + list(wellnames_key_normal.keys()),
+                                   key='wells_to_calc')
     if 'Все скважины' in wells_to_calc:
-        wells_to_calc = list(session.well_names_parsed.keys())
-    well_names_ois = [session.well_names_parsed[well_name_] for well_name_ in wells_to_calc]
+        wells_to_calc = list(wellnames_key_normal.keys())
+    selected_wells_ois = [wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
 
     CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
-    if CRM_xlsx is not None:
-        df_CRM = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        session['df_CRM'] = df_CRM
-
     submit = st.button(label='Запустить расчеты')
 
-if submit:
-    if not wells_to_calc:
-        st.error('Не выбрано ни одной скважины для расчета.')
-    session.selected_wells = wells_to_calc.copy()
-    session.selected_wells_ois = well_names_ois.copy()
-    session.was_calc_ftor = is_calc_ftor
-    session.was_calc_wolfram = is_calc_wolfram
-    session.was_calc_ensemble = is_calc_ensemble
-    for well in preprocessor.create_wells_ftor(well_names_ois):
-        # Инициализация данных для визуализации
-        _well_name = well.well_name
-        session.df_draw_liq[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        session.df_draw_oil[_well_name] = pd.DataFrame(index=pd.date_range(date_start, date_end, freq='D'))
-        session.df_draw_ensemble[_well_name] = pd.DataFrame()
-
-        # Фактические данные для визуализации
-        df = well.df_chess
-        session.events[_well_name] = df['Мероприятие']
-        session.df_draw_liq[_well_name]['true'] = df['Дебит жидкости']
-        session.df_draw_oil[_well_name]['true'] = df['Дебит нефти']
-        session.pressure[_well_name] = df['Давление забойное']
-
-        # Данные CRM для визуализации
-        if 'df_CRM' in session:
-            if _well_name in session['df_CRM'].columns:
-                session.df_draw_oil[_well_name]['CRM'] = session.df_CRM[_well_name]
-
+if submit and wells_to_calc:
+    session.state = AppState()
+    get_current_state(session.state, session)
+    at_least_one_model = is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None
     if is_calc_ftor:
-        calculator_ftor = calculate_ftor(preprocessor, well_names_ois, session.constraints)
-        extract_data_ftor(calculator_ftor, session.df_draw_liq, session.df_draw_oil)
+        calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
+        extract_data_ftor(calculator_ftor, session.state)
     if is_calc_wolfram:
         calculator_wolfram = calculate_wolfram(preprocessor,
-                                               well_names_ois,
+                                               selected_wells_ois,
                                                forecast_days_number,
                                                session.estimator_name_group,
                                                session.estimator_name_well,
                                                session.is_deep_grid_search,
                                                session.window_sizes,
-                                               session.quantiles,
-                                               )
-        extract_data_wolfram(calculator_wolfram,
-                             session.df_draw_liq,
-                             session.df_draw_oil,
-                             session.pressure,
-                             )
+                                               session.quantiles)
+        extract_data_wolfram(calculator_wolfram, session.state)
+        convert_tones_to_m3_for_wolfram(session.state, preprocessor.create_wells_ftor(selected_wells_ois))
+    if CRM_xlsx is None:
+        session.pop('df_CRM', None)
+    else:
+        session['df_CRM'] = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
+        extract_data_CRM(session['df_CRM'], session.state, preprocessor.create_wells_wolfram(selected_wells_ois))
+    if at_least_one_model:
+        make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
+    if at_least_one_model and is_calc_ensemble:
+        name_of_y_true = 'true'
+        for ind, well_name_normal in enumerate(wells_to_calc):
+            print(f'\nWell {ind + 1} out of {len(wells_to_calc)}\n')
+            input_df = prepare_df_for_ensemble(session.state, well_name_normal, name_of_y_true)
+            ensemble_result = calculate_ensemble(
+                input_df,
+                adaptation_days_number=session.adaptation_days_number,
+                interval_probability=session.interval_probability,
+                draws=session.draws,
+                tune=session.tune,
+                chains=session.chains,
+                target_accept=session.target_accept,
+                name_of_y_true=name_of_y_true
+            )
+            if not ensemble_result.empty:
+                extract_data_ensemble(ensemble_result, session.state, well_name_normal)
+    if at_least_one_model:
+        dfs, dates = cut_statistics_test_only(session.state)
+        session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
 
-    if is_calc_ensemble and (is_calc_ftor or is_calc_wolfram):
-        for _well_name in well_names_ois:
-            try:
-                session.df_draw_ensemble[_well_name] = calculate_ensemble(
-                    session.df_draw_oil[_well_name][date_test:],
-                    adaptation_days_number=session.adaptation_days_number,
-                    interval_probability=session.interval_probability,
-                    draws=session.draws,
-                    tune=session.tune,
-                    chains=session.chains,
-                    target_accept=session.target_accept,
-                    name_of_y_true='true'
-                )
-            except:
-                st.error(f'Ошибка при расчете ансамбля на скважине {_well_name}')
-
-
+if submit and not wells_to_calc:
+    st.info('Не выбрано ни одной скважины для расчета.')
 if adaptation_days_number < 90 or forecast_days_number < 28:
     st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
 page = PAGES[selection]
-page.show()
+page.show(session)
