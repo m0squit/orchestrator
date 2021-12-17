@@ -447,7 +447,10 @@ class _CreatorWellFtor(_CreatorWell):
         self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
         self._df_chess = self._df_chess.loc[self._df_chess['charwork.name'] == 'Нефтяные']
         self._date_start = self._df_chess.index[0]
-        if any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
+
+        if np.any(self._df_chess.index != pd.date_range(self._date_start, self._date_end, freq="D")):
+            raise IndexError(f'There is fragmentation of input data')
+        elif any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
             raise ValueError(f'There are missing values in input data for column "{self._NAME_PRESSURE}"')
 
         self._df_chess[self._NAME_RATE_OIL] = self._df_chess[self._NAME_RATE_OIL].apply(
