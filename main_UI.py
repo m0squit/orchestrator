@@ -151,13 +151,12 @@ with st.sidebar:
         wells_to_calc = list(wellnames_key_normal.keys())
     selected_wells_ois = [wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
 
-    CRM_xlsx = st.file_uploader('Загрузить прогноз CRM по нефти', type='xlsx')
     submit = st.button(label='Запустить расчеты')
 
 if submit and wells_to_calc:
     session.state = AppState()
     get_current_state(session.state, session)
-    at_least_one_model = is_calc_ftor or is_calc_wolfram or CRM_xlsx is not None
+    at_least_one_model = is_calc_ftor or is_calc_wolfram
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.state)
@@ -173,11 +172,6 @@ if submit and wells_to_calc:
                                                session.quantiles)
         extract_data_wolfram(calculator_wolfram, session.state)
         convert_tones_to_m3_for_wolfram(session.state, session.state.wells_ftor)
-    if CRM_xlsx is None:
-        session.pop('df_CRM', None)
-    else:
-        session['df_CRM'] = pd.read_excel(CRM_xlsx, index_col=0, engine='openpyxl')
-        extract_data_CRM(session['df_CRM'], session.state, preprocessor.create_wells_wolfram(selected_wells_ois))
     if at_least_one_model:
         make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
     if at_least_one_model and is_calc_ensemble:
