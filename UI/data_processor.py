@@ -59,19 +59,18 @@ def extract_data_wolfram(_calculator_wolfram, state):
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
 
 
-def extract_data_CRM(df_CRM, state, wells_wolfram):
+def extract_data_CRM(df, state, wells_wolfram, mode='CRM'):
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     for well in wells_wolfram:
-        if well.well_name in df_CRM.columns:
-            if 'CRM' not in state.statistics:
-                state.statistics['CRM'] = pd.DataFrame(index=dates)
-            df_true = well.df
-            rates_oil_true = df_true[well.NAME_RATE_OIL]
-            well_name_normal = state.wellnames_key_ois[well.well_name]
-            state.statistics['CRM'][f'{well_name_normal}_liq_true'] = np.nan
-            state.statistics['CRM'][f'{well_name_normal}_liq_pred'] = np.nan
-            state.statistics['CRM'][f'{well_name_normal}_oil_true'] = rates_oil_true
-            state.statistics['CRM'][f'{well_name_normal}_oil_pred'] = df_CRM[well.well_name]
+        well_name_normal = state.wellnames_key_ois[well.well_name]
+        if well_name_normal in df.columns:
+            if mode not in state.statistics:
+                state.statistics[mode] = pd.DataFrame(index=dates)
+            df_fact = well.df_chess
+            state.statistics[mode][f'{well_name_normal}_liq_true'] = df_fact['Дебит жидкости']
+            state.statistics[mode][f'{well_name_normal}_liq_pred'] = df[well_name_normal]
+            state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
+            state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
 
 def convert_tones_to_m3_for_wolfram(state, wells_ftor):

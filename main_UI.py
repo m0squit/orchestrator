@@ -11,6 +11,8 @@ from UI.app_state import AppState
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
+from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_crm.class_CRM.config import ConfigCRM
 
 
 def initialize_session(session):
@@ -64,6 +66,7 @@ def get_current_state(state: AppState, session: st.session_state) -> None:
     state['was_config'] = config
     state['was_calc_ftor'] = is_calc_ftor
     state['was_calc_wolfram'] = is_calc_wolfram
+    state['was_calc_CRM'] = is_calc_CRM
     state['was_calc_ensemble'] = is_calc_ensemble
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
@@ -103,6 +106,11 @@ with st.sidebar:
         label='Считать модель ML',
         value=True,
         key='is_calc_wolfram',
+    )
+    is_calc_CRM = st.checkbox(
+        label='Считать модель CRM',
+        value=True,
+        key='is_calc_CRM',
     )
     is_calc_ensemble = st.checkbox(
         label='Считать ансамбль моделей',
@@ -150,13 +158,12 @@ with st.sidebar:
     if 'Все скважины' in wells_to_calc:
         wells_to_calc = list(wellnames_key_normal.keys())
     selected_wells_ois = [wellnames_key_normal[well_name_] for well_name_ in wells_to_calc]
-
     submit = st.button(label='Запустить расчеты')
 
 if submit and wells_to_calc:
     session.state = AppState()
     get_current_state(session.state, session)
-    at_least_one_model = is_calc_ftor or is_calc_wolfram
+    at_least_one_model = is_calc_ftor or is_calc_wolfram or is_calc_CRM
     if is_calc_ftor:
         calculator_ftor = calculate_ftor(preprocessor, selected_wells_ois, session.constraints)
         extract_data_ftor(calculator_ftor, session.state)
@@ -172,6 +179,27 @@ if submit and wells_to_calc:
                                                session.quantiles)
         extract_data_wolfram(calculator_wolfram, session.state)
         convert_tones_to_m3_for_wolfram(session.state, session.state.wells_ftor)
+    if is_calc_CRM:
+        calc_CRM = True
+        calc_CRMIP = True
+        config_CRM = ConfigCRM(date_start_adapt=date_start,
+                               date_end_adapt=date_test - datetime.timedelta(days=1),
+                               date_end_forecast=date_end,
+                               calc_CRM=calc_CRM,
+                               calc_CRMIP=calc_CRMIP,
+                               grad_format_data=True,
+                               oilfield=field_name)
+        calculator_CRM = CalculatorCRM(config_CRM)
+        info = calculator_CRM.info
+        config_calculated = calculator_CRM.config
+        if calc_CRM:
+            CRM = calculator_CRM.CRM
+            pred_CRM = calculator_CRM.pred_CRM
+            extract_data_CRM(pred_CRM, session.state, session.state['wells_ftor'], mode='CRM')
+        if calc_CRMIP:
+            CRMIP = calculator_CRM.CRMIP
+            pred_CRMIP = calculator_CRM.pred_CRMIP
+            extract_data_CRM(pred_CRMIP, session.state, session.state['wells_ftor'], mode='CRMIP')
     if at_least_one_model:
         make_models_stop_well(session.state['statistics'], session.state['selected_wells_norm'])
     if at_least_one_model and is_calc_ensemble:
