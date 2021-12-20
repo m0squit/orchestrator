@@ -28,22 +28,6 @@ YES_NO = {
 }
 
 DEFAULT_FTOR_BOUNDS = {
-    'boundary_code': {
-        'label': 'Тип границ',
-        'lower_val': 0,
-        'default_val': 0,
-        'upper_val': 5,
-        'step': 1,
-        'min': 0,
-        'max': 5,
-        'help': """Тип границ - непротекания или постоянного давления.
-            0: RECTANGLE_BOUNDARY_CCCC
-            1: RECTANGLE_BOUNDARY_NNNN
-            2: RECTANGLE_BOUNDARY_NCNC
-            3: RECTANGLE_BOUNDARY_NNCC
-            4: RECTANGLE_BOUNDARY_NNCN
-            5: RECTANGLE_BOUNDARY_NCCC""",
-    },
     'permeability': {
         'label': 'Проницаемость k, мД',
         'lower_val': 0.1,
@@ -64,25 +48,15 @@ DEFAULT_FTOR_BOUNDS = {
         'max': 20.,
         'help': """Скин-фактор""",
     },
-    'res_width': {
-        'label': 'Ширина резервуара, м',
+    'res_radius': {
+        'label': 'Радиус резервуара, м',
         'lower_val': 200,
         'default_val': 600,
         'upper_val': 700,
         'step': 50,
         'min': 10,
         'max': 100000,
-        'help': """Ширина прямоугольного резервуара, м""",
-    },
-    'res_length': {
-        'label': 'Длина резервуара, м',
-        'lower_val': 200,
-        'default_val': 600,
-        'upper_val': 700,
-        'step': 50,
-        'min': 10,
-        'max': 100000,
-        'help': """Длина прямоугольного резервуара, м""",
+        'help': """Радиус цилиндрического резервуара, м""",
     },
     'pressure_initial': {
         'label': 'Начальное пластовое давление, атм',
@@ -127,26 +101,14 @@ DEFAULT_FTOR_BOUNDS = {
 }
 
 FTOR_DECODE = {
-    "boundary_code": {
-        'label': 'Тип границ резервуара',
-        0: "CCCC",
-        1: "NNNN",
-        2: "NCNC",
-        3: "NNCC",
-        4: "NNCN",
-        5: "NCCC",
-    },
     'permeability': {
         'label': 'Проницаемость k, мД',
     },
     'skin': {
         'label': 'Skin',
     },
-    'res_width': {
-        'label': 'Ширина резервуара, м',
-    },
-    'res_length': {
-        'label': 'Длина резервуара, м',
+    'res_radius': {
+        'label': 'Радиус цилиндрического резервуара, м',
     },
     'pressure_initial': {
         'label': 'Начальное пластовое давление, атм',

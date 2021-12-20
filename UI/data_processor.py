@@ -4,14 +4,12 @@ from UI.config import FTOR_DECODE
 
 
 def convert_params_to_readable(res: dict):
-    if 'boundary_code' in res.keys():
-        # Расшифровка типа границ и типа скважины
-        res['boundary_code'] = FTOR_DECODE['boundary_code'][res['boundary_code']]
-        res['kind_code'] = FTOR_DECODE['kind_code'][res['kind_code']]
-        # Расшифровка названий параметров адаптации
-        for key in FTOR_DECODE.keys():
-            if key in res.keys():
-                res[FTOR_DECODE[key]['label']] = res.pop(key)
+    # Расшифровка типа границ и типа скважины
+    res['kind_code'] = FTOR_DECODE['kind_code'][res['kind_code']]
+    # Расшифровка названий параметров адаптации
+    for key in FTOR_DECODE.keys():
+        if key in res.keys():
+            res[FTOR_DECODE[key]['label']] = res.pop(key)
     return res
 
 
