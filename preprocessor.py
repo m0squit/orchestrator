@@ -311,10 +311,8 @@ class _CreatorWellFtor(_CreatorWell):
         'kind_code',
         'permeability',
         'skin',
-        'res_width',
-        'res_length',
+        'res_radius',
         'pressure_initial',
-        'boundary_code',
     )}
     _prms_poss_for_constraints[1] = _prms_poss_for_constraints[0] + ('length_hor_well_bore',)
     _prms_poss_for_constraints[2] = _prms_poss_for_constraints[0] + ('length_half_fracture',)
