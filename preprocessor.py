@@ -311,10 +311,8 @@ class _CreatorWellFtor(_CreatorWell):
         'kind_code',
         'permeability',
         'skin',
-        'res_width',
-        'res_length',
+        'res_radius',
         'pressure_initial',
-        'boundary_code',
     )}
     _prms_poss_for_constraints[1] = _prms_poss_for_constraints[0] + ('length_hor_well_bore',)
     _prms_poss_for_constraints[2] = _prms_poss_for_constraints[0] + ('length_half_fracture',)
@@ -447,7 +445,10 @@ class _CreatorWellFtor(_CreatorWell):
         self._df_chess = self._df_chess.loc[self._date_start:self._date_end]
         self._df_chess = self._df_chess.loc[self._df_chess['charwork.name'] == 'Нефтяные']
         self._date_start = self._df_chess.index[0]
-        if any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
+
+        if np.any(self._df_chess.index != pd.date_range(self._date_start, self._date_end, freq="D")):
+            raise IndexError(f'There is fragmentation of input data')
+        elif any(self._df_chess[self._NAME_PRESSURE].loc[self._df_chess['sost'] == 'В работе'].isna()):
             raise ValueError(f'There are missing values in input data for column "{self._NAME_PRESSURE}"')
 
         self._df_chess[self._NAME_RATE_OIL] = self._df_chess[self._NAME_RATE_OIL].apply(
@@ -1051,5 +1052,5 @@ class _BoundsImprover:
         for event, row in self._data['event_settings'].iterrows():
             changing_prms_adap_prd = json.loads(row['changing params'])['adap_period']
             if self._NAME_XF in changing_prms_adap_prd:
-                events_changing_xf.append(event)
+                events_changing_xf.append(str(event))
         return events_changing_xf
