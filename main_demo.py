@@ -9,8 +9,8 @@ from plotly.subplots import make_subplots
 from timeit import default_timer
 import os
 
-from config import Config as ConfigPreprocessor
-from preprocessor import Preprocessor
+from tools_preprocessor.config import Config as ConfigPreprocessor
+from tools_preprocessor.preprocessor import Preprocessor
 from frameworks_ftor.ftor.well import Well as WellFtor
 
 

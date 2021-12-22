@@ -6,7 +6,7 @@ import UI.pages.models_settings
 import UI.pages.resume_app
 import UI.pages.specific_well
 import UI.pages.wells_map
-from config import Config as ConfigPreprocessor
+from tools_preprocessor.config import Config as ConfigPreprocessor
 from UI.app_state import AppState
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
