@@ -7,6 +7,7 @@ import UI.pages.resume_app
 import UI.pages.specific_well
 import UI.pages.wells_map
 from tools_preprocessor.config import Config as ConfigPreprocessor
+from tools_preprocessor.preprocessor import Preprocessor
 from UI.app_state import AppState
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
@@ -41,7 +42,7 @@ def initialize_session(session):
 
 def parse_well_names(well_names_ois):
     # Функция сопоставляет имена скважин OIS и (ГРАД?)
-    welllist = pd.read_feather(f'data/{field_name}/welllist.feather')
+    welllist = pd.read_feather(Preprocessor._path_general / field_name / 'welllist.feather')
     wellnames_key_normal = {}
     wellnames_key_ois = {}
     for name_ois in well_names_ois:
