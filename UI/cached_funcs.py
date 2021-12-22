@@ -6,7 +6,7 @@ from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 from models_ensemble.bayesian_model import BayesianModel
-from preprocessor import Preprocessor
+from tools_preprocessor.preprocessor import Preprocessor
 from statistics_explorer.config import ConfigStatistics
 from statistics_explorer.main import calculate_statistics
 
