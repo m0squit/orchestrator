@@ -1,19 +1,27 @@
 import numpy as np
 import pandas as pd
+from typing import Dict, Any, List, Tuple
+
+from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
+from frameworks_ftor.ftor.well import Well as WellFtor
+from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from UI.config import FTOR_DECODE
+from UI.app_state import AppState
 
 
-def convert_params_to_readable(res: dict):
-    # Расшифровка типа границ и типа скважины
-    res['kind_code'] = FTOR_DECODE['kind_code'][res['kind_code']]
+def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """ Расшифровка названий параметров адаптации."""
+    parsed_dict = params_dict.copy()
+    # Расшифровка типа скважины
+    parsed_dict['kind_code'] = FTOR_DECODE['kind_code'][parsed_dict['kind_code']]
     # Расшифровка названий параметров адаптации
     for key in FTOR_DECODE.keys():
-        if key in res.keys():
-            res[FTOR_DECODE[key]['label']] = res.pop(key)
-    return res
+        if key in parsed_dict.keys():
+            parsed_dict[FTOR_DECODE[key]['label']] = parsed_dict.pop(key)
+    return parsed_dict
 
 
-def extract_data_ftor(_calculator_ftor, state):
+def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['ftor'] = pd.DataFrame(index=dates)
     for well_ftor in _calculator_ftor.wells:
@@ -21,7 +29,7 @@ def extract_data_ftor(_calculator_ftor, state):
         well_name_normal = state.wellnames_key_ois[well_name_ois]
         res_ftor = well_ftor.results
         adapt_params = res_ftor.adap_and_fixed_params[0]
-        state.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params.copy())
+        state.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params)
         # Жидкость. Полный ряд (train + test)
         rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
         rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
@@ -36,7 +44,7 @@ def extract_data_ftor(_calculator_ftor, state):
         state.statistics['ftor'][f'{well_name_normal}_oil_pred'] = rates_oil_test_ftor
 
 
-def extract_data_wolfram(_calculator_wolfram, state):
+def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['wolfram'] = pd.DataFrame(index=dates)
     for _well_wolfram in _calculator_wolfram.wells:
@@ -57,22 +65,24 @@ def extract_data_wolfram(_calculator_wolfram, state):
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
 
 
-def extract_data_CRM(df_CRM, state, wells_wolfram):
+def extract_data_CRM(df: pd.DataFrame,
+                     state: AppState,
+                     wells_ftor: List[WellFtor],
+                     mode: str = 'CRM') -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
-    for well in wells_wolfram:
-        if well.well_name in df_CRM.columns:
-            if 'CRM' not in state.statistics:
-                state.statistics['CRM'] = pd.DataFrame(index=dates)
-            df_true = well.df
-            rates_oil_true = df_true[well.NAME_RATE_OIL]
-            well_name_normal = state.wellnames_key_ois[well.well_name]
-            state.statistics['CRM'][f'{well_name_normal}_liq_true'] = np.nan
-            state.statistics['CRM'][f'{well_name_normal}_liq_pred'] = np.nan
-            state.statistics['CRM'][f'{well_name_normal}_oil_true'] = rates_oil_true
-            state.statistics['CRM'][f'{well_name_normal}_oil_pred'] = df_CRM[well.well_name]
+    for well in wells_ftor:
+        well_name_normal = state.wellnames_key_ois[well.well_name]
+        if well_name_normal in df.columns:
+            if mode not in state.statistics:
+                state.statistics[mode] = pd.DataFrame(index=dates)
+            df_fact = well.df_chess
+            state.statistics[mode][f'{well_name_normal}_liq_true'] = df_fact['Дебит жидкости']
+            state.statistics[mode][f'{well_name_normal}_liq_pred'] = df[well_name_normal]
+            state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
+            state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
 
-def convert_tones_to_m3_for_wolfram(state, wells_ftor):
+def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
     for well_ftor in wells_ftor:
         density_oil = well_ftor.density_oil
         well_name_normal = state.wellnames_key_ois[well_ftor.well_name]
@@ -80,20 +90,26 @@ def convert_tones_to_m3_for_wolfram(state, wells_ftor):
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
 
 
-def prepare_df_for_ensemble(state, well_name_normal, name_of_y_true):
+def prepare_df_for_ensemble(state: AppState,
+                            well_name_normal: str,
+                            name_of_y_true: str) -> pd.DataFrame:
     models = list(state.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
     input_df_for_ensemble = pd.DataFrame(index=dates_test)
     for model in models:
-        if f'{well_name_normal}_oil_pred' in state.statistics[model]:
+        well_calculated_by_model = f'{well_name_normal}_oil_pred' in state.statistics[model]
+        all_values_are_nan = state.statistics[model][f'{well_name_normal}_oil_pred'].isna().all()
+        if well_calculated_by_model and not all_values_are_nan:
             input_df_for_ensemble[name_of_y_true] = state.statistics[model][f'{well_name_normal}_oil_true']
             input_df_for_ensemble[model] = state.statistics[model][f'{well_name_normal}_oil_pred']
     return input_df_for_ensemble
 
 
-def extract_data_ensemble(ensemble_df, state, well_name_normal):
+def extract_data_ensemble(ensemble_df: pd.DataFrame,
+                          state: AppState,
+                          well_name_normal: str) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     if 'ensemble' not in state.statistics:
         state.statistics['ensemble'] = pd.DataFrame(index=dates)
@@ -108,7 +124,8 @@ def extract_data_ensemble(ensemble_df, state, well_name_normal):
     state.ensemble_interval[f'{well_name_normal}_lower'] = ensemble_df['interval_lower']
 
 
-def make_models_stop_well(statistics, well_names):
+def make_models_stop_well(statistics: Dict[str, pd.DataFrame],
+                          well_names: List[str]) -> None:
     # Зануление значений по моделям, когда фактический дебит равен нулю или NaN
     for model in statistics:
         for well_name in well_names:
@@ -123,7 +140,7 @@ def make_models_stop_well(statistics, well_names):
             statistics[model][f'{well_name}_oil_pred'][oil_zeros | oil_nans] = np.nan
 
 
-def cut_statistics_test_only(state):
+def cut_statistics_test_only(state: AppState) -> Tuple[Dict[str, pd.DataFrame], pd.date_range]:
     statistics_test_index = pd.date_range(state.was_date_test, state.was_date_end, freq='D')
     # обрезка данных по датам(индексу) ансамбля
     if state.was_calc_ensemble:

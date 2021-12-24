@@ -2,13 +2,13 @@ import streamlit as st
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
-def show(session):
+def show(session: st.session_state) -> None:
     draw_ftor_settings(session)
     draw_wolfram_settings(session)
     draw_ensemble_settings(session)
 
 
-def draw_ftor_settings(session):
+def draw_ftor_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели пьезопроводности'):
         with st.form(key='ftor_bounds'):
             for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
@@ -53,7 +53,7 @@ def draw_ftor_settings(session):
             session.constraints = {}
 
 
-def draw_wolfram_settings(session):
+def draw_wolfram_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ML'):
         with st.form(key='ML_params'):
             st.selectbox(
@@ -110,7 +110,7 @@ def draw_wolfram_settings(session):
                                                           'write_to': session})
 
 
-def draw_ensemble_settings(session):
+def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
             st.number_input(
@@ -175,7 +175,8 @@ def draw_ensemble_settings(session):
                                                           'write_to': session})
 
 
-def update_ftor_constraints(write_from, write_to):
+def update_ftor_constraints(write_from: st.session_state,
+                            write_to: st.session_state) -> None:
     # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
     #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (~1 квартал 2022)
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
@@ -206,7 +207,8 @@ def update_ftor_constraints(write_from, write_to):
     write_to.constraints = constraints
 
 
-def update_ML_params(write_from, write_to):
+def update_ML_params(write_from: st.session_state,
+                     write_to: st.session_state) -> None:
     write_to['estimator_name_group'] = ML_FULL_ABBR[write_from['estimator_name_group_']]
     write_to['estimator_name_well'] = ML_FULL_ABBR[write_from['estimator_name_well_']]
     write_to['is_deep_grid_search'] = YES_NO[write_from['is_deep_grid_search_']]
@@ -214,7 +216,8 @@ def update_ML_params(write_from, write_to):
     write_to['quantiles'] = [float(q) for q in write_from['quantiles_'].split()]
 
 
-def update_ensemble_params(write_from, write_to):
+def update_ensemble_params(write_from: st.session_state,
+                           write_to: st.session_state) -> None:
     write_to['interval_probability'] = write_from['interval_probability_']
     write_to['draws'] = int(write_from['draws_'])
     write_to['tune'] = int(write_from['tune_'])
