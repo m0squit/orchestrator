@@ -23,12 +23,14 @@ def calculate_ftor(
         well_names,
         constraints,
 ):
-    # TODO: убрать в будущем: если пользователем задан P_init - меняем ConfigFtor
     config_ftor = ConfigFtor()
-    if 'pressure_initial' in constraints.keys():
-        if type(constraints['pressure_initial']) == dict:
+    # Если пользователь задал границы\значение параметра, которым производится адаптация на
+    # последние точки, то эти значения применяются и для самой адаптации на последние точки
+    param_last_point = config_ftor.param_name_last_points_adaptation
+    if param_last_point in constraints.keys():
+        if type(constraints[param_last_point]) == dict:
             config_ftor.are_param_bounds_discrete = False
-            config_ftor.param_bounds_last_points_adaptation = constraints['pressure_initial']['bounds']
+            config_ftor.param_bounds_last_points_adaptation = constraints[param_last_point]['bounds']
         else:
             config_ftor.apply_last_points_adaptation = False
 
