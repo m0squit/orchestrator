@@ -8,7 +8,6 @@ import UI.pages.specific_well
 import UI.pages.wells_map
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
-from UI.app_state import AppState
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
@@ -16,7 +15,7 @@ from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
 from frameworks_crm.class_CRM.config import ConfigCRM
 
 
-def initialize_session(session):
+def initialize_session(session: st.session_state) -> None:
     session.state = AppState()
     # Ftor model
     session.constraints = {}
@@ -40,7 +39,7 @@ def initialize_session(session):
     session.target_accept = 0.95
 
 
-def parse_well_names(well_names_ois):
+def parse_well_names(well_names_ois: List[int]) -> Tuple[Dict[str, int], Dict[int, str]]:
     # Функция сопоставляет имена скважин OIS и (ГРАД?)
     welllist = pd.read_feather(Preprocessor._path_general / field_name / 'welllist.feather')
     wellnames_key_normal = {}

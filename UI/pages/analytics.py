@@ -1,9 +1,11 @@
 import streamlit as st
+from typing import Tuple
 
+from UI.app_state import AppState
 from UI.cached_funcs import calculate_statistics_plots
 
 
-def show(session):
+def show(session: st.session_state) -> None:
     state = session.state
     if not state.statistics_test_only:
         st.info('Здесь будет отображаться статистика по выбранному набору скважин.')
@@ -13,7 +15,7 @@ def show(session):
     draw_form_exclude_wells(state, selected_wells_set)
 
 
-def select_wells_set(state):
+def select_wells_set(state: AppState) -> Tuple[str, ...]:
     wells_in_model = []
     for df in state.statistics_test_only.values():
         wells_in_model.append(set([col.split('_')[0] for col in df.columns]))
@@ -26,7 +28,7 @@ def select_wells_set(state):
     return well_names_for_statistics
 
 
-def draw_statistics_plots(state, selected_wells_set):
+def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) -> None:
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=state.statistics_test_only,
         field_name=state.was_config.field_name,
@@ -45,7 +47,7 @@ def draw_statistics_plots(state, selected_wells_set):
     st.plotly_chart(analytics_plots[stat_to_draw], use_container_width=True)
 
 
-def draw_form_exclude_wells(state, selected_wells_set):
+def draw_form_exclude_wells(state: AppState, selected_wells_set: Tuple[str, ...]) -> None:
     # Форма "Исключить скважины из статистики"
     form = st.form("form_exclude_wells")
     form.multiselect("Исключить скважины из статистики:",
@@ -55,5 +57,5 @@ def draw_form_exclude_wells(state, selected_wells_set):
     form.form_submit_button("Применить", on_click=update_exclude_wells, args=(state,))
 
 
-def update_exclude_wells(state):
+def update_exclude_wells(state: AppState) -> None:
     state.exclude_wells = st.session_state.mselect_exclude_wells

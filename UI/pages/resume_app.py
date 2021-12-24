@@ -3,12 +3,14 @@ import pandas as pd
 import pickle
 import streamlit as st
 from pathlib import Path
+from typing import IO
 
 from statistics_explorer.config import ConfigStatistics
+from UI.app_state import AppState
 from UI.config import FIELDS_SHOPS
 
 
-def show(session):
+def show(session: st.session_state) -> None:
     state = session.state
     draw_upload_state(state)
     draw_export_state(state)
@@ -16,7 +18,7 @@ def show(session):
     draw_upload_oilfield_data()
 
 
-def draw_upload_state(state):
+def draw_upload_state(state: AppState) -> None:
     st.subheader("Импорт готового состояния программы")
     st.write(
         "При импорте приложение попытается восстановить данные для всех вкладок приложения."
@@ -39,7 +41,7 @@ def draw_upload_state(state):
             st.error('Не удалось восстановить расчеты.', err)
 
 
-def draw_export_state(state):
+def draw_export_state(state: AppState) -> None:
     st.subheader("Экспорт текущего состояния программы")
     try:
         state_to_save = {key: state[key] for key in state}
@@ -56,7 +58,7 @@ def draw_export_state(state):
         print(err)
 
 
-def draw_export_excel(state):
+def draw_export_excel(state: AppState) -> None:
     st.subheader("Экспорт результатов по всем скважинам в Excel-формате (.xlsx)")
     st.write("""**Внимание!** Результаты, экспортированные в формате .xlsx, будет 
         невозможно импортировать как состояние программы.""")
@@ -80,7 +82,7 @@ def draw_export_excel(state):
         st.info("Кнопка станет доступна, как только будет рассчитана хотя бы одна скважина.")
 
 
-def draw_upload_oilfield_data():
+def draw_upload_oilfield_data() -> None:
     st.subheader("Загрузка входных данных по месторождению")
     oilfield_name = st.text_input('Введите название месторождения', max_chars=30)
     oilfield_shops = st.text_input('Введите название цехов',
@@ -95,7 +97,9 @@ def draw_upload_oilfield_data():
         add_oilfield(oilfield_name, oilfield_shops, oilfield_files)
 
 
-def add_oilfield(oilfield_name, oilfield_shops, oilfield_files):
+def add_oilfield(oilfield_name: str,
+                 oilfield_shops: str,
+                 oilfield_files: IO) -> None:
     oilfield_shops = [shop.strip() for shop in oilfield_shops.strip().split(',')]
     FIELDS_SHOPS[oilfield_name] = oilfield_shops
     path_to_save = Path.cwd() / 'data' / oilfield_name

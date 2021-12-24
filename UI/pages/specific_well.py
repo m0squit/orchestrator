@@ -4,13 +4,15 @@ import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 from plotly.subplots import make_subplots
+from typing import Dict
 
 from statistics_explorer.plots import calc_relative_error
 from statistics_explorer.config import ConfigStatistics
+from UI.app_state import AppState
 from UI.cached_funcs import run_preprocessor
 
 
-def show(session):
+def show(session: st.session_state) -> None:
     state = session.state
     if not state.selected_wells_norm:
         st.info('Здесь будет отображаться прогноз добычи по выбранной скважине.\n'
@@ -23,7 +25,7 @@ def show(session):
         st.write('Результаты адаптации модели пьезопроводности:', state.adapt_params[well_to_draw])
 
 
-def draw_well_plot(state):
+def draw_well_plot(state: AppState) -> str:
     well_to_draw = st.selectbox(label='Скважина',
                                 options=sorted(state.selected_wells_norm),
                                 key='well_to_calc')
@@ -43,13 +45,13 @@ def draw_well_plot(state):
     return well_to_draw
 
 
-def create_well_plot_UI(statistics: dict,
+def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                         date_test: datetime.date,
                         date_test_if_ensemble: datetime.date,
                         df_chess: pd.DataFrame,
                         wellname: str,
-                        MODEL_NAMES: dict,
-                        ensemble_interval: pd.DataFrame = pd.DataFrame()):
+                        MODEL_NAMES: Dict[str, str],
+                        ensemble_interval: pd.DataFrame = pd.DataFrame()) -> go.Figure:
     fig = make_subplots(rows=4, cols=2, shared_xaxes=True, x_title='Дата',
                         vertical_spacing=0.07,
                         horizontal_spacing=0.06,
@@ -82,9 +84,17 @@ def create_well_plot_UI(statistics: dict,
     return fig
 
 
-def add_traces_to_specific_column(fig, statistics, df_chess,
-                                  wellname, MODEL_NAMES, ensemble_interval,
-                                  column, showlegend, marker_size):
+def add_traces_to_specific_column(
+        fig: go.Figure,
+        statistics: Dict[str, pd.DataFrame],
+        df_chess: pd.DataFrame,
+        wellname: str,
+        MODEL_NAMES: Dict[str, str],
+        ensemble_interval: pd.DataFrame,
+        column: int,
+        showlegend: bool,
+        marker_size: int,
+) -> go.Figure:
     mark, m = dict(size=marker_size), 'markers'
     colors = {'ftor': px.colors.qualitative.Pastel[1],
               'wolfram': 'rgba(248, 156, 116, 0.8)',

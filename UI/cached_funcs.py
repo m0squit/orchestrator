@@ -1,28 +1,32 @@
 import datetime
 import pandas as pd
+import plotly.graph_objs as go
 import streamlit as st
+from typing import List, Tuple, Dict
+
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 from models_ensemble.bayesian_model import BayesianModel
 from tools_preprocessor.preprocessor import Preprocessor
+from tools_preprocessor.config import Config as ConfigPreprocessor
 from statistics_explorer.config import ConfigStatistics
 from statistics_explorer.main import calculate_statistics
 
 
 @st.cache(show_spinner=False)
-def run_preprocessor(config):
+def run_preprocessor(config: ConfigPreprocessor) -> Preprocessor:
     _preprocessor = Preprocessor(config)
     return _preprocessor
 
 
 @st.experimental_singleton
 def calculate_ftor(
-        _preprocessor,
-        well_names,
-        constraints,
-):
+        _preprocessor: Preprocessor,
+        well_names: List[int],
+        constraints: dict,
+) -> CalculatorFtor:
     config_ftor = ConfigFtor()
     # Если пользователь задал границы\значение параметра, которым производится адаптация на
     # последние точки, то эти значения применяются и для самой адаптации на последние точки
@@ -47,15 +51,15 @@ def calculate_ftor(
 
 @st.experimental_singleton
 def calculate_wolfram(
-        _preprocessor,
-        well_names,
-        forecast_days_number,
-        estimator_name_group,
-        estimator_name_well,
-        is_deep_grid_search,
-        window_sizes,
-        quantiles,
-):
+        _preprocessor: Preprocessor,
+        well_names: List[int],
+        forecast_days_number: int,
+        estimator_name_group: str,
+        estimator_name_well: str,
+        is_deep_grid_search: bool,
+        window_sizes: List[int],
+        quantiles: List[float],
+) -> CalculatorWolfram:
     wolfram = CalculatorWolfram(
         ConfigWolfram(
             forecast_days_number,
@@ -72,15 +76,15 @@ def calculate_wolfram(
 
 @st.experimental_singleton
 def calculate_ensemble(
-        df,
-        adaptation_days_number,
-        interval_probability,
-        draws,
-        tune,
-        chains,
-        target_accept,
-        name_of_y_true,
-):
+        df: pd.DataFrame,
+        adaptation_days_number: int,
+        interval_probability: float,
+        draws: int,
+        tune: int,
+        chains: int,
+        target_accept: float,
+        name_of_y_true: str,
+) -> pd.DataFrame:
     result = pd.DataFrame()
     try:
         bayesian_model = BayesianModel(
@@ -101,14 +105,16 @@ def calculate_ensemble(
 
 
 @st.experimental_memo
-def calculate_statistics_plots(statistics: dict,
-                               field_name: str,
-                               date_start: datetime.date,
-                               date_end: datetime.date,
-                               well_names: tuple,
-                               use_abs: bool,
-                               exclude_wells: list,
-                               bin_size: int):
+def calculate_statistics_plots(
+        statistics: dict,
+        field_name: str,
+        date_start: datetime.date,
+        date_end: datetime.date,
+        well_names: tuple,
+        use_abs: bool,
+        exclude_wells: list,
+        bin_size: int
+) -> Tuple[Dict[str, go.Figure], ConfigStatistics]:
     config_stat = ConfigStatistics(
         oilfield=field_name,
         dates=pd.date_range(date_start, date_end, freq='D').date,

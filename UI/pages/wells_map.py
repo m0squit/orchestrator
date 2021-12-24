@@ -3,8 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from UI.app_state import AppState
 
-def show(session):
+
+def show(session: st.session_state) -> None:
     state = session.state
     if not state.statistics:
         st.info('Здесь будет отображаться карта скважин, выбранных для расчета.\n'
@@ -16,7 +18,7 @@ def show(session):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def prepare_data_for_plots(state) -> pd.DataFrame:
+def prepare_data_for_plots(state: AppState) -> pd.DataFrame:
     columns = ['wellname', 'coord_x', 'coord_y', 'cum_q_liq', 'cum_q_oil']
     df = pd.DataFrame(columns=columns)
     models_without_ensemble = [model for model in state.statistics.keys() if model != 'ensemble']
@@ -75,8 +77,9 @@ def create_tree_plot(df: pd.DataFrame, mode: str) -> go.Figure:
     if mode == 'Нефть':
         values = df.cum_q_oil
     fig.add_trace(go.Treemap(labels=df.wellname,
-                             parents=["Все скважины" for elem in df.wellname],
+                             parents=["Все скважины" for _ in df.wellname],
                              values=values,
                              textinfo="text+label+value",
-                             **{'marker_colorscale': 'oranges'},))
+                             **{'marker_colorscale': 'oranges'},
+                             ))
     return fig
