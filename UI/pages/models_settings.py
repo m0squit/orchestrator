@@ -177,7 +177,7 @@ def draw_ensemble_settings(session):
 
 def update_ftor_constraints(write_from, write_to):
     # TODO: костыль для многостраничности: приходится записывать параметры модели в session и подтягивать
-    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (~4 квартал 2021)
+    #  их для каждой следующей отрисовки. Изменить, когда выйдет версия Streamlit multipage. (~1 квартал 2022)
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         write_to[f'{param_name}_is_adapt'] = write_from[f'{param_name}_is_adapt_']
         write_to[f'{param_name}_lower'] = write_from[f'{param_name}_lower_']
