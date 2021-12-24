@@ -182,7 +182,7 @@ if submit and wells_to_calc:
         convert_tones_to_m3_for_wolfram(session.state, session.state.wells_ftor)
     if is_calc_CRM:
         calc_CRM = True
-        calc_CRMIP = True
+        calc_CRMIP = False
         config_CRM = ConfigCRM(date_start_adapt=date_start,
                                date_end_adapt=date_test - datetime.timedelta(days=1),
                                date_end_forecast=date_end,

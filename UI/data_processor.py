@@ -83,6 +83,12 @@ def prepare_df_for_ensemble(state, well_name_normal, name_of_y_true):
     models = list(state.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
+    # TODO: сейчас CRM удаляется из списка моделей, так как он прогнозирует
+    #  только дебит жидкости и перезаписывает дебит нефти на NaN
+    if 'CRM' in models:
+        models.remove('CRM')
+    if 'CRMIP' in models:
+        models.remove('CRMIP')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
     input_df_for_ensemble = pd.DataFrame(index=dates_test)
     for model in models:
