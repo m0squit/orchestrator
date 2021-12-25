@@ -113,11 +113,14 @@ def draw_wolfram_settings(session: st.session_state) -> None:
 def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
+            max_adapt_period = (session.date_end - session.date_test).days - 1
+            if max_adapt_period <= 25:
+                max_adapt_period = 30
             st.number_input(
                 label='Количество дней обучения ансамбля',
                 min_value=25,
                 value=session.ensemble_adapt_period,
-                max_value=(session.date_end - session.date_test).days - 1,
+                max_value=max_adapt_period,
                 step=1,
                 key='ensemble_adapt_period_'
             )
