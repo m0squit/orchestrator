@@ -87,7 +87,7 @@ def parse_well_names(well_names_ois: List[int]) -> Tuple[Dict[str, int], Dict[in
     return wellnames_key_normal_, wellnames_key_ois_
 
 
-def get_current_state(state: AppState, _session: st.session_state) -> None:
+def get_current_state(state: AppState, _session: st.session_state) -> AppState:
     """Функция сохраняет состояние программы из сессии session в состояние state.
 
     Parameters
@@ -119,6 +119,7 @@ def get_current_state(state: AppState, _session: st.session_state) -> None:
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
     state['wells_ftor'] = preprocessor.create_wells_ftor(selected_wells_ois)
+    return state
 
 
 def select_page(pages: Dict[str, Any]) -> str:
@@ -349,8 +350,7 @@ if __name__ == '__main__':
 
     # Нажата кнопка "Запуск расчетов"
     if submit and selected_wells_norm:
-        session.state = AppState()
-        get_current_state(session.state, session)
+        session.state = get_current_state(AppState(), session)
         # Запуск моделей
         run_models(session, models, preprocessor,
                    selected_wells_ois, selected_wells_norm,
