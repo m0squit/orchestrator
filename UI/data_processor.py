@@ -36,8 +36,7 @@ def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None
         # Нефть. Только test
         rates_oil_test_ftor = res_ftor.rates_oil_test
         rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
-        # Фактические данные для визуализации
-        df = well_ftor.df_chess
+        df = well_ftor.df_chess  # Фактические данные для визуализации
         state.statistics['ftor'][f'{well_name_normal}_liq_true'] = df['Дебит жидкости']
         state.statistics['ftor'][f'{well_name_normal}_liq_pred'] = rates_liq_ftor
         state.statistics['ftor'][f'{well_name_normal}_oil_true'] = df['Дебит нефти']

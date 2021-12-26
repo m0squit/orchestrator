@@ -8,6 +8,8 @@ from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
+from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_crm.class_CRM.config import ConfigCRM
 from models_ensemble.bayesian_model import BayesianModel
 from tools_preprocessor.preprocessor import Preprocessor
 from tools_preprocessor.config import Config as ConfigPreprocessor
@@ -72,6 +74,27 @@ def calculate_wolfram(
         _preprocessor.create_wells_wolfram(well_names),
     )
     return wolfram
+
+
+@st.experimental_singleton
+def calculate_CRM(
+        date_start_adapt: datetime.date,
+        date_end_adapt: datetime.date,
+        date_end_forecast: datetime.date,
+        oilfield: str,
+        calc_CRM: bool = True,
+        calc_CRMIP: bool = False,
+        grad_format_data: bool = True,
+) -> CalculatorCRM:
+    config_CRM = ConfigCRM(date_start_adapt=date_start_adapt,
+                           date_end_adapt=date_end_adapt,
+                           date_end_forecast=date_end_forecast,
+                           calc_CRM=calc_CRM,
+                           calc_CRMIP=calc_CRMIP,
+                           grad_format_data=grad_format_data,
+                           oilfield=oilfield)
+    calculator_CRM = CalculatorCRM(config_CRM)
+    return calculator_CRM
 
 
 @st.experimental_singleton

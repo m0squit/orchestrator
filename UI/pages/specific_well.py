@@ -14,7 +14,7 @@ from UI.cached_funcs import run_preprocessor
 
 def show(session: st.session_state) -> None:
     state = session.state
-    if not state.selected_wells_norm:
+    if not state.statistics:
         st.info('Здесь будет отображаться прогноз добычи по выбранной скважине.\n'
                 'На данный момент ни одна скважина не рассчитана.\n'
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
