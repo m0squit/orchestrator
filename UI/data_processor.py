@@ -99,10 +99,11 @@ def prepare_df_for_ensemble(state: AppState,
     input_df_for_ensemble = pd.DataFrame(index=dates_test)
     for model in models:
         well_calculated_by_model = f'{well_name_normal}_oil_pred' in state.statistics[model]
-        all_values_are_nan = state.statistics[model][f'{well_name_normal}_oil_pred'].isna().all()
-        if well_calculated_by_model and not all_values_are_nan:
-            input_df_for_ensemble[name_of_y_true] = state.statistics[model][f'{well_name_normal}_oil_true']
-            input_df_for_ensemble[model] = state.statistics[model][f'{well_name_normal}_oil_pred']
+        if well_calculated_by_model:
+            all_values_are_nan = state.statistics[model][f'{well_name_normal}_oil_pred'].isna().all()
+            if not all_values_are_nan:
+                input_df_for_ensemble[name_of_y_true] = state.statistics[model][f'{well_name_normal}_oil_true']
+                input_df_for_ensemble[model] = state.statistics[model][f'{well_name_normal}_oil_pred']
     return input_df_for_ensemble
 
 
