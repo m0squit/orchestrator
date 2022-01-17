@@ -363,9 +363,6 @@ if __name__ == '__main__':
 
         submit = st.button(label='Запустить расчеты')
     check_for_correct_params(date_start, date_test, date_end, submit, selected_wells_norm)
-    # Отображение выбранной страницы
-    page = PAGES[selected_page]
-    page.show(session)
 
     # Нажата кнопка "Запуск расчетов"
     if submit and selected_wells_norm:
@@ -377,3 +374,7 @@ if __name__ == '__main__':
         # Выделение прогнозов моделей
         dfs, dates = cut_statistics_test_only(session.state)
         session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
+
+    # Отображение выбранной страницы
+    page = PAGES[selected_page]
+    page.show(session)
