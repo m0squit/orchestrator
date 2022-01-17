@@ -174,6 +174,24 @@ def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
     return oilfield_name
 
 
+def select_shops(oilfield_name: str) -> List[str]:
+    """Виджет выбора списка цехов для выбранного месторождения.
+
+    Parameters
+    ----------
+    oilfield_name : str
+    """
+    selected_shops = st.multiselect(
+        label='Цех добычи',
+        options=['Все'] + FIELDS_SHOPS[oilfield_name],
+        default='Все',
+        key='shops'
+    )
+    if 'Все' in selected_shops:
+        selected_shops = FIELDS_SHOPS[oilfield_name]
+    return selected_shops
+
+
 def select_dates(date_min: date,
                  date_max: date) -> Tuple[date, date, date]:
     """Виджет выбора дат адаптации и прогноза.
@@ -335,9 +353,10 @@ if __name__ == '__main__':
         selected_page = select_page(PAGES)
         models = select_models()
         field_name = select_oilfield(FIELDS_SHOPS)
+        shops = select_shops(field_name)
         date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
 
-        config = ConfigPreprocessor(field_name, FIELDS_SHOPS[field_name], date_start, date_test, date_end)
+        config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
         preprocessor = run_preprocessor(config)
         wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names)
         selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
