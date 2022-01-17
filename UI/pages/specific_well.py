@@ -66,20 +66,24 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                                   font=dict(size=15),
                                   traceorder='normal'),
                       height=630, width=1300)
+    date_end_adapt = date_test - datetime.timedelta(days=1)
     df_chess = df_chess.copy().dropna(subset=['Дебит жидкости', 'Дебит нефти'], how='any')
-    df_chess_test_only = df_chess[date_test:]
-    statistics_test_only = {key: df[date_test:] for key, df in statistics.items()}
-    ensemble_interval_test_only = ensemble_interval[date_test:]
-    # Адаптация + прогноз
-    fig = add_traces_to_specific_column(fig, statistics, df_chess,
-                                        wellname, MODEL_NAMES, ensemble_interval,
+    df_chess_train = df_chess[:date_end_adapt]
+    df_chess_test = df_chess[date_test:]
+    statistics_train = {key: df[:date_end_adapt] for key, df in statistics.items()}
+    statistics_test = {key: df[date_test:] for key, df in statistics.items()}
+    ensemble_interval_train = ensemble_interval[:date_end_adapt]
+    ensemble_interval_test = ensemble_interval[date_test:]
+    # Адаптация
+    fig = add_traces_to_specific_column(fig, statistics_train, df_chess_train,
+                                        wellname, MODEL_NAMES, ensemble_interval_train,
                                         column=1, showlegend=False, marker_size=3)
     # Прогноз
-    fig = add_traces_to_specific_column(fig, statistics_test_only, df_chess_test_only,
-                                        wellname, MODEL_NAMES, ensemble_interval_test_only,
+    fig = add_traces_to_specific_column(fig, statistics_test, df_chess_test,
+                                        wellname, MODEL_NAMES, ensemble_interval_test,
                                         column=2, showlegend=True, marker_size=3)
     if not ensemble_interval.empty and f'{wellname}_lower' in ensemble_interval.columns:
-        fig.add_vline(x=date_test_if_ensemble, line_width=1, line_dash='dash', exclude_empty_subplots=False)
+        fig.add_vline(x=date_test_if_ensemble, line_width=1, line_dash='dash', row='all', col=2)
     fig.add_vline(x=date_test, line_width=1, line_dash='dash')
     return fig
 
