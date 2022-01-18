@@ -82,7 +82,9 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
     fig = add_traces_to_specific_column(fig, statistics_test, df_chess_test,
                                         wellname, MODEL_NAMES, ensemble_interval_test,
                                         column=2, showlegend=True, marker_size=3)
-    if not ensemble_interval.empty and f'{wellname}_lower' in ensemble_interval.columns:
+    calced_liq = f'{wellname}_liq_lower' in ensemble_interval.columns
+    calced_oil = f'{wellname}_oil_lower' in ensemble_interval.columns
+    if not ensemble_interval.empty and (calced_liq or calced_oil):
         fig.add_vline(x=date_test_if_ensemble, line_width=1, line_dash='dash', row='all', col=2)
     fig.add_vline(x=date_test, line_width=1, line_dash='dash')
     return fig
@@ -111,17 +113,29 @@ def add_traces_to_specific_column(
     y_liq_true = df_chess['Дебит жидкости']
     y_oil_true = df_chess['Дебит нефти']
     # Доверительный интервал ансамбля
-    if not ensemble_interval.empty and f'{wellname}_lower' in ensemble_interval.columns:
-        trace = go.Scatter(name=f'OIL: Доверит. интервал',
-                           x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_lower'],
-                           mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
-                           showlegend=showlegend)
-        fig.add_trace(trace, row=2, col=column)
-        trace = go.Scatter(name=f'OIL: Доверит. интервал',
-                           x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_upper'],
-                           fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
-                           showlegend=showlegend)
-        fig.add_trace(trace, row=2, col=column)
+    if not ensemble_interval.empty:
+        if f'{wellname}_liq_lower' in ensemble_interval.columns:
+            trace = go.Scatter(name=f'LIQ: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_liq_lower'],
+                               mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=showlegend)
+            fig.add_trace(trace, row=1, col=column)
+            trace = go.Scatter(name=f'LIQ: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_liq_upper'],
+                               fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=showlegend)
+            fig.add_trace(trace, row=1, col=column)
+        if f'{wellname}_oil_lower' in ensemble_interval.columns:
+            trace = go.Scatter(name=f'OIL: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_oil_lower'],
+                               mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=showlegend)
+            fig.add_trace(trace, row=2, col=column)
+            trace = go.Scatter(name=f'OIL: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_oil_upper'],
+                               fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=showlegend)
+            fig.add_trace(trace, row=2, col=column)
     # Факт
     trace = go.Scatter(name=f'LIQ: {MODEL_NAMES["true"]}', x=y_liq_true.index, y=y_liq_true,
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend)

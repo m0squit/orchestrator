@@ -108,10 +108,10 @@ def get_current_state(state: AppState, _session: st.session_state) -> AppState:
     state['selected_wells_norm'] = selected_wells_norm.copy()
     state['selected_wells_ois'] = selected_wells_ois.copy()
     state['was_config'] = config
-    state['was_calc_ftor'] = models['ftor']
-    state['was_calc_wolfram'] = models['wolfram']
-    state['was_calc_CRM'] = models['CRM']
-    state['was_calc_ensemble'] = models['ensemble']
+    state['was_calc_ftor'] = models_to_run['ftor']
+    state['was_calc_wolfram'] = models_to_run['wolfram']
+    state['was_calc_CRM'] = models_to_run['CRM']
+    state['was_calc_ensemble'] = models_to_run['ensemble']
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
     state['was_date_test_if_ensemble'] = date_test + timedelta(days=_session.ensemble_adapt_period)
@@ -256,7 +256,7 @@ def check_for_correct_params(date_start_: date,
 
 
 def run_models(_session: st.session_state,
-               _models: Dict[str, bool],
+               _models_to_run: Dict[str, bool],
                _preprocessor: Preprocessor,
                wells_ois: List[int],
                wells_norm: List[str],
@@ -271,7 +271,7 @@ def run_models(_session: st.session_state,
     _session : st.session_state
         текущая сессия streamlit. В ней содержатся настройки моделей и
         текущее состояние программы _session.state.
-    _models : Dict[str, bool]
+    _models_to_run : Dict[str, bool]
         модели для расчета, которые выбрал пользователь.
     _preprocessor : Preprocessor
         препроцессор с конфигурацией, заданной пользователем.
@@ -293,11 +293,11 @@ def run_models(_session: st.session_state,
     В конце расчета каждой из моделей вызывается функция извлечения результатов.
     Таким образом все результаты приводятся к единому формату данных.
     """
-    at_least_one_model = _models['ftor'] or _models['wolfram'] or _models['CRM']
-    if _models['ftor']:
+    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM']
+    if _models_to_run['ftor']:
         calculator_ftor = calculate_ftor(_preprocessor, wells_ois, _session.constraints)
         extract_data_ftor(calculator_ftor, _session.state)
-    if _models['wolfram']:
+    if _models_to_run['wolfram']:
         forecast_days_number = (date_end_forecast - date_start_forecast).days
         calculator_wolfram = calculate_wolfram(_preprocessor,
                                                wells_ois,
@@ -309,7 +309,7 @@ def run_models(_session: st.session_state,
                                                _session.quantiles)
         extract_data_wolfram(calculator_wolfram, _session.state)
         convert_tones_to_m3_for_wolfram(_session.state, _session.state.wells_ftor)
-    if _models['CRM']:
+    if _models_to_run['CRM']:
         calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
                                        date_end_adapt=date_start_forecast - timedelta(days=1),
                                        date_end_forecast=date_end_forecast,
@@ -319,13 +319,13 @@ def run_models(_session: st.session_state,
         extract_data_CRM(pred_CRM, _session.state, _session.state['wells_ftor'], mode='CRM')
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
-    if at_least_one_model and _models['ensemble']:
+    if at_least_one_model and _models_to_run['ensemble']:
         name_of_y_true = 'true'
         for ind, well_name_normal in enumerate(wells_norm):
             print(f'\nWell {ind + 1} out of {len(wells_norm)}\n')
-            input_df = prepare_df_for_ensemble(_session.state, well_name_normal, name_of_y_true)
-            ensemble_result = calculate_ensemble(
-                input_df,
+            input_df_oil = prepare_df_oil_for_ensemble(_session.state, well_name_normal, name_of_y_true)
+            ensemble_result_oil = calculate_ensemble(
+                input_df_oil,
                 adaptation_days_number=_session.ensemble_adapt_period,
                 interval_probability=_session.interval_probability,
                 draws=_session.draws,
@@ -334,8 +334,22 @@ def run_models(_session: st.session_state,
                 target_accept=_session.target_accept,
                 name_of_y_true=name_of_y_true
             )
-            if not ensemble_result.empty:
-                extract_data_ensemble(ensemble_result, _session.state, well_name_normal)
+            if not ensemble_result_oil.empty:
+                extract_data_ensemble(ensemble_result_oil, _session.state, well_name_normal, 'oil')
+
+            input_df_liq = prepare_df_liq_for_ensemble(_session.state, well_name_normal, name_of_y_true)
+            ensemble_result_liq = calculate_ensemble(
+                input_df_liq,
+                adaptation_days_number=_session.ensemble_adapt_period,
+                interval_probability=_session.interval_probability,
+                draws=_session.draws,
+                tune=_session.tune,
+                chains=_session.chains,
+                target_accept=_session.target_accept,
+                name_of_y_true=name_of_y_true
+            )
+            if not ensemble_result_liq.empty:
+                extract_data_ensemble(ensemble_result_liq, _session.state, well_name_normal, 'liq')
 
 
 PAGES = {
@@ -351,7 +365,7 @@ if __name__ == '__main__':
     # Реализация UI: сайдбар
     with st.sidebar:
         selected_page = select_page(PAGES)
-        models = select_models()
+        models_to_run = select_models()
         field_name = select_oilfield(FIELDS_SHOPS)
         shops = select_shops(field_name)
         date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
@@ -368,7 +382,7 @@ if __name__ == '__main__':
     if submit and selected_wells_norm:
         session.state = get_current_state(AppState(), session)
         # Запуск моделей
-        run_models(session, models, preprocessor,
+        run_models(session, models_to_run, preprocessor,
                    selected_wells_ois, selected_wells_norm,
                    date_start, date_test, date_end, field_name)
         # Выделение прогнозов моделей
