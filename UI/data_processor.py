@@ -89,40 +89,23 @@ def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor])
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
 
 
-def prepare_df_liq_for_ensemble(state: AppState,
-                                well_name_normal: str,
-                                name_of_y_true: str) -> pd.DataFrame:
+def prepare_df_for_ensemble(state: AppState,
+                            well_name_normal: str,
+                            name_of_y_true: str,
+                            mode: str = 'liq') -> pd.DataFrame:
     models = list(state.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
-    input_df_liq = pd.DataFrame(index=dates_test)
+    input_df = pd.DataFrame(index=dates_test)
     for model in models:
-        well_calculated_by_model = f'{well_name_normal}_liq_pred' in state.statistics[model]
+        well_calculated_by_model = f'{well_name_normal}_{mode}_pred' in state.statistics[model]
         if well_calculated_by_model:
-            all_values_are_nan = state.statistics[model][f'{well_name_normal}_liq_pred'].isna().all()
+            all_values_are_nan = state.statistics[model][f'{well_name_normal}_{mode}_pred'].isna().all()
             if not all_values_are_nan:
-                input_df_liq[name_of_y_true] = state.statistics[model][f'{well_name_normal}_liq_true']
-                input_df_liq[model] = state.statistics[model][f'{well_name_normal}_liq_pred']
-    return input_df_liq
-
-
-def prepare_df_oil_for_ensemble(state: AppState,
-                                well_name_normal: str,
-                                name_of_y_true: str) -> pd.DataFrame:
-    models = list(state.statistics.keys())
-    if 'ensemble' in models:
-        models.remove('ensemble')
-    dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
-    input_df_oil = pd.DataFrame(index=dates_test)
-    for model in models:
-        well_calculated_by_model = f'{well_name_normal}_oil_pred' in state.statistics[model]
-        if well_calculated_by_model:
-            all_values_are_nan = state.statistics[model][f'{well_name_normal}_oil_pred'].isna().all()
-            if not all_values_are_nan:
-                input_df_oil[name_of_y_true] = state.statistics[model][f'{well_name_normal}_oil_true']
-                input_df_oil[model] = state.statistics[model][f'{well_name_normal}_oil_pred']
-    return input_df_oil
+                input_df[name_of_y_true] = state.statistics[model][f'{well_name_normal}_{mode}_true']
+                input_df[model] = state.statistics[model][f'{well_name_normal}_{mode}_pred']
+    return input_df
 
 
 def extract_data_ensemble(ensemble_df: pd.DataFrame,

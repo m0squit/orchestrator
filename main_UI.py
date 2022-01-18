@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 import streamlit as st
+from typing import Optional, Union
 
 import UI.pages.analytics
 import UI.pages.models_settings
@@ -295,61 +296,140 @@ def run_models(_session: st.session_state,
     """
     at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM']
     if _models_to_run['ftor']:
-        calculator_ftor = calculate_ftor(_preprocessor, wells_ois, _session.constraints)
-        extract_data_ftor(calculator_ftor, _session.state)
+        run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
     if _models_to_run['wolfram']:
-        forecast_days_number = (date_end_forecast - date_start_forecast).days
-        calculator_wolfram = calculate_wolfram(_preprocessor,
-                                               wells_ois,
-                                               forecast_days_number,
-                                               _session.estimator_name_group,
-                                               _session.estimator_name_well,
-                                               _session.is_deep_grid_search,
-                                               _session.window_sizes,
-                                               _session.quantiles)
-        extract_data_wolfram(calculator_wolfram, _session.state)
-        convert_tones_to_m3_for_wolfram(_session.state, _session.state.wells_ftor)
+        run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
+                    wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
-        calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
-                                       date_end_adapt=date_start_forecast - timedelta(days=1),
-                                       date_end_forecast=date_end_forecast,
-                                       oilfield=oilfield)
-        CRM = calculator_CRM.CRM
-        pred_CRM = calculator_CRM.pred_CRM
-        extract_data_CRM(pred_CRM, _session.state, _session.state['wells_ftor'], mode='CRM')
+        run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
-    if at_least_one_model and _models_to_run['ensemble']:
-        name_of_y_true = 'true'
+    if _models_to_run['ensemble'] and at_least_one_model:
         for ind, well_name_normal in enumerate(wells_norm):
-            print(f'\nWell {ind + 1} out of {len(wells_norm)}\n')
-            input_df_oil = prepare_df_oil_for_ensemble(_session.state, well_name_normal, name_of_y_true)
-            ensemble_result_oil = calculate_ensemble(
-                input_df_oil,
-                adaptation_days_number=_session.ensemble_adapt_period,
-                interval_probability=_session.interval_probability,
-                draws=_session.draws,
-                tune=_session.tune,
-                chains=_session.chains,
-                target_accept=_session.target_accept,
-                name_of_y_true=name_of_y_true
-            )
-            if not ensemble_result_oil.empty:
-                extract_data_ensemble(ensemble_result_oil, _session.state, well_name_normal, 'oil')
+            print(f'\nWell {ind + 1} out of {len(wells_norm)}: liq\n')
+            run_ensemble(_session, well_name_normal, 'liq')
+            print(f'\nWell {ind + 1} out of {len(wells_norm)}: oil\n')
+            run_ensemble(_session, well_name_normal, 'oil')
 
-            input_df_liq = prepare_df_liq_for_ensemble(_session.state, well_name_normal, name_of_y_true)
-            ensemble_result_liq = calculate_ensemble(
-                input_df_liq,
-                adaptation_days_number=_session.ensemble_adapt_period,
-                interval_probability=_session.interval_probability,
-                draws=_session.draws,
-                tune=_session.tune,
-                chains=_session.chains,
-                target_accept=_session.target_accept,
-                name_of_y_true=name_of_y_true
-            )
-            if not ensemble_result_liq.empty:
-                extract_data_ensemble(ensemble_result_liq, _session.state, well_name_normal, 'liq')
+
+def run_ftor(_preprocessor: Preprocessor,
+             wells_ois: List[int],
+             constraints: Optional[Dict[
+                 str, Union[float, Dict[str, Union[bool, List[float]]]]
+             ]],
+             state: AppState) -> None:
+    """Расчет модели пьезопроводности и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    _preprocessor : Preprocessor
+        препроцессор с конфигурацией, заданной пользователем.
+    wells_ois : List[int]
+        список имен скважин в формате OIS.
+    constraints : Dict
+        словарь с границами параметров адаптации.
+    state: AppState
+        состояние программы, заданное пользователем.
+    """
+    calculator_ftor = calculate_ftor(_preprocessor, wells_ois, constraints)
+    extract_data_ftor(calculator_ftor, state)
+
+
+def run_wolfram(date_start_forecast: date,
+                date_end_forecast: date,
+                _preprocessor: Preprocessor,
+                wells_ois: List[int],
+                _session: st.session_state,
+                state: AppState) -> None:
+    """Расчет модели ML и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    date_start_forecast : date
+        дата начала прогноза для всех моделей, кроме ансамбля.
+    date_end_forecast : date
+        дата конца прогноза для всех моделей.
+    _preprocessor : Preprocessor
+        препроцессор с конфигурацией, заданной пользователем.
+    wells_ois : List[int]
+        список имен скважин в формате OIS.
+    _session : st.session_state
+        текущая сессия streamlit. В ней содержатся настройки моделей и
+        текущее состояние программы _session.state.
+    state: AppState
+        состояние программы, заданное пользователем.
+    """
+    forecast_days_number = (date_end_forecast - date_start_forecast).days
+    calculator_wolfram = calculate_wolfram(_preprocessor,
+                                           wells_ois,
+                                           forecast_days_number,
+                                           _session.estimator_name_group,
+                                           _session.estimator_name_well,
+                                           _session.is_deep_grid_search,
+                                           _session.window_sizes,
+                                           _session.quantiles)
+    extract_data_wolfram(calculator_wolfram, state)
+    convert_tones_to_m3_for_wolfram(state, state.wells_ftor)
+
+
+def run_CRM(date_start_adapt: date,
+            date_start_forecast: date,
+            date_end_forecast: date,
+            oilfield: str,
+            state: AppState) -> None:
+    """Расчет модели CRM и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    date_start_adapt : date
+        дата начала адаптации для модели пьезопроводности.
+    date_start_forecast : date
+        дата начала прогноза для всех моделей, кроме ансамбля.
+    date_end_forecast : date
+        дата конца прогноза для всех моделей.
+    oilfield: str
+        название месторождения, выбранное пользователем.
+    state: AppState
+        состояние программы, заданное пользователем.
+    """
+    calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
+                                   date_end_adapt=date_start_forecast - timedelta(days=1),
+                                   date_end_forecast=date_end_forecast,
+                                   oilfield=oilfield)
+    CRM = calculator_CRM.CRM
+    pred_CRM = calculator_CRM.pred_CRM
+    extract_data_CRM(pred_CRM, state, state['wells_ftor'], mode='CRM')
+
+
+def run_ensemble(_session: st.session_state,
+                 well_name_normal: str,
+                 mode: str = 'liq') -> None:
+    """Расчет ансамбля моделей, доверительного интервала, и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    _session : st.session_state
+        текущая сессия streamlit. В ней содержатся настройки моделей и
+        текущее состояние программы _session.state.
+    well_name_normal: str
+        имя скважины в формате (ГРАД?).
+    mode: str
+        режим расчета жидкости/нефти.
+    """
+    name_of_y_true = 'true'
+    input_df_oil = prepare_df_for_ensemble(_session.state, well_name_normal, name_of_y_true, mode)
+    ensemble_result_oil = calculate_ensemble(
+        input_df_oil,
+        adaptation_days_number=_session.ensemble_adapt_period,
+        interval_probability=_session.interval_probability,
+        draws=_session.draws,
+        tune=_session.tune,
+        chains=_session.chains,
+        target_accept=_session.target_accept,
+        name_of_y_true=name_of_y_true
+    )
+    if not ensemble_result_oil.empty:
+        extract_data_ensemble(ensemble_result_oil, _session.state, well_name_normal, mode)
 
 
 PAGES = {
