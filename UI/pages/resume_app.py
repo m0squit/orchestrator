@@ -36,7 +36,7 @@ def draw_upload_state(state: AppState) -> None:
             for key in saved_state:
                 state[key] = saved_state[key]
             st.success("Расчеты обработаны успешно! "
-                       "Обновлены вкладки **Карта скважин**, **Скважина** и **Аналитика**.")
+                       "Обновлены вкладки **Карта скважин**, **Аналитика** и **Скважина**.")
         except pickle.UnpicklingError as err:
             st.error('Не удалось восстановить расчеты.', err)
 
