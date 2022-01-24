@@ -23,7 +23,7 @@ def run_preprocessor(config: ConfigPreprocessor) -> Preprocessor:
     return _preprocessor
 
 
-@st.experimental_singleton
+@st.cache
 def calculate_ftor(
         _preprocessor: Preprocessor,
         well_names: List[int],

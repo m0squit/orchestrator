@@ -359,7 +359,7 @@ def run_wolfram(date_start_forecast: date,
     state: AppState
         состояние программы, заданное пользователем.
     """
-    forecast_days_number = (date_end_forecast - date_start_forecast).days
+    forecast_days_number = (date_end_forecast - date_start_forecast).days + 1
     calculator_wolfram = calculate_wolfram(_preprocessor,
                                            wells_ois,
                                            forecast_days_number,
