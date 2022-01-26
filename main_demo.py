@@ -77,80 +77,82 @@ def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_par
     plotly.io.write_image(fig, file=file, width=1450, height=700, scale=2, engine='kaleido')
 
 
-fields = [
-    'Крайнее',
-    # 'Вынгаяхинское'
-]
+if __name__ == '__main__':
+    fields = [
+        'Крайнее',
+        # 'Вынгаяхинское',
+        # 'Оренбургское',
+    ]
 
-shops_lst = [
-    ['ЦДНГ-4'],
-    # ['ЦДНГ-10']
-]
+    shops_lst = [
+        ['ЦДНГ-4'],
+        # ['ЦДНГ-10'],
+        # ['ЦДНГ-1'],
+    ]
 
-dates_start = [
-    datetime.date(2018, 1, 1),
-    # datetime.date(2018, 1, 1)
-]
+    dates_start = [
+        datetime.date(2018, 1, 1),
+        # datetime.date(2018, 1, 1),
+        # datetime.date(2020, 7, 31),
+    ]
 
-dates_test = [
-    datetime.date(2018, 11, 1),
-    # datetime.date(2019, 1, 1)
-]
+    dates_test = [
+        datetime.date(2018, 11, 1),
+        # datetime.date(2019, 1, 1),
+        # datetime.date(2021, 5, 1),
+    ]
 
-dates_end = [
-    datetime.date(2019, 1, 31),
-    # datetime.date(2019, 3, 31)
-]
+    dates_end = [
+        datetime.date(2019, 1, 31),
+        # datetime.date(2019, 3, 31),
+        # datetime.date(2021, 7, 31),
+    ]
 
-data = zip(fields, shops_lst, dates_start, dates_test, dates_end)
+    data = zip(fields, shops_lst, dates_start, dates_test, dates_end)
 
-for field_name, shops, date_start, date_test, date_end in data:
-    time_calc_started = str(datetime.datetime.now()).replace(':', '-')
-    start = default_timer()
-    name_dir = field_name + " " + time_calc_started
-    path = Path.cwd() / 'tests' / name_dir
-    if not path.exists():
-        os.mkdir(path)
-    df_hypotheses = pd.DataFrame()
+    for field_name, shops, date_start, date_test, date_end in data:
+        time_calc_started = str(datetime.datetime.now()).replace(':', '-')
+        start = default_timer()
+        name_dir = field_name + " " + time_calc_started
+        path = Path.cwd() / 'tests' / name_dir
+        if not path.exists():
+            os.mkdir(path)
+        df_hypotheses = pd.DataFrame()
 
-    preprocessor = Preprocessor(
-        ConfigPreprocessor(
-            field_name,
-            shops,
-            date_start,
-            date_test,
-            date_end,
+        preprocessor = Preprocessor(
+            ConfigPreprocessor(
+                field_name,
+                shops,
+                date_start,
+                date_test,
+                date_end,
+            )
         )
-    )
 
-    for well_name in preprocessor.well_names:
-        try:
-            # if well_name in [
-            #     2860203200,
-            # ]:
-                data_ftor = preprocessor.create_wells_ftor(
-                    [well_name],
-                    # user_constraints_for_adap_period={
-                    #     'kind_code': 2,
-                    #     'permeability': 58.6,
-                    #     'skin': 2,
-                    #     'res_width': 986.7,
-                    #     'res_length': 958.6,
-                    #     'pressure_initial': 197.9,
-                    #     'length_half_fracture': 20.1,
-                    #     'length_hor_well_bore': 145.1,
-                    #     'number_fractures': 2,
-                    #     'boundary_code': 0
-                    # }
-                )[0]
-                calculator_ftor = CalculatorFtor(
-                    ConfigFtor(
-                        # apply_last_points_adaptation=False,
-                    ),
-                    [data_ftor],
-                    df_hypotheses)
-                df_chess = data_ftor.df_chess
-                res_ftor = calculator_ftor.wells[0].results
+        well_names = preprocessor.well_names
+        well_names = [well_name for well_name in well_names if well_name in [
+            2560006108,
+        ]]
+
+        data_preprocessor_lst = preprocessor.create_wells_ftor(well_names)
+        calculator_ftor = CalculatorFtor(
+            ConfigFtor(),
+            data_preprocessor_lst,
+            df_hypotheses,
+        )
+        wells_ftor = calculator_ftor.wells
+
+        for well_ftor in wells_ftor:
+            well_name = well_ftor.well_name
+            data_preprocessor = None
+            try:
+                for data in data_preprocessor_lst:
+                    if data.well_name == well_name:
+                        data_preprocessor = data
+                        break
+
+                df_chess = data_preprocessor.df_chess
+                res_ftor = well_ftor.results
 
                 adap_and_fixed_params = res_ftor.adap_and_fixed_params
                 rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
@@ -165,30 +167,30 @@ for field_name, shops, date_start, date_test, date_end in data:
 
                 _create_trans_plot(well_name, df_chess, rates_liq_ftor, date_test, adap_and_fixed_params, path, is_liq=True)
                 _create_trans_plot(well_name, df_chess, rates_oil_ftor, date_test, adap_and_fixed_params, path, is_liq=False)
-        except Exception as exc:
-            file = open(path / f'{well_name} error.txt', 'w')
-            file.write(str(exc))
-            file.close()
+            except Exception as exc:
+                file = open(path / f'{well_name} error.txt', 'w')
+                file.write(str(exc))
+                file.close()
 
-    exec_time = default_timer() - start
-    file = open(path / 'test_data.txt', 'w')
-    print(f'{time_calc_started = }', file=file)
-    print(f'{exec_time = } с', file=file)
-    print(f'{field_name = }', file=file)
-    print(f'{shops = }', file=file)
-    print(f'{date_start = }', file=file)
-    print(f'{date_test = }', file=file)
-    print(f'{date_end = }', file=file)
-    file.close()
+        exec_time = default_timer() - start
+        file = open(path / 'test_data.txt', 'w')
+        print(f'{time_calc_started = }', file=file)
+        print(f'{exec_time = } с', file=file)
+        print(f'{field_name = }', file=file)
+        print(f'{shops = }', file=file)
+        print(f'{date_start = }', file=file)
+        print(f'{date_test = }', file=file)
+        print(f'{date_end = }', file=file)
+        file.close()
 
-    hypo_table = path / 'df_hypotheses.xlsx'
-    df_hypotheses.to_excel(hypo_table)
+        hypo_table = path / 'df_hypotheses.xlsx'
+        df_hypotheses.to_excel(hypo_table)
 
-    results_table = path / 'aggregated_results.xlsx'
-    well_tables = {*path.glob('*.xlsx')} - {hypo_table}
-    df_results = pd.DataFrame()
-    for table in well_tables:
-        df = pd.read_excel(table, index_col='dt')
-        for col in df:
-            df_results[col] = df[col]
-    df_results.to_excel(results_table)
+        results_table = path / 'aggregated_results.xlsx'
+        well_tables = {*path.glob('*.xlsx')} - {hypo_table}
+        df_results = pd.DataFrame()
+        for table in well_tables:
+            df = pd.read_excel(table, index_col='dt')
+            for col in df:
+                df_results[col] = df[col]
+        df_results.to_excel(results_table)
