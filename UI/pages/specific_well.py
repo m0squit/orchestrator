@@ -23,6 +23,12 @@ def show(session: st.session_state) -> None:
     # Вывод параметров адаптации модели пьезопроводности
     if well_to_draw in state.adapt_params:
         st.write('Результаты адаптации модели пьезопроводности:', state.adapt_params[well_to_draw])
+    st.info('Справка по графику:  \n'
+            '**Левая часть графиков** отображает период адаптации моделей.  \n'
+            '**Правая часть графиков** отображает период прогноза моделей.  \n'
+            'Период адаптации отделяется от периода прогноза вертикальной пунктирной линией. '
+            'На правой части графика отображается вторая вертикальная пунктирная линия, '
+            'которая показывает дату начала прогноза ансамбля моделей.')
 
 
 def draw_well_plot(state: AppState) -> str:
@@ -56,6 +62,7 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                         vertical_spacing=0.07,
                         horizontal_spacing=0.06,
                         column_widths=[0.7, 0.3],
+                        column_titles=['', 'Прогноз'],
                         subplot_titles=['Дебит жидкости, м3', '',
                                         'Дебит нефти, м3', '',
                                         'Относительная ошибка по нефти, %', '',
@@ -65,6 +72,7 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                       legend=dict(orientation="v",
                                   font=dict(size=15),
                                   traceorder='normal'),
+                      margin=dict(l=50, r=50, t=100, b=50),
                       height=630, width=1300)
     date_end_adapt = date_test - datetime.timedelta(days=1)
     df_chess = df_chess.copy().dropna(subset=['Дебит жидкости', 'Дебит нефти'], how='any')
