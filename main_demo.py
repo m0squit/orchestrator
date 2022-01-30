@@ -8,10 +8,14 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from timeit import default_timer
 import os
+import warnings
 
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
 from frameworks_ftor.ftor.well import Well as WellFtor
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+pd.options.mode.chained_assignment = None
 
 
 def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_params, path, is_liq):
@@ -117,7 +121,6 @@ if __name__ == '__main__':
         path = Path.cwd() / 'tests' / name_dir
         if not path.exists():
             os.mkdir(path)
-        df_hypotheses = pd.DataFrame()
 
         preprocessor = Preprocessor(
             ConfigPreprocessor(
@@ -131,14 +134,13 @@ if __name__ == '__main__':
 
         well_names = preprocessor.well_names
         well_names = [well_name for well_name in well_names if well_name in [
-            2560006108,
+            2560500100,
         ]]
 
         data_preprocessor_lst = preprocessor.create_wells_ftor(well_names)
         calculator_ftor = CalculatorFtor(
             ConfigFtor(),
             data_preprocessor_lst,
-            df_hypotheses,
         )
         wells_ftor = calculator_ftor.wells
 
@@ -183,11 +185,8 @@ if __name__ == '__main__':
         print(f'{date_end = }', file=file)
         file.close()
 
-        hypo_table = path / 'df_hypotheses.xlsx'
-        df_hypotheses.to_excel(hypo_table)
-
         results_table = path / 'aggregated_results.xlsx'
-        well_tables = {*path.glob('*.xlsx')} - {hypo_table}
+        well_tables = {*path.glob('*.xlsx')}
         df_results = pd.DataFrame()
         for table in well_tables:
             df = pd.read_excel(table, index_col='dt')
