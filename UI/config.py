@@ -89,16 +89,6 @@ DEFAULT_FTOR_BOUNDS = {
         'max': 10000,
         'help': '',
     },
-    'number_fractures': {
-        'label': 'Число трещин ГРП',
-        'lower_val': 2,
-        'default_val': 3,
-        'upper_val': 6,
-        'step': 1,
-        'min': 2,
-        'max': 100,
-        'help': """Число трещин ГРП (для скважин МГРП)""",
-    },
 }
 
 FTOR_DECODE = {
@@ -119,9 +109,6 @@ FTOR_DECODE = {
     },
     'length_half_fracture': {
         'label': 'Полудлина трещины ГРП xf, м',
-    },
-    'number_fractures': {
-        'label': 'Число трещин ГРП',
     },
     "kind_code": {
         'label': 'Тип скважины',

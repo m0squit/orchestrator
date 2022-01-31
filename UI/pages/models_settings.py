@@ -188,22 +188,11 @@ def update_ftor_constraints(write_from: st.session_state,
         write_to[f'{param_name}_default'] = write_from[f'{param_name}_default_']
         write_to[f'{param_name}_upper'] = write_from[f'{param_name}_upper_']
 
-    discrete_params = ['boundary_code', 'number_fractures']
     constraints = {}
     for param_name, param_dict in DEFAULT_FTOR_BOUNDS.items():
         # Если параметр нужно адаптировать
         if write_to[f'{param_name}_is_adapt']:
-            if param_name in discrete_params:
-                constraints[param_name] = {
-                    'is_discrete': True,
-                    'bounds': [i for i in range(write_to[f'{param_name}_lower'],
-                                                write_to[f'{param_name}_upper'] + 1)]
-                }
-            else:
-                constraints[param_name] = {
-                    'is_discrete': False,
-                    'bounds': [write_to[f'{param_name}_lower'], write_to[f'{param_name}_upper']]
-                }
+            constraints[param_name] = [write_to[f'{param_name}_lower'], write_to[f'{param_name}_upper']]
         else:
             # Если значение параметра нужно зафиксировать
             constraints[param_name] = write_to[f'{param_name}_default']

@@ -35,7 +35,6 @@ def calculate_ftor(
     param_last_point = config_ftor.param_name_last_points_adaptation
     if param_last_point in constraints.keys():
         if type(constraints[param_last_point]) == dict:
-            config_ftor.are_param_bounds_discrete = False
             config_ftor.param_bounds_last_points_adaptation = constraints[param_last_point]['bounds']
         else:
             config_ftor.apply_last_points_adaptation = False
@@ -45,8 +44,7 @@ def calculate_ftor(
         _preprocessor.create_wells_ftor(
             well_names,
             user_constraints_for_adap_period=constraints,
-        ),
-        df_hypotheses=pd.DataFrame()
+        )
     )
     return ftor
 
