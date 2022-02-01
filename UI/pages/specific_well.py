@@ -1,15 +1,16 @@
 import datetime
-import pandas as pd
-import plotly.graph_objects as go
-import plotly.express as px
-import streamlit as st
-from plotly.subplots import make_subplots
 from typing import Dict
 
-from statistics_explorer.plots import calc_relative_error
-from statistics_explorer.config import ConfigStatistics
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+from plotly.subplots import make_subplots
+
 from UI.app_state import AppState
 from UI.cached_funcs import run_preprocessor
+from statistics_explorer.config import ConfigStatistics
+from statistics_explorer.plots import calc_relative_error
 
 
 def show(session: st.session_state) -> None:
@@ -111,6 +112,7 @@ def add_traces_to_specific_column(
 ) -> go.Figure:
     mark, m = dict(size=marker_size), 'markers'
     colors = {'ftor': px.colors.qualitative.Pastel[1],
+              'fedot': px.colors.qualitative.Pastel[2],
               'wolfram': 'rgba(248, 156, 116, 0.8)',
               'CRM': px.colors.qualitative.Pastel[6],
               'CRMIP': px.colors.qualitative.Vivid[4],

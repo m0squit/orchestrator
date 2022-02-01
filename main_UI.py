@@ -1,17 +1,20 @@
 from datetime import date, timedelta
-import streamlit as st
 from typing import Optional, Union
+
+import streamlit as st
 
 import UI.pages.analytics
 import UI.pages.models_settings
 import UI.pages.resume_app
 import UI.pages.specific_well
 import UI.pages.wells_map
-from tools_preprocessor.config import Config as ConfigPreprocessor
-from tools_preprocessor.preprocessor import Preprocessor
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
+from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_crm.class_CRM.fedot_model import FedotModel
+from tools_preprocessor.config import Config as ConfigPreprocessor
+from tools_preprocessor.preprocessor import Preprocessor
 
 
 def start_streamlit() -> st.session_state:
@@ -301,7 +304,8 @@ def run_models(_session: st.session_state,
         run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
                     wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
-        run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
+        calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
+        run_fedot(oilfield, date_start, date_test, date_end, calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -376,7 +380,7 @@ def run_CRM(date_start_adapt: date,
             date_start_forecast: date,
             date_end_forecast: date,
             oilfield: str,
-            state: AppState) -> None:
+            state: AppState) -> CalculatorCRM:
     """Расчет модели CRM и последующее извлечение результатов.
 
     Parameters
@@ -399,6 +403,34 @@ def run_CRM(date_start_adapt: date,
     CRM = calculator_CRM.CRM
     pred_CRM = calculator_CRM.pred_CRM
     extract_data_CRM(pred_CRM, state, state['wells_ftor'], mode='CRM')
+    return calculator_CRM
+
+
+def run_fedot(oilfield: str,
+              date_start: date,
+              date_test: date,
+              date_end: date,
+              coeff: pd.DataFrame,
+              state: AppState) -> None:
+    """Расчет модели Fedot (поверх CRM) и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    oilfield
+    date_start
+    date_test
+    date_end
+    coeff
+    state
+    """
+    fedot_entity = FedotModel(oilfield=oilfield,
+                              train_start=date_start,
+                              train_end=date_test - timedelta(days=1),
+                              predict_start=date_test,
+                              predict_end=date_end,
+                              coeff=coeff)
+    state.statistics['fedot'] = fedot_entity.statistics
+    fedot_entity.statistics.to_excel('fedot_results.xlsx', engine='openpyxl')
 
 
 def run_ensemble(_session: st.session_state,
