@@ -3,16 +3,12 @@ from typing import Optional, Union
 
 import streamlit as st
 
-import UI.pages.analytics
-import UI.pages.models_settings
-import UI.pages.resume_app
-import UI.pages.specific_well
-import UI.pages.wells_map
+import UI.pages
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
-from frameworks_crm.class_CRM.fedot_model import FedotModel
+from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
 
