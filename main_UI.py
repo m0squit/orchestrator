@@ -4,11 +4,11 @@ from typing import Optional, Union
 import streamlit as st
 
 import UI.pages
-from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, calculate_ensemble, run_preprocessor
+from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, \
+    calculate_fedot, calculate_ensemble, run_preprocessor
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
-from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
 
@@ -428,14 +428,14 @@ def run_fedot(oilfield: str,
     state : AppState
         состояние программы, заданное пользователем.
     """
-    fedot_entity = FedotModel(oilfield=oilfield,
-                              train_start=date_start,
-                              train_end=date_test - timedelta(days=1),
-                              predict_start=date_test,
-                              predict_end=date_end,
-                              wells_to_calc=wells_norm,
-                              coeff=coeff)
-    extract_data_fedot(fedot_entity, state)
+    calculator_fedot = calculate_fedot(oilfield=oilfield,
+                                       train_start=date_start,
+                                       train_end=date_test - timedelta(days=1),
+                                       predict_start=date_test,
+                                       predict_end=date_end,
+                                       wells_to_calc=wells_norm,
+                                       coeff=coeff)
+    extract_data_fedot(calculator_fedot, state)
 
 
 def run_ensemble(_session: st.session_state,
