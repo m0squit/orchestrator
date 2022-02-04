@@ -301,7 +301,8 @@ def run_models(_session: st.session_state,
                     wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
         calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
-        run_fedot(oilfield, date_start, date_test, date_end, wells_norm, calculator_CRM.f, _session.state)
+        if calculator_CRM is not None:
+            run_fedot(oilfield, date_start, date_test, date_end, wells_norm, calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -396,9 +397,8 @@ def run_CRM(date_start_adapt: date,
                                    date_end_adapt=date_start_forecast - timedelta(days=1),
                                    date_end_forecast=date_end_forecast,
                                    oilfield=oilfield)
-    CRM = calculator_CRM.CRM
-    pred_CRM = calculator_CRM.pred_CRM
-    extract_data_CRM(pred_CRM, state, state['wells_ftor'], mode='CRM')
+    if calculator_CRM is not None:
+        extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
     return calculator_CRM
 
 

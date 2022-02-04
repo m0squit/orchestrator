@@ -79,7 +79,7 @@ def calculate_CRM(date_start_adapt: date,
                   oilfield: str,
                   calc_CRM: bool = True,
                   calc_CRMIP: bool = False,
-                  grad_format_data: bool = True) -> CalculatorCRM:
+                  grad_format_data: bool = True) -> CalculatorCRM or None:
     config_CRM = ConfigCRM(date_start_adapt=date_start_adapt,
                            date_end_adapt=date_end_adapt,
                            date_end_forecast=date_end_forecast,
@@ -87,8 +87,11 @@ def calculate_CRM(date_start_adapt: date,
                            calc_CRMIP=calc_CRMIP,
                            grad_format_data=grad_format_data,
                            oilfield=oilfield)
-    calculator_CRM = CalculatorCRM(config_CRM)
-    return calculator_CRM
+    try:
+        calculator_CRM = CalculatorCRM(config_CRM)
+        return calculator_CRM
+    except:
+        return None
 
 
 @st.experimental_singleton
