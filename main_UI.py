@@ -301,7 +301,7 @@ def run_models(_session: st.session_state,
                     wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
         calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
-        run_fedot(oilfield, date_start, date_test, date_end, calculator_CRM.f, _session.state)
+        run_fedot(oilfield, date_start, date_test, date_end, wells_norm, calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -328,7 +328,7 @@ def run_ftor(_preprocessor: Preprocessor,
         список имен скважин в формате OIS.
     constraints : Dict
         словарь с границами параметров адаптации.
-    state: AppState
+    state : AppState
         состояние программы, заданное пользователем.
     """
     calculator_ftor = calculate_ftor(_preprocessor, wells_ois, constraints)
@@ -346,9 +346,9 @@ def run_wolfram(date_start_forecast: date,
     Parameters
     ----------
     date_start_forecast : date
-        дата начала прогноза для всех моделей, кроме ансамбля.
+        дата начала прогноза.
     date_end_forecast : date
-        дата конца прогноза для всех моделей.
+        дата конца прогноза.
     _preprocessor : Preprocessor
         препроцессор с конфигурацией, заданной пользователем.
     wells_ois : List[int]
@@ -382,12 +382,12 @@ def run_CRM(date_start_adapt: date,
     Parameters
     ----------
     date_start_adapt : date
-        дата начала адаптации для модели пьезопроводности.
+        дата начала адаптации.
     date_start_forecast : date
-        дата начала прогноза для всех моделей, кроме ансамбля.
+        дата начала прогноза.
     date_end_forecast : date
-        дата конца прогноза для всех моделей.
-    oilfield: str
+        дата конца прогноза.
+    oilfield : str
         название месторождения, выбранное пользователем.
     state: AppState
         состояние программы, заданное пользователем.
@@ -406,27 +406,36 @@ def run_fedot(oilfield: str,
               date_start: date,
               date_test: date,
               date_end: date,
+              wells_norm: list[str],
               coeff: pd.DataFrame,
               state: AppState) -> None:
     """Расчет модели Fedot (поверх CRM) и последующее извлечение результатов.
 
     Parameters
     ----------
-    oilfield
-    date_start
-    date_test
-    date_end
-    coeff
-    state
+    oilfield : str
+        название месторождения, выбранное пользователем.
+    date_start : date
+        дата начала адаптации.
+    date_test : date
+        дата начала прогноза.
+    date_end : date
+        дата конца прогноза.
+    wells_norm : List[str]
+        список имен скважин в "читаемом" формате (ГРАД?).
+    coeff : pd.DataFrame
+        коэффициенты взаимовлияния скважин
+    state : AppState
+        состояние программы, заданное пользователем.
     """
     fedot_entity = FedotModel(oilfield=oilfield,
                               train_start=date_start,
                               train_end=date_test - timedelta(days=1),
                               predict_start=date_test,
                               predict_end=date_end,
+                              wells_to_calc=wells_norm,
                               coeff=coeff)
-    state.statistics['fedot'] = fedot_entity.statistics
-    fedot_entity.statistics.to_excel('fedot_results.xlsx', engine='openpyxl')
+    extract_data_fedot(fedot_entity, state)
 
 
 def run_ensemble(_session: st.session_state,
