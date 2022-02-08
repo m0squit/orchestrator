@@ -1,5 +1,6 @@
-import streamlit as st
 from typing import Tuple
+
+import streamlit as st
 
 from UI.app_state import AppState
 from UI.cached_funcs import calculate_statistics_plots
@@ -39,12 +40,20 @@ def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) 
         exclude_wells=state.exclude_wells,
         bin_size=10
     )
-    available_plots = [*analytics_plots]
-    plots_to_draw = [plot_name for plot_name in available_plots if plot_name not in config_stat.ignore_plots]
+    available_plots = [plot_name for plot_name in analytics_plots if plot_name not in config_stat.ignore_plots]
+    plots_mode = select_plots_subset()
+    plots_to_draw = [plot_name for plot_name in available_plots if plots_mode in plot_name]
     stat_to_draw = st.selectbox(label='Выбор графика:',
-                                options=sorted(plots_to_draw),
+                                options=reversed(sorted(plots_to_draw)),
                                 key='stat_to_draw')
     st.plotly_chart(analytics_plots[stat_to_draw], use_container_width=True)
+
+
+def select_plots_subset() -> str:
+    MODES = {'Жидкость': 'жидк', 'Нефть': 'нефт'}
+    mode = st.selectbox(label='Жидкость/нефть',
+                        options=MODES)
+    return MODES[mode]
 
 
 def draw_form_exclude_wells(state: AppState, selected_wells_set: Tuple[str, ...]) -> None:
