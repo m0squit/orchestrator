@@ -1,10 +1,12 @@
 import streamlit as st
+
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 
 
 def show(session: st.session_state) -> None:
     draw_ftor_settings(session)
     draw_wolfram_settings(session)
+    draw_CRM_settings(session)
     draw_ensemble_settings(session)
 
 
@@ -110,6 +112,42 @@ def draw_wolfram_settings(session: st.session_state) -> None:
                                                           'write_to': session})
 
 
+def draw_CRM_settings(session: st.session_state) -> None:
+    with st.expander('Настройки модели CRM'):
+        with st.form(key='CRM_params'):
+            st.number_input(
+                label='Радиус влияния, м',
+                min_value=300,
+                value=session.CRM_influence_R,
+                max_value=10000,
+                step=100,
+                help="""Вне радиуса скважины считаются невзаимодействующими""",
+                key='CRM_influence_R_'
+            )
+            st.number_input(
+                label='Оптимизатор: максимальное число итераций',
+                min_value=1,
+                value=session.CRM_maxiter,
+                max_value=1000,
+                step=50,
+                key='CRM_maxiter_'
+            )
+            st.number_input(
+                label='Пластовое давление',
+                min_value=100,
+                value=session.CRM_p_res,
+                max_value=1000,
+                step=50,
+                help="""Параметр для функции восстановления давления""",
+                key='CRM_p_res_'
+            )
+
+            submit_params = st.form_submit_button('Применить',
+                                                  on_click=update_CRM_params,
+                                                  kwargs={'write_from': session,
+                                                          'write_to': session})
+
+
 def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
@@ -206,6 +244,13 @@ def update_ML_params(write_from: st.session_state,
     write_to['is_deep_grid_search'] = YES_NO[write_from['is_deep_grid_search_']]
     write_to['window_sizes'] = [int(ws) for ws in write_from['window_sizes_'].split()]
     write_to['quantiles'] = [float(q) for q in write_from['quantiles_'].split()]
+
+
+def update_CRM_params(write_from: st.session_state,
+                      write_to: st.session_state) -> None:
+    write_to['CRM_influence_R'] = int(write_from['CRM_influence_R_'])
+    write_to['CRM_maxiter'] = int(write_from['CRM_maxiter_'])
+    write_to['CRM_p_res'] = int(write_from['CRM_p_res_'])
 
 
 def update_ensemble_params(write_from: st.session_state,

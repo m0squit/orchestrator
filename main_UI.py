@@ -51,6 +51,10 @@ def initialize_session(_session: st.session_state) -> None:
     _session.is_deep_grid_search = False
     _session.quantiles = [0.1, 0.3]
     _session.window_sizes = [3, 5, 7, 15, 30]
+    # CRM model
+    _session.CRM_influence_R = 1300
+    _session.CRM_maxiter = 100
+    _session.CRM_p_res = 220
     # Ensemble model
     _session.ensemble_adapt_period = 28
     _session.interval_probability = 0.9
@@ -300,9 +304,11 @@ def run_models(_session: st.session_state,
         run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
                     wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
-        calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast, oilfield, _session.state)
+        calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
+                                 oilfield, _session, _session.state)
         if calculator_CRM is not None:
-            run_fedot(oilfield, date_start, date_test, date_end, wells_norm, calculator_CRM.f, _session.state)
+            run_fedot(oilfield, date_start, date_test, date_end, wells_norm,
+                      calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -377,6 +383,7 @@ def run_CRM(date_start_adapt: date,
             date_start_forecast: date,
             date_end_forecast: date,
             oilfield: str,
+            _session: st.session_state,
             state: AppState) -> CalculatorCRM:
     """Расчет модели CRM и последующее извлечение результатов.
 
@@ -390,13 +397,19 @@ def run_CRM(date_start_adapt: date,
         дата конца прогноза.
     oilfield : str
         название месторождения, выбранное пользователем.
+    _session : st.session_state
+        текущая сессия streamlit. В ней содержатся настройки моделей и
+        текущее состояние программы _session.state.
     state: AppState
         состояние программы, заданное пользователем.
     """
     calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
                                    date_end_adapt=date_start_forecast - timedelta(days=1),
                                    date_end_forecast=date_end_forecast,
-                                   oilfield=oilfield)
+                                   oilfield=oilfield,
+                                   influence_R=_session.CRM_influence_R,
+                                   maxiter=_session.CRM_maxiter,
+                                   p_res=_session.CRM_p_res)
     if calculator_CRM is not None:
         extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
     return calculator_CRM

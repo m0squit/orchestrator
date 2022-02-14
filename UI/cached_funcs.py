@@ -79,7 +79,10 @@ def calculate_CRM(date_start_adapt: date,
                   oilfield: str,
                   calc_CRM: bool = True,
                   calc_CRMIP: bool = False,
-                  grad_format_data: bool = True) -> CalculatorCRM or None:
+                  grad_format_data: bool = True,
+                  influence_R: int = 1300,
+                  maxiter: int = 100,
+                  p_res: int = 220) -> CalculatorCRM or None:
     config_CRM = ConfigCRM(date_start_adapt=date_start_adapt,
                            date_end_adapt=date_end_adapt,
                            date_end_forecast=date_end_forecast,
@@ -87,6 +90,9 @@ def calculate_CRM(date_start_adapt: date,
                            calc_CRMIP=calc_CRMIP,
                            grad_format_data=grad_format_data,
                            oilfield=oilfield)
+    config_CRM.INFLUENCE_R = influence_R
+    config_CRM.options_SLSQP_CRM['maxiter'] = maxiter
+    config_CRM.p_res = p_res
     try:
         calculator_CRM = CalculatorCRM(config_CRM)
         return calculator_CRM
