@@ -12,7 +12,8 @@ from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
-from models_ensemble.bayesian_model import BayesianModel
+from models_ensemble.calculator import Calculator as CalculatorEnsemble
+from models_ensemble.config import Config as ConfigEnsemble
 from statistics_explorer.config import ConfigStatistics
 from statistics_explorer.main import calculate_statistics
 from tools_preprocessor.config import Config as ConfigPreprocessor
@@ -119,31 +120,25 @@ def calculate_fedot(oilfield: str,
 
 
 @st.experimental_singleton
-def calculate_ensemble(df: pd.DataFrame,
+def calculate_ensemble(input_data: list[dict],
                        adaptation_days_number: int,
                        interval_probability: float,
                        draws: int,
                        tune: int,
                        chains: int,
                        target_accept: float,
-                       name_of_y_true: str) -> pd.DataFrame:
-    result = pd.DataFrame()
-    try:
-        bayesian_model = BayesianModel(
-            df,
-            adaptation_days_number=adaptation_days_number,
-            interval_probability=interval_probability,
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            name_of_y_true=name_of_y_true
-        )
-        result = bayesian_model.result_test
-    except:
-        print('Ошибка расчета ансамбля')
-        pass
-    return result
+                       name_of_y_true: str) -> dict[str, pd.DataFrame]:
+    calculator_ensemble = CalculatorEnsemble(
+        ConfigEnsemble(adaptation_days_number=adaptation_days_number,
+                       interval_probability=interval_probability,
+                       draws=draws,
+                       tune=tune,
+                       chains=chains,
+                       target_accept=target_accept,
+                       name_of_y_true=name_of_y_true),
+        input_data,
+    )
+    return calculator_ensemble.result_test
 
 
 @st.experimental_memo

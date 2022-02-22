@@ -95,10 +95,22 @@ def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor])
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
 
 
-def prepare_df_for_ensemble(state: AppState,
-                            well_name_normal: str,
-                            name_of_y_true: str,
-                            mode: str = 'liq') -> pd.DataFrame:
+def prepare_data_for_ensemble(state: AppState,
+                              wells_norm: list[str],
+                              name_of_y_true: str,
+                              mode: str = 'liq') -> dict[str: str, str: pd.DataFrame]:
+    input_data = []
+    for well_name_normal in wells_norm:
+        well_input = prepare_single_df_for_ensemble(state, well_name_normal, name_of_y_true, mode)
+        input_data.append({'wellname': well_name_normal,
+                           'df': well_input})
+    return input_data
+
+
+def prepare_single_df_for_ensemble(state: AppState,
+                                   well_name_normal: str,
+                                   name_of_y_true: str,
+                                   mode: str = 'liq') -> pd.DataFrame:
     models = list(state.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
@@ -118,6 +130,8 @@ def extract_data_ensemble(ensemble_df: pd.DataFrame,
                           state: AppState,
                           well_name_normal: str,
                           mode: str = 'liq') -> None:
+    if ensemble_df.empty:
+        return
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     if 'ensemble' not in state.statistics:
         state.statistics['ensemble'] = pd.DataFrame(index=dates)

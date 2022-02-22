@@ -312,11 +312,8 @@ def run_models(_session: st.session_state,
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
-        for ind, well_name_normal in enumerate(wells_norm):
-            print(f'\nWell {ind + 1} out of {len(wells_norm)}: liq\n')
-            run_ensemble(_session, well_name_normal, 'liq')
-            print(f'\nWell {ind + 1} out of {len(wells_norm)}: oil\n')
-            run_ensemble(_session, well_name_normal, 'oil')
+        run_ensemble(_session, wells_norm, mode='liq')
+        run_ensemble(_session, wells_norm, mode='oil')
 
 
 def run_ftor(_preprocessor: Preprocessor,
@@ -452,7 +449,7 @@ def run_fedot(oilfield: str,
 
 
 def run_ensemble(_session: st.session_state,
-                 well_name_normal: str,
+                 wells_norm: list[str],
                  mode: str = 'liq') -> None:
     """Расчет ансамбля моделей, доверительного интервала, и последующее извлечение результатов.
 
@@ -461,25 +458,24 @@ def run_ensemble(_session: st.session_state,
     _session : st.session_state
         текущая сессия streamlit. В ней содержатся настройки моделей и
         текущее состояние программы _session.state.
-    well_name_normal: str
-        имя скважины в формате (ГРАД?).
+    wells_norm: list[str]
+        список имен скважины в формате (ГРАД?).
     mode: str
         режим расчета жидкости/нефти.
     """
     name_of_y_true = 'true'
-    input_df_oil = prepare_df_for_ensemble(_session.state, well_name_normal, name_of_y_true, mode)
-    ensemble_result_oil = calculate_ensemble(
-        input_df_oil,
+    input_data = prepare_data_for_ensemble(_session.state, wells_norm, name_of_y_true, mode)
+    ensemble_result = calculate_ensemble(
+        input_data,
         adaptation_days_number=_session.ensemble_adapt_period,
         interval_probability=_session.interval_probability,
         draws=_session.draws,
         tune=_session.tune,
         chains=_session.chains,
         target_accept=_session.target_accept,
-        name_of_y_true=name_of_y_true
-    )
-    if not ensemble_result_oil.empty:
-        extract_data_ensemble(ensemble_result_oil, _session.state, well_name_normal, mode)
+        name_of_y_true=name_of_y_true)
+    for well_name_normal in ensemble_result.keys():
+        extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
 
 
 PAGES = {
