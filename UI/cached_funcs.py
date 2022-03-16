@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict
 import pandas as pd
 import plotly.graph_objs as go
 import streamlit as st
+from loguru import logger
 
 from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
 from frameworks_crm.class_CRM.config import ConfigCRM
@@ -95,9 +96,12 @@ def calculate_CRM(date_start_adapt: date,
     config_CRM.options_SLSQP_CRM['maxiter'] = maxiter
     config_CRM.p_res = p_res
     try:
+        logger.info(f'CRM: start calculations')
         calculator_CRM = CalculatorCRM(config_CRM)
+        logger.success(f'CRM: success')
         return calculator_CRM
-    except:
+    except Exception as exc:
+        logger.exception('CRM: FAIL', exc)
         return None
 
 

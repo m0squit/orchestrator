@@ -1,21 +1,24 @@
 import datetime
-import pandas as pd
-from frameworks_ftor.ftor.config import Config as ConfigFtor
-from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
-from pathlib import Path
-import plotly
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from timeit import default_timer
 import os
 import warnings
+from pathlib import Path
+from timeit import default_timer
 
+import pandas as pd
+import plotly
+import plotly.graph_objects as go
+from loguru import logger
+from plotly.subplots import make_subplots
+
+from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
+from frameworks_ftor.ftor.config import Config as ConfigFtor
+from frameworks_ftor.ftor.well import Well as WellFtor
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
-from frameworks_ftor.ftor.well import Well as WellFtor
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.options.mode.chained_assignment = None
+logger.remove()
 
 
 def _create_trans_plot(well_name, df_chess, rates, date_test, adap_and_fixed_params, path, is_liq):

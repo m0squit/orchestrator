@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from typing import Optional, Union
 
 import streamlit as st
+from loguru import logger
 
 import UI.pages
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, \
@@ -9,13 +10,13 @@ from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_CRM, \
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_ftor.ftor.well import Well
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
 
 
 def start_streamlit() -> st.session_state:
-    """Возвращает инициализированную сессию streamlit.
-    """
+    """Возвращает инициализированную сессию streamlit."""
     # Мета-настройки для Streamlit
     st.set_page_config(
         page_title='КСП',
@@ -28,15 +29,25 @@ def start_streamlit() -> st.session_state:
     return _session
 
 
-def initialize_session(_session: st.session_state) -> None:
-    """Инициализация сессии streamlit.session_state.
+def start_logger() -> None:
+    """Инициализация логгера."""
+    logger.remove()
+    logger.add('logs/log.log', format="{time:YYYY-MM-DD at HH:mm:ss} {level} {message}",
+               level="DEBUG", rotation="1 MB", compression="zip", enqueue=True)
+    logger.info('Start UI')
 
+
+def initialize_session(_session: st.session_state) -> None:
+    """Инициализация сессии streamlit.session_state и лога.
+
+    - Инициализируется связь с лог-файлом.
     - Инициализируется пустой словарь состояния программы session.state.
     - Инициализируются значения параметров моделей для страницы models_settings.py
 
     Notes:
         Функция используется только при первом рендеринге приложения.
     """
+    start_logger()
     _session.state = AppState()
     # Ftor model
     _session.constraints = {}
@@ -64,14 +75,15 @@ def initialize_session(_session: st.session_state) -> None:
     _session.target_accept = 0.95
 
 
-def parse_well_names(well_names_ois: List[int]) -> Tuple[Dict[str, int], Dict[int, str]]:
+def parse_well_names(well_names_ois: List[int], field_name: str) -> Tuple[Dict[str, int], Dict[int, str]]:
     """Функция сопоставляет имена скважин OIS и (ГРАД?)
 
     Parameters
     ----------
     well_names_ois: List[int]
         список имен скважин в формате OIS (например 245023100).
-
+    field_name : str
+        Имя месторождения.
     Returns
     -------
     wellnames_key_normal : Dict[str, int]
@@ -79,6 +91,7 @@ def parse_well_names(well_names_ois: List[int]) -> Tuple[Dict[str, int], Dict[in
     wellnames_key_ois : Dict[int, str]
         Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
     """
+    # TODO: заменить костыльный способ
     welllist = pd.read_feather(Preprocessor._path_general / field_name / 'welllist.feather')
     wellnames_key_normal_ = {}
     wellnames_key_ois_ = {}
@@ -91,8 +104,22 @@ def parse_well_names(well_names_ois: List[int]) -> Tuple[Dict[str, int], Dict[in
     return wellnames_key_normal_, wellnames_key_ois_
 
 
-def get_current_state(state: AppState, _session: st.session_state) -> AppState:
-    """Функция сохраняет состояние программы из сессии session в состояние state.
+def save_current_state(
+        state: AppState,
+        _session: st.session_state,
+        config: ConfigPreprocessor,
+        models_to_run: dict[str, bool],
+        date_start: date,
+        date_test: date,
+        date_end: date,
+        selected_wells_norm: list[str],
+        selected_wells_ois: list[int],
+        wellnames_key_normal: dict[str, int],
+        wellnames_key_ois: dict[int, str],
+        wells_ftor: list[Well]
+) -> AppState:
+    """
+    Функция сохраняет состояние программы в объект state класса AppState.
 
     Parameters
     ----------
@@ -100,6 +127,26 @@ def get_current_state(state: AppState, _session: st.session_state) -> AppState:
         Переменная, в которую будет записано состояние программы.
     _session: streamlit.session_state
         Сессия приложения, из которой будет извлекаться состояние программы.
+    config : ConfigPreprocessor
+        Конфигурация месторождения, дат адаптации и прогноза, выбранная пользователем.
+    models_to_run : dict[str, bool]
+        Словарь ключ - имя модели, значение - выбрана ли модель для расчета.
+    date_start : date
+        Дата начала адаптации.
+    date_test : date
+        Дата начала прогноза.
+    date_end : date
+        Дата конца прогноза.
+    selected_wells_norm : list[str]
+        Список выбранных скважин для расчета в формате ГРАД.
+    selected_wells_ois : list[int]
+        Список выбранных скважин для расчета в формате OIS.
+    wellnames_key_normal : Dict[str, int]
+        Ключ = имя скважины в формате ГРАД, значение - имя скважины OIS.
+    wellnames_key_ois : Dict[int, str]
+        Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
+    wells_ftor : list[Well]
+        Список объектов скважин Well.
     Returns
     -------
     """
@@ -122,7 +169,7 @@ def get_current_state(state: AppState, _session: st.session_state) -> AppState:
     state['was_date_end'] = date_end
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
-    state['wells_ftor'] = preprocessor.create_wells_ftor(selected_wells_ois)
+    state['wells_ftor'] = wells_ftor
     return state
 
 
@@ -307,7 +354,7 @@ def run_models(_session: st.session_state,
         calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
                                  oilfield, _session, _session.state)
         if calculator_CRM is not None:
-            run_fedot(oilfield, date_start, date_test, date_end, wells_norm,
+            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
@@ -478,15 +525,8 @@ def run_ensemble(_session: st.session_state,
         extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
 
 
-PAGES = {
-    "Настройки моделей": UI.pages.models_settings,
-    "Карта скважин": UI.pages.wells_map,
-    "Аналитика": UI.pages.analytics,
-    "Скважина": UI.pages.specific_well,
-    "Импорт/экспорт расчетов": UI.pages.resume_app,
-}
-
-if __name__ == '__main__':
+@logger.catch
+def main():
     session = start_streamlit()
     # Реализация UI: сайдбар
     with st.sidebar:
@@ -498,7 +538,7 @@ if __name__ == '__main__':
 
         config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
         preprocessor = run_preprocessor(config)
-        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names)
+        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
         selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
 
         submit = st.button(label='Запустить расчеты')
@@ -506,11 +546,26 @@ if __name__ == '__main__':
 
     # Нажата кнопка "Запуск расчетов"
     if submit and selected_wells_norm:
-        session.state = get_current_state(AppState(), session)
+        logger.info('Submit button pressed.')
+        session.state = save_current_state(
+            AppState(),
+            session,
+            config,
+            models_to_run,
+            date_start,
+            date_test,
+            date_end,
+            selected_wells_norm,
+            selected_wells_ois,
+            wellnames_key_normal,
+            wellnames_key_ois,
+            preprocessor.create_wells_ftor(selected_wells_ois)
+        )
         # Запуск моделей
         run_models(session, models_to_run, preprocessor,
                    selected_wells_ois, selected_wells_norm,
                    date_start, date_test, date_end, field_name)
+        logger.success('Finish calculations.')
         # Выделение прогнозов моделей
         dfs, dates = cut_statistics_test_only(session.state)
         session.state.statistics_test_only, session.state.statistics_test_index = dfs, dates
@@ -518,3 +573,15 @@ if __name__ == '__main__':
     # Отображение выбранной страницы
     page = PAGES[selected_page]
     page.show(session)
+
+
+PAGES = {
+    "Настройки моделей": UI.pages.models_settings,
+    "Карта скважин": UI.pages.wells_map,
+    "Аналитика": UI.pages.analytics,
+    "Скважина": UI.pages.specific_well,
+    "Импорт/экспорт расчетов": UI.pages.resume_app,
+}
+
+if __name__ == '__main__':
+    main()

@@ -35,4 +35,8 @@ results/
 *.png
 *.html
 
+# logs
+*.log
+*.zip
+
 data_notes.txt

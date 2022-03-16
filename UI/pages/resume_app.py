@@ -1,13 +1,15 @@
 import io
-import pandas as pd
 import pickle
-import streamlit as st
 from pathlib import Path
 from typing import IO
 
-from statistics_explorer.config import ConfigStatistics
+import pandas as pd
+import streamlit as st
+from loguru import logger
+
 from UI.app_state import AppState
 from UI.config import FIELDS_SHOPS
+from statistics_explorer.config import ConfigStatistics
 
 
 def show(session: st.session_state) -> None:
@@ -39,6 +41,7 @@ def draw_upload_state(state: AppState) -> None:
                        "Обновлены вкладки **Карта скважин**, **Аналитика** и **Скважина**.")
         except pickle.UnpicklingError as err:
             st.error('Не удалось восстановить расчеты.', err)
+            logger.exception('Не удалось восстановить расчеты.', err)
 
 
 def draw_export_state(state: AppState) -> None:
@@ -53,9 +56,10 @@ def draw_export_state(state: AppState) -> None:
             mime='application/octet-stream',
         )
     except pickle.PicklingError as err:
-        st.error('Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
-                 'экспортировать по кнопке ниже.')
-        print(err)
+        text_error = 'Не удалось создать файл для экспорта. Результаты расчетов в формате .xlsx можно '
+        'экспортировать по кнопке ниже.'
+        st.error(text_error)
+        logger.exception(text_error, err)
 
 
 def draw_export_excel(state: AppState) -> None:
