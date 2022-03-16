@@ -46,7 +46,8 @@ def calculate_ftor(_preprocessor: Preprocessor,
         _preprocessor.create_wells_ftor(
             well_names,
             user_constraints_for_adap_period=constraints,
-        )
+        ),
+        logging=True
     )
     return ftor
 
@@ -141,6 +142,7 @@ def calculate_ensemble(input_data: list[dict],
                        target_accept=target_accept,
                        name_of_y_true=name_of_y_true),
         input_data,
+        logging=True
     )
     return calculator_ensemble.result_test
 
