@@ -144,6 +144,7 @@ if __name__ == '__main__':
         calculator_ftor = CalculatorFtor(
             ConfigFtor(),
             data_preprocessor_lst,
+            logging=False,
         )
         wells_ftor = calculator_ftor.wells
 
