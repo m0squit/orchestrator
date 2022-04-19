@@ -56,14 +56,23 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
         df_true = _well_wolfram.df
         rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
         rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
+        rates_gasfact_true = df_true[_well_wolfram.NAME_GAZFACTOR]
+        # rates_gas_true = df_true[_well_wolfram.NAME_RATE_GAS]
         rates_liq_wolfram = res_wolfram.rates_liq_test
         rates_oil_wolfram = res_wolfram.rates_oil_test
+        rates_gasfact_wolfram = res_wolfram.rates_gasfact_test
+        # rates_gas_wolfram = res_wolfram.rates_gas_test
+        print(rates_gasfact_true, rates_gasfact_wolfram)
 
         well_name_normal = state.wellnames_key_ois[_well_name_ois]
         state.statistics['wolfram'][f'{well_name_normal}_liq_true'] = rates_liq_true
         state.statistics['wolfram'][f'{well_name_normal}_liq_pred'] = rates_liq_wolfram
         state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
+        # state.statistics['wolfram'][f'{well_name_normal}_gas_true'] = rates_gas_true
+        # state.statistics['wolfram'][f'{well_name_normal}_gas_pred'] = rates_gas_wolfram
+        state.statistics['wolfram'][f'{well_name_normal}_gasfact_true'] = rates_gasfact_true
+        state.statistics['wolfram'][f'{well_name_normal}_gasfact_pred'] = rates_gasfact_wolfram
 
 
 def extract_data_CRM(df: pd.DataFrame,
