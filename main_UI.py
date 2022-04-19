@@ -1,3 +1,7 @@
+"""
+Provides UI for orchestrator using streamlit.
+"""
+
 from datetime import date, timedelta
 from typing import Optional, Union
 
@@ -75,7 +79,10 @@ def initialize_session(_session: st.session_state) -> None:
     _session.target_accept = 0.95
 
 
-def parse_well_names(well_names_ois: List[int], field_name: str) -> Tuple[Dict[str, int], Dict[int, str]]:
+def parse_well_names(
+        well_names_ois: List[int],
+        field_name: str
+) -> Tuple[Dict[str, int], Dict[int, str]]:
     """Функция сопоставляет имена скважин OIS и (ГРАД?)
 
     Parameters
@@ -301,7 +308,8 @@ def check_for_correct_params(date_start_: date,
     adaptation_days_number = (date_test_ - date_start_).days
     forecast_days_number = (date_end_ - date_test_).days
     if adaptation_days_number < 90 or forecast_days_number < 28:
-        st.error('**Период адаптации** должен быть не менее 90 суток. **Период прогноза** - не менее 28 суток.')
+        st.error('**Период адаптации** должен быть не менее 90 суток.'
+                 ' **Период прогноза** - не менее 28 суток.')
     if pressed_submit and not selected_wells_norm_:
         st.info('Не выбрано ни одной скважины для расчета.')
 
@@ -344,7 +352,9 @@ def run_models(_session: st.session_state,
     В конце расчета каждой из моделей вызывается функция извлечения результатов.
     Таким образом все результаты приводятся к единому формату данных.
     """
-    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM']
+    at_least_one_model = (_models_to_run['ftor']
+                          or _models_to_run['wolfram']
+                          or _models_to_run['CRM'])
     if _models_to_run['ftor']:
         run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
     if _models_to_run['wolfram']:
@@ -354,8 +364,8 @@ def run_models(_session: st.session_state,
         calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
                                  oilfield, _session, _session.state)
         if calculator_CRM is not None:
-            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
-                      calculator_CRM.f, _session.state)
+            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast,
+                      wells_norm, calculator_CRM.f, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -522,7 +532,8 @@ def run_ensemble(_session: st.session_state,
         target_accept=_session.target_accept,
         name_of_y_true=name_of_y_true)
     for well_name_normal in ensemble_result.keys():
-        extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
+        extract_data_ensemble(ensemble_result[well_name_normal],
+                              _session.state, well_name_normal, mode)
 
 
 @logger.catch
@@ -538,7 +549,8 @@ def main():
 
         config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
         preprocessor = run_preprocessor(config)
-        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
+        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names,
+                                                                   field_name)
         selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
 
         submit = st.button(label='Запустить расчеты')
