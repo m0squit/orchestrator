@@ -250,7 +250,7 @@ def select_dates(date_min: date,
     date_start_ = st.date_input(
         label='Дата начала адаптации (с 00:00)',
         min_value=date_min,
-        value=date(2018, 12, 1),
+        value=date(2021, 3, 1),
         max_value=date_max,
         key='date_start',
         help="""
@@ -261,14 +261,14 @@ def select_dates(date_min: date,
     date_test_ = st.date_input(
         label='Дата начала прогноза (с 00:00)',
         min_value=date_min,
-        value=date(2019, 3, 1),
+        value=date(2021, 12, 2),
         max_value=date_max,
         key='date_test',
     )
     date_end_ = st.date_input(
         label='Дата конца прогноза (по 23:59)',
         min_value=date_min,
-        value=date(2019, 5, 30),
+        value=date(2022, 4, 30),
         max_value=date_max,
         key='date_end',
     )
