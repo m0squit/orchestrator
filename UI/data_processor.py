@@ -5,7 +5,7 @@ import pandas as pd
 
 from UI.app_state import AppState
 from UI.config import FTOR_DECODE
-from frameworks_crm.class_Fedot.fedot_model import FedotModel
+# from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.well import Well as WellFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
@@ -83,8 +83,8 @@ def extract_data_CRM(df: pd.DataFrame,
             state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
 
-def extract_data_fedot(fedot_entity: FedotModel, state: AppState) -> None:
-    state.statistics['fedot'] = fedot_entity.statistics
+# def extract_data_fedot(fedot_entity: FedotModel, state: AppState) -> None:
+#     state.statistics['fedot'] = fedot_entity.statistics
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
