@@ -97,7 +97,7 @@ if __name__ == '__main__':
                 'длительность ТРС': (stop_prd_end_date - stop_prd_start_date).days + 1,
                 'длительность выхода на режим': 1
             }
-        with open(f"data_{field_name}.json", "w", encoding='UTF-8') as outfile:
-            json.dump(data_shelf, outfile, ensure_ascii=False)
-        df_fact_test_prd.to_excel('fact_test_period.xlsx')
+    with open(f"data_{field_name}.json", "w", encoding='UTF-8') as outfile:
+        json.dump(data_shelf, outfile, ensure_ascii=False)
+    df_fact_test_prd.to_excel('fact_test_period.xlsx')
 
