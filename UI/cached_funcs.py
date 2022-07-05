@@ -6,8 +6,10 @@ import plotly.graph_objs as go
 import streamlit as st
 from loguru import logger
 
-# from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
-# from frameworks_crm.class_CRM.config import ConfigCRM
+from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_crm.class_CRM.config import ConfigCRM
+from frameworks_hybrid_crm_ml.class_Fedot.config import ConfigFedot
+from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 # from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
@@ -76,52 +78,53 @@ def calculate_wolfram(_preprocessor: Preprocessor,
 
 
 @st.experimental_singleton
-# def calculate_CRM(date_start_adapt: date,
-#                   date_end_adapt: date,
-#                   date_end_forecast: date,
-#                   oilfield: str,
-#                   calc_CRM: bool = True,
-#                   calc_CRMIP: bool = False,
-#                   grad_format_data: bool = True,
-#                   influence_R: int = 1300,
-#                   maxiter: int = 100,
-#                   p_res: int = 220) -> CalculatorCRM or None:
-#     config_CRM = ConfigCRM(date_start_adapt=date_start_adapt,
-#                            date_end_adapt=date_end_adapt,
-#                            date_end_forecast=date_end_forecast,
-#                            calc_CRM=calc_CRM,
-#                            calc_CRMIP=calc_CRMIP,
-#                            grad_format_data=grad_format_data,
-#                            oilfield=oilfield)
-#     config_CRM.INFLUENCE_R = influence_R
-#     config_CRM.options_SLSQP_CRM['maxiter'] = maxiter
-#     config_CRM.p_res = p_res
-#     try:
-#         logger.info(f'CRM: start calculations')
-#         calculator_CRM = CalculatorCRM(config_CRM)
-#         logger.success(f'CRM: success')
-#         return calculator_CRM
-#     except Exception as exc:
-#         logger.exception('CRM: FAIL', exc)
-#         return None
+def calculate_CRM(date_start_adapt: date,
+                  date_end_adapt: date,
+                  date_end_forecast: date,
+                  oilfield: str,
+                  calc_CRM: bool = True,
+                  calc_CRMIP: bool = False,
+                  grad_format_data: bool = True,
+                  influence_R: int = 1300,
+                  maxiter: int = 100,
+                  p_res: int = 220) -> CalculatorCRM or None:
+    config_CRM = ConfigCRM(date_start_adapt=date_start_adapt,
+                           date_end_adapt=date_end_adapt,
+                           date_end_forecast=date_end_forecast,
+                           calc_CRM=calc_CRM,
+                           calc_CRMIP=calc_CRMIP,
+                           grad_format_data=grad_format_data,
+                           oilfield=oilfield)
+    config_CRM.INFLUENCE_R = influence_R
+    config_CRM.options_SLSQP_CRM['maxiter'] = maxiter
+    config_CRM.p_res = p_res
+    try:
+        logger.info(f'CRM: start calculations')
+        calculator_CRM = CalculatorCRM(config_CRM)
+        logger.success(f'CRM: success')
+        return calculator_CRM
+    except Exception as exc:
+        logger.exception('CRM: FAIL', exc)
+        return None
 
 
-# @st.experimental_singleton
-# def calculate_fedot(oilfield: str,
-#                     train_start: date,
-#                     train_end: date,
-#                     predict_start: date,
-#                     predict_end: date,
-#                     wells_to_calc: list[str],
-#                     coeff: pd.DataFrame) -> FedotModel:
-#     calculator_fedot = FedotModel(oilfield=oilfield,
-#                                   train_start=train_start,
-#                                   train_end=train_end,
-#                                   predict_start=predict_start,
-#                                   predict_end=predict_end,
-#                                   wells_to_calc=wells_to_calc,
-#                                   coeff=coeff)
-#     return calculator_fedot
+@st.experimental_singleton
+def calculate_fedot(oilfield: str,
+                    train_start: date,
+                    train_end: date,
+                    predict_start: date,
+                    predict_end: date,
+                    coeff: pd.DataFrame,
+                    lags: pd.DataFrame = None) -> CalculatorFedot:
+    config_Fedot = ConfigFedot(oilfield=oilfield,
+                               train_start=train_start,
+                               train_end=train_end,
+                               predict_start=predict_start,
+                               predict_end=predict_end,
+                               coeff_f=coeff,
+                               lags=lags)
+    calculator_fedot = CalculatorFedot(config_Fedot)
+    return calculator_fedot
 
 
 @st.experimental_singleton

@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Tuple
 import numpy as np
 import pandas as pd
 
+from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 from UI.app_state import AppState
 from UI.config import FTOR_DECODE
 # from frameworks_crm.class_Fedot.fedot_model import FedotModel
@@ -83,8 +84,8 @@ def extract_data_CRM(df: pd.DataFrame,
             state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
 
-# def extract_data_fedot(fedot_entity: FedotModel, state: AppState) -> None:
-#     state.statistics['fedot'] = fedot_entity.statistics
+def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
+    state.statistics['fedot'] = fedot_entity.statistic_all
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
