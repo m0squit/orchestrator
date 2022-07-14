@@ -9,6 +9,8 @@ from UI.config import FTOR_DECODE
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.well import Well as WellFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
+from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
+from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
 
 
 def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -21,6 +23,34 @@ def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
         if key in parsed_dict.keys():
             parsed_dict[FTOR_DECODE[key]['label']] = parsed_dict.pop(key)
     return parsed_dict
+
+# def extract_data_shelf(_calculator_shelf: DataPostProcessorShelf, state: AppState) -> None:
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None:
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    state.statistics['shelf'] = pd.DataFrame(index=dates)
+    # print(_calculator_shelf.df_result)
+    # print(_calculator_shelf._df_fact_test_prd)
+    for well_shelf in _calculator_shelf.wells_list:
+        well_name_ois = well_shelf
+        well_name_normal = state.wellnames_key_ois[well_name_ois]
+        # print(well_name_ois, well_name_normal)
+        res_oil = _calculator_shelf.df_result[well_name_ois]
+        res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+        true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+        true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+        # print(res_oil, res_liq, true_oil, true_liq)
+        state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
+        state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
+        state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
+        state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+    state.statistics['shelf'].to_excel('extract_data.xlsx')
+
+    # for clm in _calculator_shelf.df_shelf_ksp_format.columns:
+    #     print(_calculator_shelf.df_shelf_ksp_format[clm])
+    #     state.statistics['shelf'][clm] = _calculator_shelf.df_shelf_ksp_format[clm]
+    # state.statistics['shelf'] = _calculator_shelf.df_shelf_ksp_format
+    # print(state.statistics['shelf'])
+    # state.statistics['shelf'].to
 
 
 def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None:

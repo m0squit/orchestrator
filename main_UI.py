@@ -5,8 +5,8 @@ import streamlit as st
 from loguru import logger
 
 import UI.pages
-from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
-    # calculate_fedot, calculate_CRM
+from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor, calculate_shelf
+# calculate_fedot, calculate_CRM
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 # from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
@@ -162,6 +162,7 @@ def save_current_state(
     state['was_calc_ftor'] = models_to_run['ftor']
     state['was_calc_wolfram'] = models_to_run['wolfram']
     state['was_calc_CRM'] = models_to_run['CRM']
+    state['was_calc_shelf'] = models_to_run['shelf']
     state['was_calc_ensemble'] = models_to_run['ensemble']
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
@@ -198,6 +199,11 @@ def select_models() -> Dict[str, bool]:
             label='Считать модель CRM',
             value=True,
             key='is_calc_CRM',
+        ),
+        'shelf': st.checkbox(
+            label='Считать модель ППТП',
+            value=True,
+            key='is_calc_shelf',
         ),
         'ensemble': st.checkbox(
             label='Считать ансамбль моделей',
@@ -314,7 +320,8 @@ def run_models(_session: st.session_state,
                date_start_adapt: date,
                date_start_forecast: date,
                date_end_forecast: date,
-               oilfield: str) -> None:
+               oilfield: str,
+               shops: List[str]) -> None:
     """Запуск расчета моделей, которые выбрал пользователь.
 
     Parameters
@@ -344,12 +351,19 @@ def run_models(_session: st.session_state,
     В конце расчета каждой из моделей вызывается функция извлечения результатов.
     Таким образом все результаты приводятся к единому формату данных.
     """
-    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM']
+    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM'] or _models_to_run['shelf']
     if _models_to_run['ftor']:
         run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
     if _models_to_run['wolfram']:
         run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
                     wells_ois, _session, _session.state)
+    if _models_to_run['shelf']:
+        print('run shelf')
+        # print(oilfield, date_start_adapt, date_start_forecast, date_start_adapt,
+        #       date_end_forecast)
+        # print(_preprocessor) wells_ois,
+        run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
+                  date_end_forecast, 30, 5, _session.state)
     # if _models_to_run['CRM']:
     #     calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
     #                              oilfield, _session, _session.state)
@@ -361,6 +375,44 @@ def run_models(_session: st.session_state,
     if _models_to_run['ensemble'] and at_least_one_model:
         run_ensemble(_session, wells_norm, mode='liq')
         run_ensemble(_session, wells_norm, mode='oil')
+
+
+def run_shelf(oilfield: str,
+              shops: List[str],
+              well_ois: List[int],
+              train_start: date,
+              train_end: date,
+              predict_start: date,
+              predict_end: date,
+              n_days_past: int,
+              n_days_calc_avg: int,
+              state: AppState) -> None:
+    """Расчет модели прогноза по темпам падений и последующее извлечение результатов.
+       Parameters
+       ----------
+       oilfield : str
+           название месторождения, выбранное пользователем.
+       date_start : date
+           дата начала адаптации.
+       date_test : date
+           дата начала прогноза.
+       date_end : date
+           дата конца прогноза.
+       state : AppState
+           состояние программы, заданное пользователем.
+       """
+    print('run_shelf inside')
+    calculator_shelf = calculate_shelf(oilfield,
+                                       shops,
+                                       well_ois,
+                                       train_start,
+                                       train_end,
+                                       predict_start,
+                                       predict_end,
+                                       n_days_past,
+                                       n_days_calc_avg)
+    print('run shelf done')
+    extract_data_shelf(calculator_shelf,state)
 
 
 def run_ftor(_preprocessor: Preprocessor,
@@ -544,6 +596,8 @@ def main():
         submit = st.button(label='Запустить расчеты')
     check_for_correct_params(date_start, date_test, date_end, submit, selected_wells_norm)
 
+    # print(config.shops)
+
     # Нажата кнопка "Запуск расчетов"
     if submit and selected_wells_norm:
         logger.info('Submit button pressed.')
@@ -564,7 +618,7 @@ def main():
         # Запуск моделей
         run_models(session, models_to_run, preprocessor,
                    selected_wells_ois, selected_wells_norm,
-                   date_start, date_test, date_end, field_name)
+                   date_start, date_test, date_end, field_name,shops)
         logger.success('Finish calculations.')
         # Выделение прогнозов моделей
         dfs, dates = cut_statistics_test_only(session.state)

@@ -9,6 +9,10 @@ from loguru import logger
 # from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
 # from frameworks_crm.class_CRM.config import ConfigCRM
 # from frameworks_crm.class_Fedot.fedot_model import FedotModel
+from frameworks_shelf_algo.class_Shelf.config import ConfigShelf
+from frameworks_shelf_algo.class_Shelf.data_processor_shelf import DataProcessorShelf
+from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
+from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
@@ -50,6 +54,30 @@ def calculate_ftor(_preprocessor: Preprocessor,
         logging=True
     )
     return ftor
+
+@st.experimental_singleton
+def calculate_shelf(oilfield: str,
+                    shops: List[str],
+                    wells_ois: List[int],
+                    train_start: date,
+                    train_end: date,
+                    predict_start: date,
+                    predict_end: date,
+                    n_days_past: int,
+                    n_days_calc_avg: int) -> DataPostProcessorShelf:
+    config_shelf = ConfigShelf(oilfield=oilfield,
+                               shops=shops,
+                               wells_ois=wells_ois,
+                               train_start=train_start,
+                               train_end=train_end,
+                               predict_start=predict_start,
+                               predict_end=predict_end,
+                               n_days_past=n_days_past,
+                               n_days_calc_avg=n_days_calc_avg)
+    print('calculate_shelf')
+    results_shelf = CalculatorShelf(config_shelf)
+    # results_shelf = DataPostProcessorShelf(config_shelf)
+    return results_shelf
 
 
 @st.experimental_singleton
