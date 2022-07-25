@@ -10,6 +10,8 @@ from UI.config import FTOR_DECODE
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.well import Well as WellFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
+from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
+from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
 
 
 def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -86,6 +88,22 @@ def extract_data_CRM(df: pd.DataFrame,
 
 def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
     state.statistics['fedot'] = fedot_entity.statistic_all
+
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None:
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    state.statistics['shelf'] = pd.DataFrame(index=dates)
+    for well_shelf in _calculator_shelf.wells_list:
+        well_name_ois = well_shelf
+        well_name_normal = state.wellnames_key_ois[well_name_ois]
+        res_oil = _calculator_shelf.df_result[well_name_ois]
+        res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+        true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+        true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+        state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
+        state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
+        state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
+        state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+    # state.statistics['shelf'].to_excel('extract_data.xlsx')
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:

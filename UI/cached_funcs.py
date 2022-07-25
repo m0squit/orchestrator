@@ -17,6 +17,10 @@ from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfra
 from frameworks_wolfram.wolfram.config import Config as ConfigWolfram
 from models_ensemble.calculator import Calculator as CalculatorEnsemble
 from models_ensemble.config import Config as ConfigEnsemble
+from frameworks_shelf_algo.class_Shelf.config import ConfigShelf
+from frameworks_shelf_algo.class_Shelf.data_processor_shelf import DataProcessorShelf
+from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
+from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
 from statistics_explorer.config import ConfigStatistics
 from statistics_explorer.main import calculate_statistics
 from tools_preprocessor.config import Config as ConfigPreprocessor
@@ -114,6 +118,7 @@ def calculate_fedot(oilfield: str,
                     train_end: date,
                     predict_start: date,
                     predict_end: date,
+                    wells_norm: List,
                     coeff: pd.DataFrame,
                     lags: pd.DataFrame = None) -> CalculatorFedot:
     config_Fedot = ConfigFedot(oilfield=oilfield,
@@ -121,10 +126,34 @@ def calculate_fedot(oilfield: str,
                                train_end=train_end,
                                predict_start=predict_start,
                                predict_end=predict_end,
+                               wells_norm=wells_norm,
                                coeff_f=coeff,
                                lags=lags)
     calculator_fedot = CalculatorFedot(config_Fedot)
     return calculator_fedot
+
+@st.experimental_singleton
+def calculate_shelf(oilfield: str,
+                    shops: List[str],
+                    wells_ois: List[int],
+                    train_start: date,
+                    train_end: date,
+                    predict_start: date,
+                    predict_end: date,
+                    n_days_past: int,
+                    n_days_calc_avg: int) -> DataPostProcessorShelf:
+    config_shelf = ConfigShelf(oilfield=oilfield,
+                               shops=shops,
+                               wells_ois=wells_ois,
+                               train_start=train_start,
+                               train_end=train_end,
+                               predict_start=predict_start,
+                               predict_end=predict_end,
+                               n_days_past=n_days_past,
+                               n_days_calc_avg=n_days_calc_avg)
+    results_shelf = CalculatorShelf(config_shelf)
+    # results_shelf = DataPostProcessorShelf(config_shelf)
+    return results_shelf
 
 
 @st.experimental_singleton
