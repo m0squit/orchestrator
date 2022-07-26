@@ -10,7 +10,6 @@ from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
 from frameworks_crm.class_CRM.config import ConfigCRM
 from frameworks_hybrid_crm_ml.class_Fedot.config import ConfigFedot
 from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
-# from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.config import Config as ConfigFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
