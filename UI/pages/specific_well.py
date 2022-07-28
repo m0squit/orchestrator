@@ -116,6 +116,7 @@ def add_traces_to_specific_column(
               'wolfram': 'rgba(248, 156, 116, 0.8)',
               'CRM': px.colors.qualitative.Pastel[6],
               'CRMIP': px.colors.qualitative.Vivid[4],
+              'shelf': px.colors.qualitative.Pastel[7],
               'ensemble': 'rgba(115, 175, 72, 0.7)',
               'ensemble_interval': 'rgba(184, 247, 212, 0.7)',
               'true': 'rgba(99, 110, 250, 0.7)',
