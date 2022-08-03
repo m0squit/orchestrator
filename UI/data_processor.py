@@ -85,6 +85,9 @@ def extract_data_CRM(df: pd.DataFrame,
             state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
             state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
+def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> None:
+    state['coeff_f'] = data_coeff_f
+
 
 def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
     state.statistics['fedot'] = fedot_entity.statistic_all

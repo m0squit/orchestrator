@@ -103,7 +103,7 @@ def parse_well_names(well_names_ois: List[int], field_name: str) -> Tuple[Dict[s
         wellnames_key_ois_[name_ois] = well_name_norm
     return wellnames_key_normal_, wellnames_key_ois_
 
-
+# TODO: добавить переменные в функцию
 def save_current_state(
         state: AppState,
         _session: st.session_state,
@@ -171,6 +171,8 @@ def save_current_state(
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
     state['wells_ftor'] = wells_ftor
+    state['coeff_f'] = pd.DataFrame()
+    state['wells_coords_CRM'] = pd.DataFrame()
     return state
 
 
@@ -466,6 +468,8 @@ def run_CRM(date_start_adapt: date,
                                    p_res=_session.CRM_p_res)
     if calculator_CRM is not None:
         extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
+        extract_influence_coeff_CRM(calculator_CRM.f, state)
+        state['wells_coords_CRM'] = calculator_CRM._coordinates
     return calculator_CRM
 
 
