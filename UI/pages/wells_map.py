@@ -64,22 +64,21 @@ def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tu
     well_names = [
         elem for elem in selected_wells_set if elem not in state.exclude_wells
     ]
-    for wellname_norm in well_names:
-        # wellname_norm = state.wellnames_key_ois[well.well_name]
+    for well in well_names:
         cum_q_liq, cum_q_oil, err_liq, err_oil = None, None, pd.DataFrame(), pd.DataFrame()
-        if f'{wellname_norm}_liq_true' in state.statistics[model]:
+        if f'{well}_liq_true' in state.statistics[model]:
             df_test_period = state.statistics[model][state.was_date_test:]
-            q_test_period = df_test_period[[f'{wellname_norm}_liq_true', f'{wellname_norm}_oil_true']]
+            q_test_period = df_test_period[[f'{well}_liq_true', f'{well}_oil_true']]
             cum_q_liq, cum_q_oil = q_test_period.sum().round(1)
-            err_liq = calc_relative_error(df_test_period[f'{wellname_norm}_liq_true'],
-                                          df_test_period[f'{wellname_norm}_liq_pred'],
+            err_liq = calc_relative_error(df_test_period[f'{well}_liq_true'],
+                                          df_test_period[f'{well}_liq_pred'],
                                           use_abs=True)
             err_liq = round(err_liq.mean(), 1)
-            err_oil = calc_relative_error(df_test_period[f'{wellname_norm}_oil_true'],
-                                          df_test_period[f'{wellname_norm}_oil_pred'],
+            err_oil = calc_relative_error(df_test_period[f'{well}_oil_true'],
+                                          df_test_period[f'{well}_oil_pred'],
                                           use_abs=True)
             err_oil = round(err_oil.mean(), 1)
-        df.loc[len(df)] = wellname_norm, cum_q_liq, cum_q_oil, err_liq, err_oil
+        df.loc[len(df)] = well, cum_q_liq, cum_q_oil, err_liq, err_oil
     return df
 
 
