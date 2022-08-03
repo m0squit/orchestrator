@@ -1,7 +1,9 @@
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from typing import Tuple
 
+from UI.pages.analytics import select_wells_set, draw_form_exclude_wells
 from statistics_explorer.plots import calc_relative_error
 from statistics_explorer.config import ConfigStatistics
 from UI.app_state import AppState
@@ -14,8 +16,10 @@ def show(session: st.session_state) -> None:
                 'На данный момент ни одна скважина не рассчитана.\n'
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
         return
-    fig = select_plot(state)
+    selected_wells_set = select_wells_set(state)
+    fig = select_plot(state, selected_wells_set)
     st.plotly_chart(fig, use_container_width=True)
+    draw_form_exclude_wells(state, selected_wells_set)
     st.info('Справка по TreeMap:  \n'
             '**Цвет сектора** зависит от средней посуточной ошибки на периоде прогноза (модуль отклонения).  \n'
             '**Размер сектора** зависит от накопленной добычи на периоде прогноза, [м3].  \n'
@@ -23,7 +27,7 @@ def show(session: st.session_state) -> None:
             '  \n- имя скважины,  \n- накопленная добыча,  \n- посуточная ошибка на прогнозе.  \n')
 
 
-def select_plot(state: AppState) -> go.Figure:
+def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> go.Figure:
     selected_plot = st.selectbox(label='', options=['Карта скважин', 'TreeMap'])
     if selected_plot == 'Карта скважин':
         df = prepare_data_for_wells_map(state)
@@ -32,7 +36,7 @@ def select_plot(state: AppState) -> go.Figure:
         mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq'}
         mode = st.selectbox(label='Жидкость/нефть', options=sorted(mode_dict))
         model_for_error = select_model(state)
-        df = prepare_data_for_treemap(state, model_for_error)
+        df = prepare_data_for_treemap(state, model_for_error, selected_wells_set)
         return create_tree_plot(df, mode=mode)
 
 
@@ -54,11 +58,14 @@ def select_model(state: AppState) -> str:
     return MODEL_NAMES_REVERSED[model]
 
 
-def prepare_data_for_treemap(state: AppState, model: str) -> pd.DataFrame:
+def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tuple[str, ...]) -> pd.DataFrame:
     columns = ['wellname', 'cum_q_liq', 'cum_q_oil', 'err_liq', 'err_oil']
     df = pd.DataFrame(columns=columns)
-    for well in state.wells_ftor:
-        wellname_norm = state.wellnames_key_ois[well.well_name]
+    well_names = [
+        elem for elem in selected_wells_set if elem not in state.exclude_wells
+    ]
+    for wellname_norm in well_names:
+        # wellname_norm = state.wellnames_key_ois[well.well_name]
         cum_q_liq, cum_q_oil, err_liq, err_oil = None, None, pd.DataFrame(), pd.DataFrame()
         if f'{wellname_norm}_liq_true' in state.statistics[model]:
             df_test_period = state.statistics[model][state.was_date_test:]
