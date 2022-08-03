@@ -52,7 +52,7 @@ def draw_export_state(state: AppState) -> None:
         st.download_button(
             label="Экспорт текущего состояния программы",
             data=state_to_save,
-            file_name=f'state_to_save.pickle',
+            file_name=f"{state.was_config.field_name}_{state.was_date_test}_{state.was_date_end}.pickle",
             mime='application/octet-stream',
         )
     except pickle.PicklingError as err:
