@@ -17,27 +17,28 @@ def show(session: st.session_state) -> None:
                 'Выберите настройки и нажмите кнопку **Запустить расчеты**.')
         return
     selected_wells_set = select_wells_set(state)
-    fig = select_plot(state, selected_wells_set)
+    fig, selected_plot = select_plot(state, selected_wells_set)
     st.plotly_chart(fig, use_container_width=True)
-    draw_form_exclude_wells(state, selected_wells_set)
-    st.info('Справка по TreeMap:  \n'
-            '**Цвет сектора** зависит от средней посуточной ошибки на периоде прогноза (модуль отклонения).  \n'
-            '**Размер сектора** зависит от накопленной добычи на периоде прогноза, [м3].  \n'
-            'Надписи внутри каждого сектора идут в следующем порядке:'
-            '  \n- имя скважины,  \n- накопленная добыча,  \n- посуточная ошибка на прогнозе.  \n')
+    if selected_plot == 'TreeMap':
+        draw_form_exclude_wells(state, selected_wells_set)
+        st.info('Справка по TreeMap:  \n'
+                '**Цвет сектора** зависит от средней посуточной ошибки на периоде прогноза (модуль отклонения).  \n'
+                '**Размер сектора** зависит от накопленной добычи на периоде прогноза, [м3].  \n'
+                'Надписи внутри каждого сектора идут в следующем порядке:'
+                '  \n- имя скважины,  \n- накопленная добыча,  \n- посуточная ошибка на прогнозе.  \n')
 
 
-def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> go.Figure:
+def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Figure, str]:
     selected_plot = st.selectbox(label='', options=['Карта скважин', 'TreeMap'])
     if selected_plot == 'Карта скважин':
         df = prepare_data_for_wells_map(state)
-        return create_wells_map_plot(df)
+        return create_wells_map_plot(df), selected_plot
     if selected_plot == 'TreeMap':
         mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq'}
         mode = st.selectbox(label='Жидкость/нефть', options=sorted(mode_dict))
         model_for_error = select_model(state)
         df = prepare_data_for_treemap(state, model_for_error, selected_wells_set)
-        return create_tree_plot(df, mode=mode)
+        return create_tree_plot(df, mode=mode), selected_plot
 
 
 def prepare_data_for_wells_map(state: AppState) -> pd.DataFrame:
