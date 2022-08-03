@@ -11,11 +11,13 @@ FIELDS_SHOPS = {
     'Отдельное': ['ЦДHГ-1'],  # H - латинская
     'Романовское': ['ЦДНГ-3'],
     'Холмогорское': ['ЦДHГ-1'],  # H - латинская
+    'Восточно-Мессояхское': ['ЦДНГ-1'],
 }
+FIELDS_SHOPS = dict(sorted(FIELDS_SHOPS.items()))
 
 # Диапазон дат выгрузки sh таблицы
 DATE_MIN = datetime.date(2018, 1, 1)
-DATE_MAX = datetime.date(2022, 6, 1)
+DATE_MAX = datetime.date(2022, 9, 1)
 
 PERIOD_TRAIN_MIN = relativedelta(months=3)
 PERIOD_TEST_MIN = relativedelta(months=1)
