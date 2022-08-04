@@ -40,7 +40,6 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
         df_f_coeff = plot_influence_table(state.coeff_f, mode_well)
         return crm_plot(coords_df, f_dict, mode_well, state.CRM_influence_R), selected_plot, df_f_coeff
     if selected_plot == 'TreeMap':
-
         mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq'}
         mode = st.selectbox(label='Жидкость/нефть', options=sorted(mode_dict))
         model_for_error = select_model(state)
@@ -61,6 +60,7 @@ def select_model(state: AppState) -> str:
     MODEL_NAMES = ConfigStatistics.MODEL_NAMES
     MODEL_NAMES_REVERSED = {v: k for k, v in MODEL_NAMES.items()}
     models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble']
+    models_without_ensemble.insert(0, 'Ансамбль')
     model = st.selectbox(label="Модель для расчета ошибки:",
                          options=models_without_ensemble)
     return MODEL_NAMES_REVERSED[model]
