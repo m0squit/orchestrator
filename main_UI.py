@@ -172,6 +172,7 @@ def save_current_state(
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
     state['wells_ftor'] = wells_ftor
     state['coeff_f'] = pd.DataFrame()
+    state['CRM_influence_R'] = _session.CRM_influence_R
     state['wells_coords_CRM'] = pd.DataFrame()
     return state
 
