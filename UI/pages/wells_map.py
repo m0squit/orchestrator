@@ -47,19 +47,11 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
     return create_tree_plot(df, mode=mode), selected_plot, None
 
 
-# def prepare_data_for_wells_map(state: AppState) -> pd.DataFrame:
-#     columns = ['wellname', 'coord_x', 'coord_y']
-#     df = pd.DataFrame(columns=columns)
-#     for well in state.wells_ftor:
-#         wellname_norm = state.wellnames_key_ois[well.well_name]
-#         df.loc[len(df)] = wellname_norm, well.x_coord, well.y_coord
-#     return df
-
-
 def select_model(state: AppState) -> str:
     MODEL_NAMES = ConfigStatistics.MODEL_NAMES
     MODEL_NAMES_REVERSED = {v: k for k, v in MODEL_NAMES.items()}
     models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble']
+    # добавляем ансамбль в тримап
     models_without_ensemble.insert(0, 'Ансамбль')
     model = st.selectbox(label="Модель для расчета ошибки:",
                          options=models_without_ensemble)
@@ -90,25 +82,6 @@ def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tu
     return df
 
 
-# def create_wells_map_plot(df: pd.DataFrame) -> go.Figure:
-#     fig = go.Figure()
-#     fig.update_layout(font=dict(size=15),
-#                       title_text=f'Карта скважин',
-#                       height=630,
-#                       width=1300,
-#                       separators='. ')
-#     fig.add_trace(go.Scatter(
-#         x=df['coord_x'],
-#         y=df['coord_y'],
-#         mode='markers+text',
-#         text=df['wellname'],
-#         textposition='top center',
-#         # hovertext=df['cum_q_oil'],
-#         hoverinfo='all',
-#         showlegend=False, ))
-#     return fig
-
-
 def create_tree_plot(df: pd.DataFrame, mode: str) -> go.Figure:
     fig = go.Figure()
     fig.update_layout(font=dict(size=15),
@@ -131,13 +104,13 @@ def create_tree_plot(df: pd.DataFrame, mode: str) -> go.Figure:
                              ))
     return fig
 
-def select_well(produced_wells: List):
+def select_well(produced_wells: list) -> str:
     well_chosen = st.selectbox(label="Скважина:",
-                               options=list(produced_wells), #['', 'Все скважины'] +
+                               options=list(sorted(produced_wells)), #['', 'Все скважины'] +
                                key='selected_wells_for_influence')
     return well_chosen
 
-def crm_map(f_values, coords_df, border=0.):
+def crm_map(f_values: pd.DataFrame, coords_df: pd.DataFrame, border: float = 0.) -> [pd.DataFrame, dict]:
     '''
     f_values - матрица взаимовлияния
        |
@@ -194,7 +167,7 @@ def crm_map(f_values, coords_df, border=0.):
     return coords_df, f_dict
 
 
-def crm_plot(coords_df, f_dict, mode:str, influence_R:int):
+def crm_plot(coords_df: pd.DataFrame, f_dict: dict, mode:str, influence_R:int) -> go.Figure:
     _df = pd.DataFrame(columns=['x', 'y', 'value'])
     count = 0
     fig = go.Figure()
@@ -283,7 +256,7 @@ def crm_plot(coords_df, f_dict, mode:str, influence_R:int):
 
     return fig
 
-def plot_influence_table(df_table, mode):
+def plot_influence_table(df_table: pd.DataFrame, mode: str) -> go.Figure:
     # if mode == "":
     #     return None
     # elif mode == "Все скважины":
