@@ -42,15 +42,18 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
     if selected_plot == 'TreeMap':
         mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq'}
         mode = st.selectbox(label='Жидкость/нефть', options=sorted(mode_dict))
-        model_for_error = select_model(state)
+        model_for_error = select_model(state, mode)
         df = prepare_data_for_treemap(state, model_for_error, selected_wells_set)
     return create_tree_plot(df, mode=mode), selected_plot, None
 
 
-def select_model(state: AppState) -> str:
+def select_model(state: AppState, mode: str) -> str:
     MODEL_NAMES = ConfigStatistics.MODEL_NAMES
     MODEL_NAMES_REVERSED = {v: k for k, v in MODEL_NAMES.items()}
-    models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble']
+    if mode == "Нефть":
+        models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble' and model != 'CRM']
+    else:
+        models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble']
     # добавляем ансамбль в тримап
     models_without_ensemble.insert(0, 'Ансамбль')
     model = st.selectbox(label="Модель для расчета ошибки:",
