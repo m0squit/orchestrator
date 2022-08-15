@@ -15,9 +15,11 @@ from statistics_explorer.config import ConfigStatistics
 def show(session: st.session_state) -> None:
     state = session.state
     draw_upload_state(state)
+    external_stats(state)
     draw_export_state(state)
     draw_export_excel(state)
     draw_upload_oilfield_data()
+
 
 
 def draw_upload_state(state: AppState) -> None:
@@ -112,3 +114,11 @@ def add_oilfield(oilfield_name: str,
     for file in oilfield_files:
         with open(path_to_save / file.name, 'wb') as f:
             f.write(file.getbuffer())
+
+def external_stats(state: AppState):
+    st.subheader("Загрузка готовых данных для статистики")
+    uploaded_file = st.file_uploader('Принимаются данные в формате .xlsx',
+                                    accept_multiple_files=False,
+                                      type='xlsx')
+    state.statistics_test_only[uploaded_file.name.split('.')[0]] = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
+    state.statistics_another_models = uploaded_file.name.split('.')[0]

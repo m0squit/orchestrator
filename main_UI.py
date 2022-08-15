@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from typing import Optional, Union
 
+import pandas as pd
 import streamlit as st
 from loguru import logger
 
@@ -177,6 +178,7 @@ def save_current_state(
     state['coeff_f'] = pd.DataFrame()
     state['CRM_influence_R'] = _session.CRM_influence_R
     state['wells_coords_CRM'] = pd.DataFrame()
+    state['statistics_another_models'] = None
     return state
 
 
@@ -549,7 +551,7 @@ def run_shelf(oilfield: str,
                                        n_days_past,
                                        n_days_calc_avg)
     # print('run shelf done')
-    extract_data_shelf(calculator_shelf,state)
+    extract_data_shelf(calculator_shelf, state)
 
 def run_ensemble(_session: st.session_state,
                  wells_norm: list[str],

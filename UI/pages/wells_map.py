@@ -13,6 +13,7 @@ from UI.app_state import AppState
 
 def show(session: st.session_state) -> None:
     state = session.state
+
     if not state.statistics:
         st.info('Здесь будет отображаться карта скважин, выбранных для расчета.\n'
                 'На данный момент ни одна скважина не рассчитана.\n'
@@ -20,9 +21,12 @@ def show(session: st.session_state) -> None:
         return
     selected_wells_set = select_wells_set(state)
     fig, selected_plot, fig_table = select_plot(state, selected_wells_set)
+    # button = convert_df(state)
     st.plotly_chart(fig, use_container_width=True)
     if selected_plot == 'Карта скважин':
         st.plotly_chart(fig_table, use_container_width=True)
+        # st.button('hey')
+
     if selected_plot == 'TreeMap':
         draw_form_exclude_wells(state, selected_wells_set)
         st.info('Справка по TreeMap:  \n'
@@ -32,12 +36,15 @@ def show(session: st.session_state) -> None:
                 '  \n- имя скважины,  \n- накопленная добыча,  \n- посуточная ошибка на прогнозе.  \n')
 
 
+
 def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Figure, str]:
     selected_plot = st.selectbox(label='', options=['Карта скважин', 'TreeMap'])
     if selected_plot == 'Карта скважин':
         mode_well = select_well(state.coeff_f.columns)
         coords_df, f_dict = crm_map(state.coeff_f, state.wells_coords_CRM)
         df_f_coeff = plot_influence_table(state.coeff_f, mode_well)
+        # button = st.download_button(label="Коэффициенты взаимовлияния", data=f_dict, file_name='Coeff_f.xlsx',
+        #                    mime='text/csv')
         return crm_plot(coords_df, f_dict, mode_well, state.CRM_influence_R), selected_plot, df_f_coeff
     if selected_plot == 'TreeMap':
         mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq'}
@@ -112,6 +119,21 @@ def select_well(produced_wells: list) -> str:
                                options=list(sorted(produced_wells)), #['', 'Все скважины'] +
                                key='selected_wells_for_influence')
     return well_chosen
+#
+# @st.cache
+# def convert_df(state: AppState):
+#  # IMPORTANT: Cache the conversion to prevent computation on every rerun
+#     download = st.download_button(
+#                                  label="Download data as CSV",
+#                                  data=state.coeff_f,
+#                                  file_name='large_df.csv',
+#                                  mime='text/csv',
+#                                 )
+#     print(download)
+#     return download
+
+
+
 
 def crm_map(f_values: pd.DataFrame, coords_df: pd.DataFrame, border: float = 0.) -> [pd.DataFrame, dict]:
     '''

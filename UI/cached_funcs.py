@@ -187,7 +187,8 @@ def calculate_statistics_plots(
         well_names: tuple,
         use_abs: bool,
         exclude_wells: list,
-        bin_size: int
+        bin_size: int,
+        add_models: str = None,
 ) -> Tuple[Dict[str, go.Figure], ConfigStatistics]:
     config_stat = ConfigStatistics(
         oilfield=field_name,
@@ -196,6 +197,7 @@ def calculate_statistics_plots(
         use_abs=use_abs,
         bin_size=bin_size,
     )
+    config_stat.MODEL_NAMES[add_models] = add_models
     config_stat.exclude_wells(exclude_wells)
     analytics_plots = calculate_statistics(statistics, config_stat)
     return analytics_plots, config_stat
