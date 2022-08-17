@@ -634,6 +634,7 @@ def main():
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
+    "Планируемые мероприятия": UI.pages.gtm_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,
