@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Tuple
 
 import numpy as np
 import pandas as pd
+import pathlib
 
 from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 from UI.app_state import AppState
@@ -195,3 +196,16 @@ def cut_statistics_test_only(state: AppState) -> Tuple[Dict[str, pd.DataFrame], 
     for key in state.statistics:
         statistics_test_only[key] = state.statistics[key].copy().reindex(statistics_test_index).fillna(0)
     return statistics_test_only, statistics_test_index
+
+
+def add_fieldshops(fieldshops: dict) -> None:
+    fieldshops_path = pathlib.Path.cwd() / 'tools_preprocessor' / 'data'
+    fieldshops_name = fieldshops_path.glob("**")
+    for fs_name in fieldshops_name:
+        if pathlib.Path(fs_name / 'welllist.feather').exists():
+            fieldshops_ceh = pd.read_feather(pathlib.Path(fs_name / 'welllist.feather'))
+            fs_name = fs_name.name
+        else:
+            continue
+        fieldshops_ceh = fieldshops_ceh.ceh.unique()
+        fieldshops[fs_name] = list(fieldshops_ceh)

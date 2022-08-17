@@ -229,6 +229,7 @@ def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
     fields_shops : Dict[str, List[str]]
         цеха для каждого месторождения
     """
+    add_fieldshops(fieldshops=fields_shops)
     oilfield_name = st.selectbox(
         label='Месторождение',
         options=fields_shops.keys(),

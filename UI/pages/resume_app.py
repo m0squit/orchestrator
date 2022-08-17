@@ -60,6 +60,10 @@ def draw_export_state(state: AppState) -> None:
         'экспортировать по кнопке ниже.'
         st.error(text_error)
         logger.exception(text_error, err)
+    except AttributeError as err:
+        logger.exception(err)
+    finally:
+        st.info('Кнопка станет доступна, как только будет рассчитана хотя бы одна скважина.')
 
 
 def draw_export_excel(state: AppState) -> None:
@@ -98,17 +102,17 @@ def draw_upload_oilfield_data() -> None:
                                       type=['feather', 'xlsm'])
     button_add_oilfield = st.button('OK')
     if button_add_oilfield:
-        add_oilfield(oilfield_name, oilfield_shops, oilfield_files)
+        add_oilfield(oilfield_name, oilfield_files)
 
 
 def add_oilfield(oilfield_name: str,
-                 oilfield_shops: str,
                  oilfield_files: IO) -> None:
-    oilfield_shops = [shop.strip() for shop in oilfield_shops.strip().split(',')]
-    FIELDS_SHOPS[oilfield_name] = oilfield_shops
-    path_to_save = Path.cwd() / 'data' / oilfield_name
+    path_to_save = Path.cwd() / 'tools_preprocessor' / 'data' / oilfield_name
     if not path_to_save.exists():
         path_to_save.mkdir()
     for file in oilfield_files:
         with open(path_to_save / file.name, 'wb') as f:
             f.write(file.getbuffer())
+    if Path(path_to_save / 'welllist.feather').exists():
+        oilfield_shops = pd.read_feather(Path(path_to_save / 'welllist.feather'))
+        FIELDS_SHOPS[oilfield_name] = list(oilfield_shops.ceh.unique())
