@@ -116,9 +116,10 @@ def add_oilfield(oilfield_name: str,
             f.write(file.getbuffer())
 
 def external_stats(state: AppState):
-    st.subheader("Загрузка готовых данных для статистики")
+    st.subheader("Загрузка готовых данных для статистики и Ансамбля")
     uploaded_file = st.file_uploader('Принимаются данные в формате .xlsx',
                                     accept_multiple_files=False,
                                       type='xlsx')
+    state.statistics[uploaded_file.name.split('.')[0]] = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
     state.statistics_test_only[uploaded_file.name.split('.')[0]] = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
-    state.statistics_another_models = uploaded_file.name.split('.')[0]
+    state['statistics_another_models'] = uploaded_file.name.split('.')[0]

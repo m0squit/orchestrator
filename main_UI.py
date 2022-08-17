@@ -178,7 +178,6 @@ def save_current_state(
     state['coeff_f'] = pd.DataFrame()
     state['CRM_influence_R'] = _session.CRM_influence_R
     state['wells_coords_CRM'] = pd.DataFrame()
-    state['statistics_another_models'] = None
     return state
 
 
