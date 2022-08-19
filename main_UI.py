@@ -589,16 +589,23 @@ def main():
     with st.sidebar:
         selected_page = select_page(PAGES)
         models_to_run = select_models()
-        field_name = select_oilfield(FIELDS_SHOPS)
-        shops = select_shops(field_name)
-        date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
+        try:
+            field_name = select_oilfield(FIELDS_SHOPS)
+            shops = select_shops(field_name)
+            date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
 
-        config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
-        preprocessor = run_preprocessor(config)
-        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
-        selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
+            config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
+            preprocessor = run_preprocessor(config)
+            wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
+            selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
 
-        submit = st.button(label='Запустить расчеты')
+            submit = st.button(label='Запустить расчеты')
+        except KeyError:
+            logger.error("Can't find any oilfield in data")
+            date_start, date_test, date_end = pd.to_datetime([DATE_MIN, DATE_MIN+timedelta(90), DATE_MAX])
+            selected_wells_norm, selected_wells_ois = None, None
+            st.error('Добавьте данные по месторождению')
+            submit = None
     check_for_correct_params(date_start, date_test, date_end, submit, selected_wells_norm)
 
     # Нажата кнопка "Запуск расчетов"
