@@ -66,6 +66,10 @@ def initialize_session(_session: st.session_state) -> None:
     _session.CRM_influence_R = 1300
     _session.CRM_maxiter = 100
     _session.CRM_p_res = 220
+    # Shelf model
+    _session.n_days_past = 30
+    _session.n_days_calc_avg = 5
+    # _session.shelf_json = dict()
     # Ensemble model
     _session.ensemble_adapt_period = 28
     _session.interval_probability = 0.9
@@ -359,11 +363,8 @@ def run_models(_session: st.session_state,
                     wells_ois, _session, _session.state)
     if _models_to_run['shelf']:
         print('run shelf')
-        # print(oilfield, date_start_adapt, date_start_forecast, date_start_adapt,
-        #       date_end_forecast)
-        # print(_preprocessor) wells_ois,
         run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
-                  date_end_forecast, 30, 5, _session.state)
+                  date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
     # if _models_to_run['CRM']:
     #     calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
     #                              oilfield, _session, _session.state)
@@ -401,7 +402,8 @@ def run_shelf(oilfield: str,
        state : AppState
            состояние программы, заданное пользователем.
        """
-    print('run_shelf inside')
+    if 'change_gtm_info' not in st.session_state:
+        st.session_state['change_gtm_info'] = 0
     calculator_shelf = calculate_shelf(oilfield,
                                        shops,
                                        well_ois,
@@ -410,9 +412,10 @@ def run_shelf(oilfield: str,
                                        predict_start,
                                        predict_end,
                                        n_days_past,
-                                       n_days_calc_avg)
+                                       n_days_calc_avg,
+                                       st.session_state['change_gtm_info'])
     print('run shelf done')
-    extract_data_shelf(calculator_shelf,state)
+    extract_data_shelf(calculator_shelf,state,st.session_state['change_gtm_info'])
 
 
 def run_ftor(_preprocessor: Preprocessor,
@@ -631,6 +634,8 @@ def main():
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
+    "Планируемые мероприятия": UI.pages.gtm_settings,
+    "Последний замер и темпы падения": UI.pages.tp_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,

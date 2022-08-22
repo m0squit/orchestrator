@@ -64,7 +64,8 @@ def calculate_shelf(oilfield: str,
                     predict_start: date,
                     predict_end: date,
                     n_days_past: int,
-                    n_days_calc_avg: int) -> DataPostProcessorShelf:
+                    n_days_calc_avg: int,
+                    change_gtm_info: int) -> DataPostProcessorShelf:
     config_shelf = ConfigShelf(oilfield=oilfield,
                                shops=shops,
                                wells_ois=wells_ois,
@@ -74,7 +75,6 @@ def calculate_shelf(oilfield: str,
                                predict_end=predict_end,
                                n_days_past=n_days_past,
                                n_days_calc_avg=n_days_calc_avg)
-    print('calculate_shelf')
     results_shelf = CalculatorShelf(config_shelf)
     # results_shelf = DataPostProcessorShelf(config_shelf)
     return results_shelf
