@@ -1,8 +1,9 @@
 import pandas as pd
 import streamlit as st
+from io import BytesIO
 from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME, LAST_MEASUREMENT, DATE, \
     VALUE, VALUE_LIQ, DEC_RATES, DEC_RATES_LIQ
-import datetime
+import datetime as dt
 from copy import deepcopy
 from frameworks_shelf_algo.class_Shelf.support_functions import transform_str_dates_to_datetime_or_vice_versa, \
     get_s_decline_rates, get_s_decline_rates_liq, get_date_range
@@ -98,9 +99,13 @@ def show(session: st.session_state):
     # print("GTM show")
     if 'change_gtm_info' not in st.session_state:
         st.session_state['change_gtm_info'] = 0
+    wells_sorted_ois = sorted(st.session_state.state.selected_wells_ois)
+    wells_sorted_norm = []
+    for w in wells_sorted_ois:
+        wells_sorted_norm.append(st.session_state.state.wellnames_key_ois[w])
     _well1 = st.selectbox(
         label='Скважина',
-        options=st.session_state.state.selected_wells_norm,
+        options=wells_sorted_norm,
         key='well',
     )
     _well = st.session_state.state.wellnames_key_normal[_well1]
@@ -160,7 +165,101 @@ def show(session: st.session_state):
                 st.number_input(param, value=val, key=param + 'add')
             st.form_submit_button('Применить', on_click=change_gtm_info, kwargs={'command': 'add'})
 
-    # st.write('-' * 100)
+
+    def draw_final_table():
+        st.write('-' * 100)
+        st.write('**Сводная таблица по ГТМ**')
+        # Таблица начинается либо с начала периода адаптации (date_start), либо с начала данных вообще (first_date)
+        _date_start = st.session_state['date_start']
+        # _date_start = st.session_state.first_date
+        _date_end = st.session_state['date_end']
+        dates = get_date_range(_date_start, _date_end)
+        all_gtm_columns = wells_sorted_norm
+        all_gtms = pd.DataFrame(index=dates, columns=all_gtm_columns)
+        for _well1 in all_gtm_columns:
+            _well = st.session_state.state.wellnames_key_normal[_well1]
+            for _date1, all_data in sorted(st.session_state.shelf_json[_well][GTMS].items()):
+                if _date1 >= _date_start:
+                    name = st.session_state.shelf_json[_well][GTMS][_date1][NAME]
+                    name_vnr = 'Выход на режим'
+                    all_gtms.loc[_date1,_well1] = name
+                    if name == 'Текущий ремонт скважин':
+                        n_days_trs = st.session_state.shelf_json[_well][GTMS][_date1]['длительность ТРС']
+                        dates = get_date_range(_date1, _date1 + dt.timedelta(days=n_days_trs - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name
+                        n_days_vnr = st.session_state.shelf_json[_well][GTMS][_date1]['длительность выхода на режим']
+                        dates = get_date_range(_date1 + dt.timedelta(n_days_trs),
+                                               _date1 + dt.timedelta(n_days_trs) + dt.timedelta(days=n_days_vnr - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name_vnr
+                    elif name == 'Капитальный ремонт скважин':
+                        n_days_krs = st.session_state.shelf_json[_well][GTMS][_date1]['длительность КРС']
+                        dates = get_date_range(_date1, _date1 + dt.timedelta(days=n_days_krs - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name
+                        n_days_vnr = st.session_state.shelf_json[_well][GTMS][_date1]['длительность выхода на режим']
+                        dates = get_date_range(_date1 + dt.timedelta(n_days_krs),
+                                               _date1 + dt.timedelta(n_days_krs) + dt.timedelta(days=n_days_vnr - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name_vnr
+                    elif name == 'Соляно-кислотная обработка':
+                        n_days_sko = st.session_state.shelf_json[_well][GTMS][_date1]['длительность СКО']
+                        dates = get_date_range(_date1, _date1 + dt.timedelta(days=n_days_sko - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name
+                        n_days_vnr = 2
+                        dates = get_date_range(_date1 + dt.timedelta(n_days_sko),
+                                               _date1 + dt.timedelta(n_days_sko) + dt.timedelta(days=n_days_vnr - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name_vnr
+                    elif name == 'Промыслово-геофизические исследования':
+                        n_days_stop = st.session_state.shelf_json[_well][GTMS][_date1]['длительность остановки']
+                        dates = get_date_range(_date1, _date1 + dt.timedelta(days=n_days_stop - 1))
+                        for _date2 in dates:
+                            all_gtms.loc[_date2, _well1] = name
+                    elif name == 'Перевод в нагнетательный фонд':
+                        all_gtms.loc[_date1, _well1] = name
+
+        all_gtms = all_gtms.fillna('В работе')
+
+        def color_gtm(val):
+            if val == 'Текущий ремонт скважин':
+                color = 'blueviolet'
+            elif val == 'Капитальный ремонт скважин':
+                color = 'antiquewhite'
+            elif val == 'Соляно-кислотная обработка':
+                color = 'magenta'
+            elif val == 'Промыслово-геофизические исследования':
+                color = 'moccasin'
+            elif val == 'Выход на режим':
+                color = 'yellow'
+            elif val == 'Перевод в нагнетательный фонд':
+                color = 'tomato1'
+            else:
+                color = 'white'
+            return 'background-color: %s' % color
+
+        st.dataframe(all_gtms.style.applymap(color_gtm))
+
+        def to_excel(df):
+            output = BytesIO()
+            writer = pd.ExcelWriter(output, engine='xlsxwriter')
+            df.to_excel(writer, index=True, sheet_name='ГТМ')
+            worksheet = writer.sheets['ГТМ']
+            worksheet.set_column('A:A', None)
+            writer.save()
+            processed_data = output.getvalue()
+            return processed_data
+
+        df_xlsx = to_excel(all_gtms)
+        st.download_button(label='Сохранить таблицу', data=df_xlsx, file_name='Сводный_ГТМ.xlsx')
+
+    draw_final_table()
+
+
+
+
     # _date_start = st.session_state['date_test']
     # draw_last_measurement_settings(_well, _date_start)
     # print('measurements done')
