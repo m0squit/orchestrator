@@ -26,7 +26,6 @@ def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
             parsed_dict[FTOR_DECODE[key]['label']] = parsed_dict.pop(key)
     return parsed_dict
 
-# def extract_data_shelf(_calculator_shelf: DataPostProcessorShelf, state: AppState) -> None:
 def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _change_gtm_info: int) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['shelf'] = pd.DataFrame(index=dates)
