@@ -56,30 +56,6 @@ def calculate_ftor(_preprocessor: Preprocessor,
     )
     return ftor
 
-@st.experimental_singleton
-def calculate_shelf(oilfield: str,
-                    shops: List[str],
-                    wells_ois: List[int],
-                    train_start: date,
-                    train_end: date,
-                    predict_start: date,
-                    predict_end: date,
-                    n_days_past: int,
-                    n_days_calc_avg: int,
-                    change_gtm_info: int) -> DataPostProcessorShelf:
-    config_shelf = ConfigShelf(oilfield=oilfield,
-                               shops=shops,
-                               wells_ois=wells_ois,
-                               train_start=train_start,
-                               train_end=train_end,
-                               predict_start=predict_start,
-                               predict_end=predict_end,
-                               n_days_past=n_days_past,
-                               n_days_calc_avg=n_days_calc_avg)
-    results_shelf = CalculatorShelf(config_shelf)
-    # results_shelf = DataPostProcessorShelf(config_shelf)
-    return results_shelf
-
 
 @st.experimental_singleton
 def calculate_wolfram(_preprocessor: Preprocessor,
@@ -164,7 +140,8 @@ def calculate_shelf(oilfield: str,
                     predict_start: date,
                     predict_end: date,
                     n_days_past: int,
-                    n_days_calc_avg: int) -> DataPostProcessorShelf:
+                    n_days_calc_avg: int,
+                    change_gtm_info: int) -> DataPostProcessorShelf:
     config_shelf = ConfigShelf(oilfield=oilfield,
                                shops=shops,
                                wells_ois=wells_ois,
