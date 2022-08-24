@@ -380,6 +380,46 @@ def run_models(_session: st.session_state,
         run_ensemble(_session, wells_norm, mode='oil')
 
 
+def run_shelf(oilfield: str,
+              shops: List[str],
+              well_ois: List[int],
+              train_start: date,
+              train_end: date,
+              predict_start: date,
+              predict_end: date,
+              n_days_past: int,
+              n_days_calc_avg: int,
+              state: AppState) -> None:
+    """Расчет модели прогноза по темпам падений и последующее извлечение результатов.
+       Parameters
+       ----------
+       oilfield : str
+           название месторождения, выбранное пользователем.
+       date_start : date
+           дата начала адаптации.
+       date_test : date
+           дата начала прогноза.
+       date_end : date
+           дата конца прогноза.
+       state : AppState
+           состояние программы, заданное пользователем.
+       """
+    if 'change_gtm_info' not in st.session_state:
+        st.session_state['change_gtm_info'] = 0
+    calculator_shelf = calculate_shelf(oilfield,
+                                       shops,
+                                       well_ois,
+                                       train_start,
+                                       train_end,
+                                       predict_start,
+                                       predict_end,
+                                       n_days_past,
+                                       n_days_calc_avg,
+                                       st.session_state['change_gtm_info'])
+    print('run shelf done')
+    extract_data_shelf(calculator_shelf,state,st.session_state['change_gtm_info'])
+
+
 def run_ftor(_preprocessor: Preprocessor,
              wells_ois: List[int],
              constraints: Optional[Dict[
@@ -642,6 +682,7 @@ def main():
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
     "Планируемые мероприятия": UI.pages.gtm_settings,
+    "Последний замер и темпы падения": UI.pages.tp_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,

@@ -172,11 +172,17 @@ def draw_shelf_settings(session: st.session_state) -> None:
                 step=1,
                 key='n_days_calc_avg_'
             )
-
             submit_params = st.form_submit_button('Применить',
                                                   on_click=update_shelf_params,
                                                   kwargs={'write_from': session,
                                                           'write_to': session})
+        # _well1 = st.selectbox(
+        #     label='Скважина',
+        #     options=st.session_state.state.selected_wells_norm,
+        #     key='well',
+        # )
+        # print(_well1)
+        #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
 
 
 def draw_ensemble_settings(session: st.session_state) -> None:
@@ -282,6 +288,12 @@ def update_CRM_params(write_from: st.session_state,
     write_to['CRM_influence_R'] = int(write_from['CRM_influence_R_'])
     write_to['CRM_maxiter'] = int(write_from['CRM_maxiter_'])
     write_to['CRM_p_res'] = int(write_from['CRM_p_res_'])
+
+def update_shelf_params(write_from: st.session_state,
+                        write_to: st.session_state) -> None:
+    write_to['n_days_past'] = int(write_from['n_days_past_'])
+    write_to['n_days_calc_avg'] = int(write_from['n_days_calc_avg_'])
+
 
 def update_shelf_params(write_from: st.session_state,
                         write_to: st.session_state) -> None:
