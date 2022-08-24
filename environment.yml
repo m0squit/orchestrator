@@ -1,4 +1,4 @@
-name: env_ksp_no_fedot
+name: env_ksp
 channels:
   - conda-forge
   - defaults
@@ -21,3 +21,4 @@ dependencies:
     - xlsxwriter
     - openpyxl
     - loguru
+    - fedot

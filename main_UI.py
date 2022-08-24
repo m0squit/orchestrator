@@ -5,11 +5,11 @@ import streamlit as st
 from loguru import logger
 
 import UI.pages
-from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor
-    # calculate_fedot, calculate_CRM
+from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor,\
+    calculate_fedot, calculate_CRM,  calculate_shelf
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
-# from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
+from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
 from frameworks_ftor.ftor.well import Well
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
@@ -66,6 +66,9 @@ def initialize_session(_session: st.session_state) -> None:
     _session.CRM_influence_R = 1300
     _session.CRM_maxiter = 100
     _session.CRM_p_res = 220
+    # Shelf model
+    _session.n_days_past = 30
+    _session.n_days_calc_avg = 5
     # Ensemble model
     _session.ensemble_adapt_period = 28
     _session.interval_probability = 0.9
@@ -103,7 +106,7 @@ def parse_well_names(well_names_ois: List[int], field_name: str) -> Tuple[Dict[s
         wellnames_key_ois_[name_ois] = well_name_norm
     return wellnames_key_normal_, wellnames_key_ois_
 
-
+# TODO: добавить переменные в функцию
 def save_current_state(
         state: AppState,
         _session: st.session_state,
@@ -162,6 +165,7 @@ def save_current_state(
     state['was_calc_ftor'] = models_to_run['ftor']
     state['was_calc_wolfram'] = models_to_run['wolfram']
     state['was_calc_CRM'] = models_to_run['CRM']
+    state['was_calc_shelf'] = models_to_run['shelf']
     state['was_calc_ensemble'] = models_to_run['ensemble']
     state['was_date_start'] = date_start
     state['was_date_test'] = date_test
@@ -170,6 +174,9 @@ def save_current_state(
     state['wellnames_key_normal'] = wellnames_key_normal.copy()
     state['wellnames_key_ois'] = wellnames_key_ois.copy()
     state['wells_ftor'] = wells_ftor
+    state['coeff_f'] = pd.DataFrame()
+    state['CRM_influence_R'] = _session.CRM_influence_R
+    state['wells_coords_CRM'] = pd.DataFrame()
     return state
 
 
@@ -199,6 +206,11 @@ def select_models() -> Dict[str, bool]:
             value=True,
             key='is_calc_CRM',
         ),
+        'shelf': st.checkbox(
+            label='Считать модель ППТП',
+            value=True,
+            key='is_calc_shelf',
+        ),
         'ensemble': st.checkbox(
             label='Считать ансамбль моделей',
             value=True,
@@ -217,6 +229,7 @@ def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
     fields_shops : Dict[str, List[str]]
         цеха для каждого месторождения
     """
+    add_fieldshops(fieldshops=fields_shops)
     oilfield_name = st.selectbox(
         label='Месторождение',
         options=fields_shops.keys(),
@@ -314,7 +327,8 @@ def run_models(_session: st.session_state,
                date_start_adapt: date,
                date_start_forecast: date,
                date_end_forecast: date,
-               oilfield: str) -> None:
+               oilfield: str,
+               shops: List[str]) -> None:
     """Запуск расчета моделей, которые выбрал пользователь.
 
     Parameters
@@ -344,18 +358,21 @@ def run_models(_session: st.session_state,
     В конце расчета каждой из моделей вызывается функция извлечения результатов.
     Таким образом все результаты приводятся к единому формату данных.
     """
-    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM']
+    at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM'] or _models_to_run['shelf']
     if _models_to_run['ftor']:
         run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
     if _models_to_run['wolfram']:
         run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
                     wells_ois, _session, _session.state)
-    # if _models_to_run['CRM']:
-    #     calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
-    #                              oilfield, _session, _session.state)
-    #     if calculator_CRM is not None:
-    #         run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
-    #                   calculator_CRM.f, _session.state)
+    if _models_to_run['CRM']:
+        calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
+                                 oilfield, _session, _session.state)
+        if calculator_CRM is not None:
+            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
+                      calculator_CRM.f, _session.state)
+    if _models_to_run['shelf']:
+        run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
+                  date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -423,77 +440,117 @@ def run_wolfram(date_start_forecast: date,
     convert_tones_to_m3_for_wolfram(state, state.wells_ftor)
 
 
-# def run_CRM(date_start_adapt: date,
-#             date_start_forecast: date,
-#             date_end_forecast: date,
-#             oilfield: str,
-#             _session: st.session_state,
-#             state: AppState) -> CalculatorCRM:
-#     """Расчет модели CRM и последующее извлечение результатов.
-#
-#     Parameters
-#     ----------
-#     date_start_adapt : date
-#         дата начала адаптации.
-#     date_start_forecast : date
-#         дата начала прогноза.
-#     date_end_forecast : date
-#         дата конца прогноза.
-#     oilfield : str
-#         название месторождения, выбранное пользователем.
-#     _session : st.session_state
-#         текущая сессия streamlit. В ней содержатся настройки моделей и
-#         текущее состояние программы _session.state.
-#     state: AppState
-#         состояние программы, заданное пользователем.
-#     """
-#     calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
-#                                    date_end_adapt=date_start_forecast - timedelta(days=1),
-#                                    date_end_forecast=date_end_forecast,
-#                                    oilfield=oilfield,
-#                                    influence_R=_session.CRM_influence_R,
-#                                    maxiter=_session.CRM_maxiter,
-#                                    p_res=_session.CRM_p_res)
-#     if calculator_CRM is not None:
-#         extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
-#     return calculator_CRM
+def run_CRM(date_start_adapt: date,
+            date_start_forecast: date,
+            date_end_forecast: date,
+            oilfield: str,
+            _session: st.session_state,
+            state: AppState) -> CalculatorCRM:
+    """Расчет модели CRM и последующее извлечение результатов.
+
+    Parameters
+    ----------
+    date_start_adapt : date
+        дата начала адаптации.
+    date_start_forecast : date
+        дата начала прогноза.
+    date_end_forecast : date
+        дата конца прогноза.
+    oilfield : str
+        название месторождения, выбранное пользователем.
+    _session : st.session_state
+        текущая сессия streamlit. В ней содержатся настройки моделей и
+        текущее состояние программы _session.state.
+    state: AppState
+        состояние программы, заданное пользователем.
+    """
+    calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
+                                   date_end_adapt=date_start_forecast - timedelta(days=1),
+                                   date_end_forecast=date_end_forecast,
+                                   oilfield=oilfield,
+                                   influence_R=_session.CRM_influence_R,
+                                   maxiter=_session.CRM_maxiter,
+                                   p_res=_session.CRM_p_res)
+    if calculator_CRM is not None:
+        extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
+        extract_influence_coeff_CRM(calculator_CRM.f, state)
+        state['wells_coords_CRM'] = calculator_CRM._coordinates
+    return calculator_CRM
 
 
-# def run_fedot(oilfield: str,
-#               date_start: date,
-#               date_test: date,
-#               date_end: date,
-#               wells_norm: list[str],
-#               coeff: pd.DataFrame,
-#               state: AppState) -> None:
-#     """Расчет модели Fedot (поверх CRM) и последующее извлечение результатов.
-#
-#     Parameters
-#     ----------
-#     oilfield : str
-#         название месторождения, выбранное пользователем.
-#     date_start : date
-#         дата начала адаптации.
-#     date_test : date
-#         дата начала прогноза.
-#     date_end : date
-#         дата конца прогноза.
-#     wells_norm : List[str]
-#         список имен скважин в "читаемом" формате (ГРАД?).
-#     coeff : pd.DataFrame
-#         коэффициенты взаимовлияния скважин
-#     state : AppState
-#         состояние программы, заданное пользователем.
-#     """
-#     calculator_fedot = calculate_fedot(oilfield=oilfield,
-#                                        train_start=date_start,
-#                                        train_end=date_test - timedelta(days=1),
-#                                        predict_start=date_test,
-#                                        predict_end=date_end,
-#                                        wells_to_calc=wells_norm,
-#                                        coeff=coeff)
-#     extract_data_fedot(calculator_fedot, state)
+def run_fedot(oilfield: str,
+              date_start: date,
+              date_test: date,
+              date_end: date,
+              wells_norm: List,
+              coeff: pd.DataFrame,
+              state: AppState,
+              lags: pd.DataFrame = None) -> None:
+    """Расчет модели Fedot (поверх CRM) и последующее извлечение результатов.
 
+    Parameters
+    ----------
+    oilfield : str
+        название месторождения, выбранное пользователем.
+    date_start : date
+        дата начала адаптации.
+    date_test : date
+        дата начала прогноза.
+    date_end : date
+        дата конца прогноза.
+    wells_norm : List[str]
+        список имен скважин в "читаемом" формате (ГРАД?).
+    coeff : pd.DataFrame
+        коэффициенты взаимовлияния скважин
+    state : AppState
+        состояние программы, заданное пользователем.
+    """
+    calculator_fedot = calculate_fedot(oilfield=oilfield,
+                                       train_start=date_start,
+                                       train_end=date_test - timedelta(days=1),
+                                       predict_start=date_test,
+                                       predict_end=date_end,
+                                       wells_norm=wells_norm,
+                                       coeff=coeff,
+                                       lags=lags)
+    extract_data_fedot(calculator_fedot, state)
+
+def run_shelf(oilfield: str,
+              shops: List[str],
+              well_ois: List[int],
+              train_start: date,
+              train_end: date,
+              predict_start: date,
+              predict_end: date,
+              n_days_past: int,
+              n_days_calc_avg: int,
+              state: AppState) -> None:
+    """Расчет модели прогноза по темпам падений и последующее извлечение результатов.
+       Parameters
+       ----------
+       oilfield : str
+           название месторождения, выбранное пользователем.
+       date_start : date
+           дата начала адаптации.
+       date_test : date
+           дата начала прогноза.
+       date_end : date
+           дата конца прогноза.
+       state : AppState
+           состояние программы, заданное пользователем.
+       """
+    print('run_shelf inside')
+    calculator_shelf = calculate_shelf(oilfield,
+                                       shops,
+                                       well_ois,
+                                       train_start,
+                                       train_end,
+                                       predict_start,
+                                       predict_end,
+                                       n_days_past,
+                                       n_days_calc_avg)
+    # print('run shelf done')
+    extract_data_shelf(calculator_shelf,state)
 
 def run_ensemble(_session: st.session_state,
                  wells_norm: list[str],
@@ -532,16 +589,23 @@ def main():
     with st.sidebar:
         selected_page = select_page(PAGES)
         models_to_run = select_models()
-        field_name = select_oilfield(FIELDS_SHOPS)
-        shops = select_shops(field_name)
-        date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
+        try:
+            field_name = select_oilfield(FIELDS_SHOPS)
+            shops = select_shops(field_name)
+            date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
 
-        config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
-        preprocessor = run_preprocessor(config)
-        wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
-        selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
+            config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
+            preprocessor = run_preprocessor(config)
+            wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
+            selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
 
-        submit = st.button(label='Запустить расчеты')
+            submit = st.button(label='Запустить расчеты')
+        except KeyError:
+            logger.error("Can't find any oilfield in data")
+            date_start, date_test, date_end = pd.to_datetime([DATE_MIN, DATE_MIN+timedelta(90), DATE_MAX])
+            selected_wells_norm, selected_wells_ois = None, None
+            st.error('Добавьте данные по месторождению')
+            submit = None
     check_for_correct_params(date_start, date_test, date_end, submit, selected_wells_norm)
 
     # Нажата кнопка "Запуск расчетов"
@@ -564,7 +628,7 @@ def main():
         # Запуск моделей
         run_models(session, models_to_run, preprocessor,
                    selected_wells_ois, selected_wells_norm,
-                   date_start, date_test, date_end, field_name)
+                   date_start, date_test, date_end, field_name, shops)
         logger.success('Finish calculations.')
         # Выделение прогнозов моделей
         dfs, dates = cut_statistics_test_only(session.state)
@@ -577,6 +641,7 @@ def main():
 
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
+    "Планируемые мероприятия": UI.pages.gtm_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,

@@ -36,7 +36,7 @@ def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) 
         date_start=state.statistics_test_index[0],
         date_end=state.statistics_test_index[-1],
         well_names=selected_wells_set,
-        use_abs=False,
+        use_abs=True,
         exclude_wells=state.exclude_wells,
         bin_size=10
     )
@@ -47,6 +47,7 @@ def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) 
                                 options=reversed(sorted(plots_to_draw)),
                                 key='stat_to_draw')
     st.plotly_chart(analytics_plots[stat_to_draw], use_container_width=True)
+    st.plotly_chart(analytics_plots["Статистика по моделям"], use_container_width=True)
 
 
 def select_plots_subset() -> str:

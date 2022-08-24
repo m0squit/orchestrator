@@ -7,6 +7,7 @@ def show(session: st.session_state) -> None:
     draw_ftor_settings(session)
     draw_wolfram_settings(session)
     draw_CRM_settings(session)
+    draw_shelf_settings(session)
     draw_ensemble_settings(session)
 
 
@@ -148,6 +149,36 @@ def draw_CRM_settings(session: st.session_state) -> None:
                                                           'write_to': session})
 
 
+def draw_shelf_settings(session: st.session_state) -> None:
+    with st.expander('Настройки модели ППТП'):
+        with st.form(key='shelf_params'):
+            max_adapt_period = (session.date_end - session.date_test).days - 1
+            # if max_adapt_period <= 25:
+            #     max_adapt_period = 30
+            st.number_input(
+                label='Количество дней для расчета темпа падения',
+                min_value=2,
+                value=session.n_days_past,
+                max_value=max_adapt_period,
+                step=1,
+                key='n_days_past_'
+            )
+            max_avg = int(session.n_days_past / 2)
+            st.number_input(
+                label='Количество дней для осреднения',
+                min_value=1,
+                value=session.n_days_calc_avg,
+                max_value=max_avg,
+                step=1,
+                key='n_days_calc_avg_'
+            )
+
+            submit_params = st.form_submit_button('Применить',
+                                                  on_click=update_shelf_params,
+                                                  kwargs={'write_from': session,
+                                                          'write_to': session})
+
+
 def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
@@ -251,6 +282,11 @@ def update_CRM_params(write_from: st.session_state,
     write_to['CRM_influence_R'] = int(write_from['CRM_influence_R_'])
     write_to['CRM_maxiter'] = int(write_from['CRM_maxiter_'])
     write_to['CRM_p_res'] = int(write_from['CRM_p_res_'])
+
+def update_shelf_params(write_from: st.session_state,
+                        write_to: st.session_state) -> None:
+    write_to['n_days_past'] = int(write_from['n_days_past_'])
+    write_to['n_days_calc_avg'] = int(write_from['n_days_calc_avg_'])
 
 
 def update_ensemble_params(write_from: st.session_state,

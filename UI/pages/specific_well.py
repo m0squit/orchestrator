@@ -116,6 +116,7 @@ def add_traces_to_specific_column(
               'wolfram': 'rgba(248, 156, 116, 0.8)',
               'CRM': px.colors.qualitative.Pastel[6],
               'CRMIP': px.colors.qualitative.Vivid[4],
+              'shelf': px.colors.qualitative.Pastel[7],
               'ensemble': 'rgba(115, 175, 72, 0.7)',
               'ensemble_interval': 'rgba(184, 247, 212, 0.7)',
               'true': 'rgba(99, 110, 250, 0.7)',
@@ -125,7 +126,7 @@ def add_traces_to_specific_column(
     # Доверительный интервал ансамбля
     if not ensemble_interval.empty:
         if f'{wellname}_liq_lower' in ensemble_interval.columns:
-            trace = go.Scatter(name=f'LIQ: Доверит. интервал',
+            trace = go.Scatter(name=f'Доверит. интервал',
                                x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_liq_lower'],
                                mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
                                showlegend=showlegend)
@@ -133,25 +134,25 @@ def add_traces_to_specific_column(
             trace = go.Scatter(name=f'LIQ: Доверит. интервал',
                                x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_liq_upper'],
                                fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
-                               showlegend=showlegend)
+                               showlegend=False)
             fig.add_trace(trace, row=1, col=column)
         if f'{wellname}_oil_lower' in ensemble_interval.columns:
             trace = go.Scatter(name=f'OIL: Доверит. интервал',
                                x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_oil_lower'],
                                mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
-                               showlegend=showlegend)
+                               showlegend=False)
             fig.add_trace(trace, row=2, col=column)
             trace = go.Scatter(name=f'OIL: Доверит. интервал',
                                x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_oil_upper'],
                                fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
-                               showlegend=showlegend)
+                               showlegend=False)
             fig.add_trace(trace, row=2, col=column)
     # Факт
-    trace = go.Scatter(name=f'LIQ: {MODEL_NAMES["true"]}', x=y_liq_true.index, y=y_liq_true,
+    trace = go.Scatter(name=f'{MODEL_NAMES["true"]}', x=y_liq_true.index, y=y_liq_true,
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend)
     fig.add_trace(trace, row=1, col=column)
     trace = go.Scatter(name=f'OIL: {MODEL_NAMES["true"]}', x=y_oil_true.index, y=y_oil_true,
-                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend)
+                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
     fig.add_trace(trace, row=2, col=column)
     # Прогнозы моделей
     for model in statistics:
@@ -159,18 +160,18 @@ def add_traces_to_specific_column(
             clr = colors[model]
             y_liq = statistics[model][f'{wellname}_liq_pred'].dropna()
             y_oil = statistics[model][f'{wellname}_oil_pred'].dropna()
-            trace_liq = go.Scatter(name=f'LIQ: {MODEL_NAMES[model]}', x=y_liq.index, y=y_liq,
+            trace_liq = go.Scatter(name=f'{MODEL_NAMES[model]}', x=y_liq.index, y=y_liq,
                                    mode=m, marker=mark, line=dict(width=1, color=clr),
                                    showlegend=showlegend)
             fig.add_trace(trace_liq, row=1, col=column)  # Дебит жидкости
             trace_oil = go.Scatter(name=f'OIL: {MODEL_NAMES[model]}', x=y_oil.index, y=y_oil,
                                    mode=m, marker=mark, line=dict(width=1, color=clr),
-                                   showlegend=showlegend)
+                                   showlegend=False)
             fig.add_trace(trace_oil, row=2, col=column)  # Дебит нефти
             deviation = calc_relative_error(y_oil_true, y_oil, use_abs=False)
             trace_err = go.Scatter(name=f'OIL ERR: {MODEL_NAMES[model]}', x=deviation.index, y=deviation,
                                    mode=m, marker=dict(size=4), line=dict(width=1, color=clr),
-                                   showlegend=showlegend)
+                                   showlegend=False)
             fig.add_trace(trace_err, row=3, col=column)  # Ошибка по нефти
     # Забойное давление
     pressure = df_chess['Давление забойное']

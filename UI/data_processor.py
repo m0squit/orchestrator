@@ -2,13 +2,17 @@ from typing import Dict, Any, List, Tuple
 
 import numpy as np
 import pandas as pd
+import pathlib
 
+from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 from UI.app_state import AppState
 from UI.config import FTOR_DECODE
 # from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.well import Well as WellFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
+from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
+from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
 
 
 def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -82,9 +86,28 @@ def extract_data_CRM(df: pd.DataFrame,
             state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
             state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
+def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> None:
+    state['coeff_f'] = data_coeff_f
 
-# def extract_data_fedot(fedot_entity: FedotModel, state: AppState) -> None:
-#     state.statistics['fedot'] = fedot_entity.statistics
+
+def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
+    state.statistics['fedot'] = fedot_entity.statistic_all
+
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None:
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    state.statistics['shelf'] = pd.DataFrame(index=dates)
+    for well_shelf in _calculator_shelf.wells_list:
+        well_name_ois = well_shelf
+        well_name_normal = state.wellnames_key_ois[well_name_ois]
+        res_oil = _calculator_shelf.df_result[well_name_ois]
+        res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+        true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+        true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+        state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
+        state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
+        state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
+        state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+    # state.statistics['shelf'].to_excel('extract_data.xlsx')
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
@@ -173,3 +196,16 @@ def cut_statistics_test_only(state: AppState) -> Tuple[Dict[str, pd.DataFrame], 
     for key in state.statistics:
         statistics_test_only[key] = state.statistics[key].copy().reindex(statistics_test_index).fillna(0)
     return statistics_test_only, statistics_test_index
+
+
+def add_fieldshops(fieldshops: dict) -> None:
+    fieldshops_path = pathlib.Path.cwd() / 'tools_preprocessor' / 'data'
+    fieldshops_name = fieldshops_path.glob("**")
+    for fs_name in fieldshops_name:
+        if pathlib.Path(fs_name / 'welllist.feather').exists():
+            fieldshops_ceh = pd.read_feather(pathlib.Path(fs_name / 'welllist.feather'))
+            fs_name = fs_name.name
+        else:
+            continue
+        fieldshops_ceh = fieldshops_ceh.ceh.unique()
+        fieldshops[fs_name] = list(fieldshops_ceh)
