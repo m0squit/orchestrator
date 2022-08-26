@@ -68,7 +68,7 @@ def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tu
         elem for elem in selected_wells_set if elem not in state.exclude_wells
     ]
     for well in well_names:
-        cum_q_liq, cum_q_oil, err_liq, err_oil = None, None, pd.DataFrame(), pd.DataFrame()
+        cum_q_liq, cum_q_oil, err_liq, err_oil = None, None, None, None
         if f'{well}_liq_true' in state.statistics[model]:
             df_test_period = state.statistics[model][state.was_date_test:]
             q_test_period = df_test_period[[f'{well}_liq_true', f'{well}_oil_true']]

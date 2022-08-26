@@ -27,6 +27,7 @@ def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
     return parsed_dict
 
 
+
 def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['ftor'] = pd.DataFrame(index=dates)
@@ -93,7 +94,7 @@ def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> 
 def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
     state.statistics['fedot'] = fedot_entity.statistic_all
 
-def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None:
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _change_gtm_info: int) -> None:
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['shelf'] = pd.DataFrame(index=dates)
     for well_shelf in _calculator_shelf.wells_list:
@@ -107,7 +108,6 @@ def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> N
         state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
         state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
         state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
-    # state.statistics['shelf'].to_excel('extract_data.xlsx')
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:

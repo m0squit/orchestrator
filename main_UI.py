@@ -539,7 +539,8 @@ def run_shelf(oilfield: str,
        state : AppState
            состояние программы, заданное пользователем.
        """
-    print('run_shelf inside')
+    if 'change_gtm_info' not in st.session_state:
+        st.session_state['change_gtm_info'] = 0
     calculator_shelf = calculate_shelf(oilfield,
                                        shops,
                                        well_ois,
@@ -548,9 +549,10 @@ def run_shelf(oilfield: str,
                                        predict_start,
                                        predict_end,
                                        n_days_past,
-                                       n_days_calc_avg)
-    # print('run shelf done')
-    extract_data_shelf(calculator_shelf,state)
+                                       n_days_calc_avg,
+                                       st.session_state['change_gtm_info'])
+    print('run shelf done')
+    extract_data_shelf(calculator_shelf,state,st.session_state['change_gtm_info'])
 
 def run_ensemble(_session: st.session_state,
                  wells_norm: list[str],
@@ -642,6 +644,7 @@ def main():
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
     "Планируемые мероприятия": UI.pages.gtm_settings,
+    "Последний замер и темпы падения": UI.pages.tp_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,
