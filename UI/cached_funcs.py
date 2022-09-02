@@ -55,6 +55,7 @@ def calculate_ftor(_preprocessor: Preprocessor,
     )
     return ftor
 
+
 @st.experimental_singleton
 def calculate_shelf(oilfield: str,
                     shops: List[str],
