@@ -29,85 +29,162 @@ def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None:
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
-    state.statistics['ftor'] = pd.DataFrame(index=dates)
-    for well_ftor in _calculator_ftor.wells:
-        well_name_ois = well_ftor.well_name
-        well_name_normal = state.wellnames_key_ois[well_name_ois]
-        res_ftor = well_ftor.results
-        adapt_params = res_ftor.adap_and_fixed_params[0]
-        state.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params)
-        # Жидкость. Полный ряд (train + test)
-        rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
-        rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
-        # Нефть. Только test
-        rates_oil_test_ftor = res_ftor.rates_oil_test
-        rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
-        df = well_ftor.df_chess  # Фактические данные для визуализации
-        state.statistics['ftor'][f'{well_name_normal}_liq_true'] = df['Дебит жидкости']
-        state.statistics['ftor'][f'{well_name_normal}_liq_pred'] = rates_liq_ftor
-        state.statistics['ftor'][f'{well_name_normal}_oil_true'] = df['Дебит нефти']
-        state.statistics['ftor'][f'{well_name_normal}_oil_pred'] = rates_oil_test_ftor
+    if 'ftor' not in state.statistics.keys():
+        dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+        state.statistics['ftor'] = pd.DataFrame(index=dates)
+        for well_ftor in _calculator_ftor.wells:
+            well_name_ois = well_ftor.well_name
+            well_name_normal = state.wellnames_key_ois[well_name_ois]
+            res_ftor = well_ftor.results
+            adapt_params = res_ftor.adap_and_fixed_params[0]
+            state.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params)
+            # Жидкость. Полный ряд (train + test)
+            rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
+            rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
+            # Нефть. Только test
+            rates_oil_test_ftor = res_ftor.rates_oil_test
+            rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
+            df = well_ftor.df_chess  # Фактические данные для визуализации
+            state.statistics['ftor'][f'{well_name_normal}_liq_true'] = df['Дебит жидкости']
+            state.statistics['ftor'][f'{well_name_normal}_liq_pred'] = rates_liq_ftor
+            state.statistics['ftor'][f'{well_name_normal}_oil_true'] = df['Дебит нефти']
+            state.statistics['ftor'][f'{well_name_normal}_oil_pred'] = rates_oil_test_ftor
+    else:
+        dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
+        for well_ftor in _calculator_ftor.wells:
+            well_name_ois = well_ftor.well_name
+            well_name_normal = state.wellnames_key_ois[well_name_ois]
+            res_ftor = well_ftor.results
+            adapt_params = res_ftor.adap_and_fixed_params[0]
+            state.adapt_params[well_name_normal] = convert_params_to_readable(adapt_params)
+            # Жидкость. Полный ряд (train + test)
+            rates_liq_ftor = pd.concat(objs=[res_ftor.rates_liq_train, res_ftor.rates_liq_test])
+            rates_liq_ftor = pd.to_numeric(rates_liq_ftor)
+            # Нефть. Только test
+            rates_oil_test_ftor = res_ftor.rates_oil_test
+            rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
+            df = well_ftor.df_chess  # Фактические данные для визуализации
+            state.statistics['ftor'][f'{well_name_normal}_liq_true'][dates] = df['Дебит жидкости'][dates]
+            state.statistics['ftor'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_ftor[dates]
+            state.statistics['ftor'][f'{well_name_normal}_oil_true'][dates] = df['Дебит нефти'][dates]
+            state.statistics['ftor'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_test_ftor[dates]
 
 
 def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState) -> None:
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
-    state.statistics['wolfram'] = pd.DataFrame(index=dates)
-    for _well_wolfram in _calculator_wolfram.wells:
-        _well_name_ois = _well_wolfram.well_name
-        res_wolfram = _well_wolfram.results
-        # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует
-        # для вычислений максимально возможный доступный ряд фактичесих данных.
-        df_true = _well_wolfram.df
-        rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
-        rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        rates_liq_wolfram = res_wolfram.rates_liq_test
-        rates_oil_wolfram = res_wolfram.rates_oil_test
+    if 'wolfram' not in state.statistics.keys():
+        dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+        state.statistics['wolfram'] = pd.DataFrame(index=dates)
+        for _well_wolfram in _calculator_wolfram.wells:
+            _well_name_ois = _well_wolfram.well_name
+            res_wolfram = _well_wolfram.results
+            # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует
+            # для вычислений максимально возможный доступный ряд фактичесих данных.
+            df_true = _well_wolfram.df
+            rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
+            rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
+            rates_liq_wolfram = res_wolfram.rates_liq_test
+            rates_oil_wolfram = res_wolfram.rates_oil_test
 
-        well_name_normal = state.wellnames_key_ois[_well_name_ois]
-        state.statistics['wolfram'][f'{well_name_normal}_liq_true'] = rates_liq_true
-        state.statistics['wolfram'][f'{well_name_normal}_liq_pred'] = rates_liq_wolfram
-        state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
-        state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
+            well_name_normal = state.wellnames_key_ois[_well_name_ois]
+            state.statistics['wolfram'][f'{well_name_normal}_liq_true'] = rates_liq_true
+            state.statistics['wolfram'][f'{well_name_normal}_liq_pred'] = rates_liq_wolfram
+            state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
+            state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
+        state.statistics['wolfram'].to_excel('wolfram_1.xlsx')
+    else:
+        dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
+        for _well_wolfram in _calculator_wolfram.wells:
+            _well_name_ois = _well_wolfram.well_name
+            res_wolfram = _well_wolfram.results
+            # Фактические данные (вторично) извлекаются из wolfram, т.к. он использует
+            # для вычислений максимально возможный доступный ряд фактичесих данных.
+            df_true = _well_wolfram.df
+            rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
+            rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
+            rates_liq_wolfram = res_wolfram.rates_liq_test
+            rates_oil_wolfram = res_wolfram.rates_oil_test
+
+            well_name_normal = state.wellnames_key_ois[_well_name_ois]
+            state.statistics['wolfram'][f'{well_name_normal}_liq_true'][dates] = rates_liq_true[dates]
+            state.statistics['wolfram'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_wolfram[dates]
+            state.statistics['wolfram'][f'{well_name_normal}_oil_true'][dates] = rates_oil_true[dates]
+            state.statistics['wolfram'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_wolfram[dates]
+        state.statistics['wolfram'].to_excel('wolfram_2.xlsx')
+
 
 
 def extract_data_CRM(df: pd.DataFrame,
                      state: AppState,
                      wells_ftor: List[WellFtor],
+                     df_for_ensemble=None,
                      mode: str = 'CRM') -> None:
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
-    for well in wells_ftor:
-        well_name_normal = state.wellnames_key_ois[well.well_name]
-        if well_name_normal in df.columns:
-            if mode not in state.statistics:
-                state.statistics[mode] = pd.DataFrame(index=dates)
-            df_fact = well.df_chess
-            state.statistics[mode][f'{well_name_normal}_liq_true'] = df_fact['Дебит жидкости']
-            state.statistics[mode][f'{well_name_normal}_liq_pred'] = df[well_name_normal]
-            state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
-            state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
+    if df_for_ensemble is None:
+        dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+        for well in wells_ftor:
+            well_name_normal = state.wellnames_key_ois[well.well_name]
+            if well_name_normal in df.columns:
+                if mode not in state.statistics:
+                    state.statistics[mode] = pd.DataFrame(index=dates)
+                df_fact = well.df_chess
+                state.statistics[mode][f'{well_name_normal}_liq_true'] = df_fact['Дебит жидкости']
+                state.statistics[mode][f'{well_name_normal}_liq_pred'] = df[well_name_normal]
+                state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
+                state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
+    else:
+        dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+        dates_ensemble = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
+        for well in wells_ftor:
+            well_name_normal = state.wellnames_key_ois[well.well_name]
+            if well_name_normal in df.columns:
+                if mode not in state.statistics:
+                    state.statistics[mode] = pd.DataFrame(index=dates)
+                df_fact = well.df_chess
+                state.statistics[mode][f'{well_name_normal}_liq_true'] = df_fact['Дебит жидкости']
+                state.statistics[mode][f'{well_name_normal}_liq_pred'] = df_for_ensemble[well_name_normal]
+                state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
+                state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
 
-def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> None:
-    state['coeff_f'] = data_coeff_f
+                state.statistics[mode][f'{well_name_normal}_liq_pred'][dates_ensemble] = df[well_name_normal][dates_ensemble]
 
 
 def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
-    state.statistics['fedot'] = fedot_entity.statistic_all
+    if 'fedot' not in state.statistics.keys():
+        state.statistics['fedot'] = fedot_entity.statistic_all
+    else:
+        dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
+        state.statistics['fedot'] = pd.concat([state.statistics['fedot'].drop([dates[0]]),
+                                               pd.DataFrame(columns=state.statistics['fedot'].columns, index=dates)])
+        for well_fedot in state.statistics['fedot'].columns:
+            state.statistics['fedot'][well_fedot][dates] = fedot_entity.statistic_all[well_fedot][dates]
 
 def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _change_gtm_info: int) -> None:
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
-    state.statistics['shelf'] = pd.DataFrame(index=dates)
-    for well_shelf in _calculator_shelf.wells_list:
-        well_name_ois = well_shelf
-        well_name_normal = state.wellnames_key_ois[well_name_ois]
-        res_oil = _calculator_shelf.df_result[well_name_ois]
-        res_liq = _calculator_shelf.df_result_liq[well_name_ois]
-        true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
-        true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
-        state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
-        state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
-        state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
-        state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+    if 'shelf' not in state.statistics.keys():
+        dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+        state.statistics['shelf'] = pd.DataFrame(index=dates)
+        for well_shelf in _calculator_shelf.wells_list:
+            well_name_ois = well_shelf
+            well_name_normal = state.wellnames_key_ois[well_name_ois]
+            res_oil = _calculator_shelf.df_result[well_name_ois]
+            res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+            true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+            true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+            state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
+            state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
+            state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
+            state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+    else:
+        dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
+        for well_shelf in _calculator_shelf.wells_list:
+            well_name_ois = well_shelf
+            well_name_normal = state.wellnames_key_ois[well_name_ois]
+            res_oil = _calculator_shelf.df_result[well_name_ois]
+            res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+            true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+            true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+            state.statistics['shelf'][f'{well_name_normal}_liq_true'][dates] = true_liq[dates]
+            state.statistics['shelf'][f'{well_name_normal}_liq_pred'][dates] = res_liq[dates]
+            state.statistics['shelf'][f'{well_name_normal}_oil_true'][dates] = true_oil[dates]
+            state.statistics['shelf'][f'{well_name_normal}_oil_pred'][dates] = res_oil[dates]
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:

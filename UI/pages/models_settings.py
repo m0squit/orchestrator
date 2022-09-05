@@ -152,7 +152,7 @@ def draw_CRM_settings(session: st.session_state) -> None:
 def draw_shelf_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ППТП'):
         with st.form(key='shelf_params'):
-            max_adapt_period = (session.date_end - session.date_test).days - 1
+            max_adapt_period = (session.date_end - session.date_test).days
             # if max_adapt_period <= 25:
             #     max_adapt_period = 30
             st.number_input(

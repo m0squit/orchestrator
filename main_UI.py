@@ -263,7 +263,7 @@ def select_dates(date_min: date,
     date_start_ = st.date_input(
         label='Дата начала адаптации (с 00:00)',
         min_value=date_min,
-        value=date(2021, 3, 1),
+        value=date(2018, 1, 1),
         max_value=date_max,
         key='date_start',
         help="""
@@ -274,14 +274,14 @@ def select_dates(date_min: date,
     date_test_ = st.date_input(
         label='Дата начала прогноза (с 00:00)',
         min_value=date_min,
-        value=date(2021, 12, 2),
+        value=date(2021, 3, 1),
         max_value=date_max,
         key='date_test',
     )
     date_end_ = st.date_input(
         label='Дата конца прогноза (по 23:59)',
         min_value=date_min,
-        value=date(2022, 4, 30),
+        value=date(2021, 4, 30),
         max_value=date_max,
         key='date_end',
     )
@@ -360,19 +360,77 @@ def run_models(_session: st.session_state,
     """
     at_least_one_model = _models_to_run['ftor'] or _models_to_run['wolfram'] or _models_to_run['CRM'] or _models_to_run['shelf']
     if _models_to_run['ftor']:
-        run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
+        if _models_to_run['ensemble']:
+            # для адаптации ансамбля
+            date_end_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            config_for_ftor_with_ensemble = ConfigPreprocessor(oilfield, shops, date_start_adapt,
+                                                               date_start_forecast, date_end_forecast_with_ensemble)
+            preprocessor_with_ensemble = run_preprocessor(config_for_ftor_with_ensemble)
+            run_ftor(preprocessor_with_ensemble, wells_ois, _session.constraints, _session.state)
+            # для прогноза модели
+            date_start_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            config_for_ftor_with_ensemble = ConfigPreprocessor(oilfield, shops, date_start_adapt,
+                                                               date_start_forecast_with_ensemble, date_end_forecast)
+            preprocessor_with_ensemble = run_preprocessor(config_for_ftor_with_ensemble)
+            run_ftor(preprocessor_with_ensemble, wells_ois, _session.constraints, _session.state)
+        else:
+            run_ftor(_preprocessor, wells_ois, _session.constraints, _session.state)
     if _models_to_run['wolfram']:
-        run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
-                    wells_ois, _session, _session.state)
+        if _models_to_run['ensemble']:
+            # для адаптации ансамбля
+            date_end_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            config_for_wolfram_with_ensemble = ConfigPreprocessor(oilfield, shops, date_start_adapt,
+                                                               date_start_forecast, date_end_forecast_with_ensemble)
+            preprocessor_with_ensemble = run_preprocessor(config_for_wolfram_with_ensemble)
+            run_wolfram(date_start_forecast, date_end_forecast_with_ensemble, preprocessor_with_ensemble,
+                        wells_ois, _session, _session.state)
+            # для прогноза модели
+            date_start_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            config_for_wolfram_with_ensemble = ConfigPreprocessor(oilfield, shops, date_start_adapt,
+                                                               date_start_forecast_with_ensemble, date_end_forecast)
+            preprocessor_with_ensemble = run_preprocessor(config_for_wolfram_with_ensemble)
+            run_wolfram(date_start_forecast_with_ensemble, date_end_forecast, preprocessor_with_ensemble,
+                        wells_ois, _session, _session.state)
+        else:
+            run_wolfram(date_start_forecast, date_end_forecast, _preprocessor,
+                        wells_ois, _session, _session.state)
     if _models_to_run['CRM']:
-        calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
-                                 oilfield, _session, _session.state)
-        if calculator_CRM is not None:
-            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
+        if _models_to_run['ensemble']:
+            date_start_end_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
+                                     oilfield, _session, _session.state, date_start_end_forecast_with_ensemble)
+            if calculator_CRM is not None:
+                run_fedot(oilfield, date_start_adapt, date_start_forecast, date_start_end_forecast_with_ensemble, wells_norm,
+                          calculator_CRM.f, _session.state)
+                run_fedot(oilfield, date_start_adapt, date_start_end_forecast_with_ensemble, date_end_forecast, wells_norm,
+                          calculator_CRM.f, _session.state)
+        else:
+            calculator_CRM = run_CRM(date_start_adapt, date_start_forecast, date_end_forecast,
+                                     oilfield, _session, _session.state)
+            if calculator_CRM is not None:
+            # if _models_to_run['ensemble']:
+            #     # для адаптации ансамбля
+            #     date_end_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            #
+            #     # для прогноза модели
+            #     date_start_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            #
+            # else:
+                run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       calculator_CRM.f, _session.state)
     if _models_to_run['shelf']:
-        run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
-                  date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
+        if _models_to_run['ensemble']:
+            # для адаптации ансамбля
+            date_end_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
+                      date_end_forecast_with_ensemble , _session.n_days_past, _session.n_days_calc_avg, _session.state)
+            # для прогноза модели
+            date_start_forecast_with_ensemble = date_start_forecast + timedelta(_session.ensemble_adapt_period)
+            run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast_with_ensemble, date_start_adapt,
+                      date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
+        else:
+            run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
+                      date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
@@ -445,7 +503,9 @@ def run_CRM(date_start_adapt: date,
             date_end_forecast: date,
             oilfield: str,
             _session: st.session_state,
-            state: AppState) -> CalculatorCRM:
+            state: AppState,
+            date_start_end_forecast_with_ensemble: date = None
+            ) -> CalculatorCRM:
     """Расчет модели CRM и последующее извлечение результатов.
 
     Parameters
@@ -467,13 +527,14 @@ def run_CRM(date_start_adapt: date,
     calculator_CRM = calculate_CRM(date_start_adapt=date_start_adapt,
                                    date_end_adapt=date_start_forecast - timedelta(days=1),
                                    date_end_forecast=date_end_forecast,
+                                   date_start_end_forecast_with_ensemble=date_start_end_forecast_with_ensemble,
                                    oilfield=oilfield,
                                    influence_R=_session.CRM_influence_R,
                                    maxiter=_session.CRM_maxiter,
                                    p_res=_session.CRM_p_res)
     if calculator_CRM is not None:
-        extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], mode='CRM')
-        extract_influence_coeff_CRM(calculator_CRM.f, state)
+        extract_data_CRM(calculator_CRM.pred_CRM, state, state['wells_ftor'], calculator_CRM.pred_CRM_ensemble, mode='CRM')
+        state['coeff_f'] = calculator_CRM.f
         state['wells_coords_CRM'] = calculator_CRM._coordinates
     return calculator_CRM
 
@@ -595,6 +656,9 @@ def main():
             field_name = select_oilfield(FIELDS_SHOPS)
             shops = select_shops(field_name)
             date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
+            if models_to_run['ensemble'] and (models_to_run['ftor'] or models_to_run['wolfram'] or
+                                              models_to_run['CRM'] or models_to_run['shelf']):
+                date_test = date_test - timedelta(session.ensemble_adapt_period)
 
             config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
             preprocessor = run_preprocessor(config)
