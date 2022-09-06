@@ -105,7 +105,7 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
             rates_oil_wolfram = res_wolfram.rates_oil_test
 
             well_name_normal = state.wellnames_key_ois[_well_name_ois]
-            if (f'{well_name_normal}_liq_true' in state.statistics['ftor'].columns) and (f'{well_name_normal}_oil_true' in state.statistics['ftor'].columns):
+            if (f'{well_name_normal}_liq_true' in state.statistics['wolfram'].columns) and (f'{well_name_normal}_oil_true' in state.statistics['wolfram'].columns):
                 state.statistics['wolfram'][f'{well_name_normal}_liq_true'][dates] = rates_liq_true[dates]
                 state.statistics['wolfram'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_wolfram[dates]
                 state.statistics['wolfram'][f'{well_name_normal}_oil_true'][dates] = rates_oil_true[dates]
