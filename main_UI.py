@@ -67,10 +67,10 @@ def initialize_session(_session: st.session_state) -> None:
     _session.CRM_maxiter = 100
     _session.CRM_p_res = 220
     # Shelf model
-    _session.n_days_past = 30
+    _session.n_days_past = 27
     _session.n_days_calc_avg = 5
     # Ensemble model
-    _session.ensemble_adapt_period = 28
+    _session.ensemble_adapt_period = 26
     _session.interval_probability = 0.9
     _session.draws = 300
     _session.tune = 200

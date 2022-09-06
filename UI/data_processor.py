@@ -64,10 +64,11 @@ def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None
             rates_oil_test_ftor = res_ftor.rates_oil_test
             rates_oil_test_ftor = pd.to_numeric(rates_oil_test_ftor)
             df = well_ftor.df_chess  # Фактические данные для визуализации
-            state.statistics['ftor'][f'{well_name_normal}_liq_true'][dates] = df['Дебит жидкости'][dates]
-            state.statistics['ftor'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_ftor[dates]
-            state.statistics['ftor'][f'{well_name_normal}_oil_true'][dates] = df['Дебит нефти'][dates]
-            state.statistics['ftor'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_test_ftor[dates]
+            if f'{well_name_normal}_liq_true' in state.statistics['ftor'].columns:
+                state.statistics['ftor'][f'{well_name_normal}_liq_true'][dates] = df['Дебит жидкости'][dates]
+                state.statistics['ftor'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_ftor[dates]
+                state.statistics['ftor'][f'{well_name_normal}_oil_true'][dates] = df['Дебит нефти'][dates]
+                state.statistics['ftor'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_test_ftor[dates]
 
 
 def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState) -> None:
@@ -90,7 +91,6 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
             state.statistics['wolfram'][f'{well_name_normal}_liq_pred'] = rates_liq_wolfram
             state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
             state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
-        state.statistics['wolfram'].to_excel('wolfram_1.xlsx')
     else:
         dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
         for _well_wolfram in _calculator_wolfram.wells:
@@ -105,11 +105,11 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
             rates_oil_wolfram = res_wolfram.rates_oil_test
 
             well_name_normal = state.wellnames_key_ois[_well_name_ois]
-            state.statistics['wolfram'][f'{well_name_normal}_liq_true'][dates] = rates_liq_true[dates]
-            state.statistics['wolfram'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_wolfram[dates]
-            state.statistics['wolfram'][f'{well_name_normal}_oil_true'][dates] = rates_oil_true[dates]
-            state.statistics['wolfram'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_wolfram[dates]
-        state.statistics['wolfram'].to_excel('wolfram_2.xlsx')
+            if f'{well_name_normal}_liq_true' in state.statistics['ftor'].columns:
+                state.statistics['wolfram'][f'{well_name_normal}_liq_true'][dates] = rates_liq_true[dates]
+                state.statistics['wolfram'][f'{well_name_normal}_liq_pred'][dates] = rates_liq_wolfram[dates]
+                state.statistics['wolfram'][f'{well_name_normal}_oil_true'][dates] = rates_oil_true[dates]
+                state.statistics['wolfram'][f'{well_name_normal}_oil_pred'][dates] = rates_oil_wolfram[dates]
 
 
 
