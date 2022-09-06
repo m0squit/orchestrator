@@ -191,8 +191,9 @@ def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor])
     for well_ftor in wells_ftor:
         density_oil = well_ftor.density_oil
         well_name_normal = state.wellnames_key_ois[well_ftor.well_name]
-        state.statistics['wolfram'][f'{well_name_normal}_oil_true'] /= density_oil
-        state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
+        if f'{well_name_normal}_oil_true' in state.statistics['wolfram'].columns:
+            state.statistics['wolfram'][f'{well_name_normal}_oil_true'] /= density_oil
+            state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] /= density_oil
 
 
 def prepare_data_for_ensemble(state: AppState,
