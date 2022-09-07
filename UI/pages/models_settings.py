@@ -1,6 +1,18 @@
 import streamlit as st
-
+import pandas as pd
+import datetime
+from copy import deepcopy
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
+from frameworks_shelf_algo.class_Shelf.config import ConfigShelf
+from frameworks_shelf_algo.class_Shelf.support_functions import _get_path, \
+    transform_str_dates_to_datetime_or_vice_versa, get_s_decline_rates, get_s_decline_rates_liq
+from frameworks_shelf_algo.class_Shelf.data_processor_shelf import DataProcessorShelf
+from tools_preprocessor.config import Config as ConfigPreprocessor
+from tools_preprocessor.preprocessor import Preprocessor
+from UI.cached_funcs import run_preprocessor #, parse_well_names
+# from UI.pages.tp_settings import draw_last_measurement_settings, draw_decline_rates_settings
+from frameworks_shelf_algo.class_Shelf.constants import LAST_MEASUREMENT, DATE, \
+    VALUE, VALUE_LIQ, DEC_RATES, DEC_RATES_LIQ
 
 
 def show(session: st.session_state) -> None:
@@ -9,7 +21,6 @@ def show(session: st.session_state) -> None:
     draw_CRM_settings(session)
     draw_shelf_settings(session)
     draw_ensemble_settings(session)
-
 
 def draw_ftor_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели пьезопроводности'):
@@ -151,6 +162,28 @@ def draw_CRM_settings(session: st.session_state) -> None:
 
 def draw_shelf_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ППТП'):
+        # сопоставляет имена выбранных скважин OIS и (ГРАД?)
+        #     wellnames_key_normal : Dict[str, int]
+        #         Ключ = имя скважины в формате ГРАД, значение - имя скважины OIS.
+        #     wellnames_key_ois : Dict[int, str]
+        #         Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
+        _path = _get_path(session.field_name)
+        welllist = pd.read_feather(_path / 'welllist.feather')
+        wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
+        wells_work.set_index('dt', inplace=True)
+        wells_work = wells_work[wells_work.index > session.date_test]
+        wells_work = wells_work[wells_work["sost"] == 'В работе']
+        wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
+        all_wells_ois_ = wells_work["well.ois"]
+        wellnames_key_normal_ = {}
+        wellnames_key_ois_ = {}
+        for ois_well in all_wells_ois_.unique():
+            well_name_norm = welllist[welllist["ois"] == ois_well]
+            well_name_norm = well_name_norm[well_name_norm.npath == 0]
+            # well_name_norm = well_name_norm[well_name_norm.ceh in session.shops]
+            well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+            wellnames_key_normal_[well_name_norm] = ois_well
+            wellnames_key_ois_[ois_well] = well_name_norm
         with st.form(key='shelf_params'):
             max_adapt_period = (session.date_end - session.date_test).days
             # if max_adapt_period <= 25:
@@ -176,13 +209,37 @@ def draw_shelf_settings(session: st.session_state) -> None:
                                                   on_click=update_shelf_params,
                                                   kwargs={'write_from': session,
                                                           'write_to': session})
-        # _well1 = st.selectbox(
-        #     label='Скважина',
-        #     options=st.session_state.state.selected_wells_norm,
-        #     key='well',
-        # )
-        # print(_well1)
-        #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
+        st.write('-' * 100)
+        st.write('**Последний замер и темпы падения**')
+        if 'Все скважины' in session.selected_wells_norm:
+            wells_ois = list(wellnames_key_ois_.keys())
+        else:
+            wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
+        wells_sorted_ois = sorted(wells_ois)
+        wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+        config_shelf = ConfigShelf(oilfield=session.field_name,
+                               shops=session.shops,
+                               wells_ois=wells_sorted_ois,
+                               train_start=session.date_start,
+                               train_end=session.date_test,
+                               predict_start=session.date_test,
+                               predict_end=session.date_end,
+                               n_days_past=session.n_days_past,
+                               n_days_calc_avg=session.n_days_calc_avg)
+        if 'change_gtm_info' not in session:
+            session['change_gtm_info'] = 0
+        DataProcessorShelf(config_shelf)
+        _well1 = st.selectbox(
+            label='Скважина',
+            options=wells_sorted_norm,
+            key='well',
+        )
+        _well = wellnames_key_normal_[_well1]
+        _date_start = session['date_test']
+        draw_last_measurement_settings(_well, _date_start)
+        st.write('-' * 100)
+        _date_end = session['date_end']
+        draw_decline_rates_settings(_well, _date_start, _date_end)
 
 
 def draw_ensemble_settings(session: st.session_state) -> None:
@@ -309,3 +366,89 @@ def update_ensemble_params(write_from: st.session_state,
     write_to['chains'] = int(write_from['chains_'])
     write_to['target_accept'] = float(write_from['target_accept_'])
     write_to['ensemble_adapt_period'] = int(write_from['ensemble_adapt_period_'])
+
+
+def draw_last_measurement_settings(_well: str, _date_start: datetime.date):
+    def edit_last_measurement():
+        st.session_state.shelf_json[_well][LAST_MEASUREMENT][DATE] = st.session_state['changed_date']
+        st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE] = st.session_state['changed_val']
+        st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE_LIQ] = st.session_state['changed_val_liq']
+        st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
+
+    def del_last_measurement():
+        st.session_state.shelf_json[_well][LAST_MEASUREMENT] = dict()
+        st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
+
+    st.write('**Последний замер**')
+    last_measurement_data = st.session_state.shelf_json[_well][LAST_MEASUREMENT]
+    there_is_data = len(last_measurement_data) != 0
+    if there_is_data:
+        date = last_measurement_data[DATE]
+        val = last_measurement_data[VALUE]
+        val_liq = last_measurement_data[VALUE_LIQ]
+        st.write(f"Дата: {date}")
+        st.write(f"Значение нефти: {val}")
+        st.write(f"Значение жидкости: {val_liq}")
+    else:
+        st.write('Данные отсутствуют')
+        date, val, val_liq = _date_start, 0, 0
+    with st.empty():
+        if 'b_edit_last_measurement' in st.session_state and st.session_state['b_edit_last_measurement'] is True:
+            with st.form('form_edit_last_measurement'):
+                st.date_input('Дата', value=date, key='changed_date')
+                st.number_input('Значение нефти', value=val, key='changed_val')
+                st.number_input('Значение жидкости', value=val_liq, key='changed_val_liq')
+                st.form_submit_button('Применить', on_click=edit_last_measurement)
+        else:
+            st.button('Добавить/изменить', key='b_edit_last_measurement')
+    if there_is_data:
+        st.button('Удалить', on_click=del_last_measurement)
+
+def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_end: datetime.date):
+    def edit_dec_rate():
+        st.session_state.shelf_json[_well][DEC_RATES][st.session_state['new_date']] = st.session_state['new_val']
+        st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['new_date']] = st.session_state['new_val_liq']
+        st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
+
+    def del_dec_rate():
+        del st.session_state.shelf_json[_well][DEC_RATES][st.session_state['date_to_delete']]
+        del st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['date_to_delete']]
+        st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
+
+    st.write('**Темпы падения**')
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write('Введенные пользователем:')
+        dec_rates_to_show = deepcopy(st.session_state.shelf_json[_well][DEC_RATES])
+        dec_rates_to_show_liq = deepcopy(st.session_state.shelf_json[_well][DEC_RATES_LIQ])
+        transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show, dates_to_datetime=False)
+        transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show_liq, dates_to_datetime=False)
+        st.write('Темпы падения для нефти')
+        st.write(dec_rates_to_show)
+        st.write('Темпы падения для жидкости')
+        st.write(dec_rates_to_show_liq)
+        with st.empty():
+            if 'b_edit_dec_rate' in st.session_state and st.session_state['b_edit_dec_rate'] is True:
+                with st.form('form_edit_dec_rate'):
+                    st.date_input('Дата', value=_date_start, key='new_date')
+                    st.number_input('Значение ТП нефти', key='new_val')
+                    st.number_input('Значение ТП жидкости', key='new_val_liq')
+                    st.form_submit_button('Добавить/изменить', on_click=edit_dec_rate)
+            else:
+                st.button('Добавить/изменить', key='b_edit_dec_rate')
+        with st.empty():
+            if 'b_del_dec_rate' in st.session_state and st.session_state['b_del_dec_rate'] is True:
+                with st.form('form_del_dec_rate'):
+                    dates_when_dec_rate_changes = [*st.session_state.shelf_json[_well][DEC_RATES].keys()]
+                    st.selectbox('Дата', dates_when_dec_rate_changes, key='date_to_delete')
+                    st.form_submit_button('Удалить', on_click=del_dec_rate)
+            else:
+                if len(st.session_state.shelf_json[_well][DEC_RATES]) != 0:
+                    st.button('Удалить', key='b_del_dec_rate')
+    with col2:
+        st.write('Автозаполненные:')
+        s_decline_rates = get_s_decline_rates(st.session_state.shelf_json, _well, _date_start, _date_end)
+        s_decline_rates_liq = get_s_decline_rates_liq(st.session_state.shelf_json, _well, _date_start, _date_end)
+        pd_decline_show = pd.concat([s_decline_rates, s_decline_rates_liq], axis=1, ignore_index=True)
+        pd_decline_show.columns = ['нефть', 'жидкость']
+        st.write(pd_decline_show)

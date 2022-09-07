@@ -4,4 +4,4 @@ import UI.pages.resume_app
 import UI.pages.specific_well
 import UI.pages.wells_map
 import UI.pages.gtm_settings
-import UI.pages.tp_settings
+# import UI.pages.tp_settings
