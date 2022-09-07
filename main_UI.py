@@ -431,11 +431,17 @@ def run_models(_session: st.session_state,
         else:
             run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                       date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
+
+    if (date_start_forecast - date_end_forecast < timedelta(35)) and (_models_to_run['ensemble'] and at_least_one_model):
+        repeat_last_value(_session, date_start_adapt, date_start_forecast,
+                          date_end_forecast, timedelta(_session.ensemble_adapt_period))
     if at_least_one_model:
         make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
         run_ensemble(_session, wells_norm, mode='liq')
         run_ensemble(_session, wells_norm, mode='oil')
+    # if 'last_value' in _session.state['statistics'].keys():
+    _session.state['statistics'].pop('last_value', None)
 
 
 def run_ftor(_preprocessor: Preprocessor,
@@ -644,6 +650,31 @@ def run_ensemble(_session: st.session_state,
     for well_name_normal in ensemble_result.keys():
         extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
 
+# протягивает последнее значения при прогнозе на месяц
+def repeat_last_value(_session: st.session_state,
+                      date_start_forecast: date,
+                      date_start_adapt: date,
+                      date_end_forecast: date,
+                      date_timedelta: timedelta
+                      ) -> None:
+    date_start_forecast_model = date_start_adapt + date_timedelta
+    dates = pd.date_range(date_start_forecast, date_end_forecast, freq='D').date
+    date_adaptation = pd.date_range(date_start_adapt, date_start_forecast_model, freq='D').date
+    date_predict = pd.date_range(date_start_forecast_model, date_end_forecast, freq='D').date
+    model_for_well = list(_session.state.statistics.keys())[0]
+    _session.state.statistics['last_value'] = pd.DataFrame(columns=_session.state.statistics[model_for_well].columns,
+                                                           index=dates)
+    wells_model = [w.split('_')[0] for w in _session.state.statistics['last_value'].columns]
+    # _session.state.statistics['last_value'].loc[dates] = _session.state.statistics[model_for_well].loc[dates]
+    for well in wells_model:
+        _session.state.statistics['last_value'][f'{well}_liq_true'] = _session.state.statistics['last_value'][f'{well}_liq_true'].fillna(0)
+        _session.state.statistics['last_value'][f'{well}_oil_true'] = _session.state.statistics['last_value'][f'{well}_oil_true'].fillna(0)
+
+        _session.state.statistics['last_value'][f'{well}_liq_pred'][date_adaptation] = _session.state.statistics[model_for_well][f'{well}_liq_true'][date_adaptation[0]]
+        _session.state.statistics['last_value'][f'{well}_oil_pred'][date_adaptation] = _session.state.statistics[model_for_well][f'{well}_oil_true'][date_adaptation[0]]
+
+        _session.state.statistics['last_value'][f'{well}_liq_pred'][date_predict] = _session.state.statistics[model_for_well][f'{well}_liq_true'][date_predict[0]]
+        _session.state.statistics['last_value'][f'{well}_oil_pred'][date_predict] = _session.state.statistics[model_for_well][f'{well}_oil_true'][date_predict[0]]
 
 @logger.catch
 def main():
