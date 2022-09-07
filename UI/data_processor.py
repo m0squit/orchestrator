@@ -164,27 +164,31 @@ def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _cha
         for well_shelf in _calculator_shelf.wells_list:
             well_name_ois = well_shelf
             well_name_normal = state.wellnames_key_ois[well_name_ois]
-            res_oil = _calculator_shelf.df_result[well_name_ois]
-            res_liq = _calculator_shelf.df_result_liq[well_name_ois]
-            true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
-            true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
-            state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
-            state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
-            state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
-            state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
+            if well_name_ois in _calculator_shelf.df_result:
+                res_oil = _calculator_shelf.df_result[well_name_ois]
+                res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+                true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
+                true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+                state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
+                state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
+                state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
+                state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
     else:
         dates = pd.date_range(state.was_date_test_if_ensemble, state.was_date_end, freq='D').date
         for well_shelf in _calculator_shelf.wells_list:
             well_name_ois = well_shelf
             well_name_normal = state.wellnames_key_ois[well_name_ois]
+            if well_name_ois not in _calculator_shelf.df_result:
+                continue
             res_oil = _calculator_shelf.df_result[well_name_ois]
             res_liq = _calculator_shelf.df_result_liq[well_name_ois]
             true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
             true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
-            state.statistics['shelf'][f'{well_name_normal}_liq_true'][dates] = true_liq[dates]
-            state.statistics['shelf'][f'{well_name_normal}_liq_pred'][dates] = res_liq[dates]
-            state.statistics['shelf'][f'{well_name_normal}_oil_true'][dates] = true_oil[dates]
-            state.statistics['shelf'][f'{well_name_normal}_oil_pred'][dates] = res_oil[dates]
+            if f'{well_name_normal}_liq_true' in state.statistics['shelf']:
+                state.statistics['shelf'][f'{well_name_normal}_liq_true'][dates] = true_liq[dates]
+                state.statistics['shelf'][f'{well_name_normal}_liq_pred'][dates] = res_liq[dates]
+                state.statistics['shelf'][f'{well_name_normal}_oil_true'][dates] = true_oil[dates]
+                state.statistics['shelf'][f'{well_name_normal}_oil_pred'][dates] = res_oil[dates]
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
