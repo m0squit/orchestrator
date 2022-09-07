@@ -221,6 +221,8 @@ def prepare_single_df_for_ensemble(state: AppState,
         models.remove('ensemble')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
     input_df = pd.DataFrame(index=dates_test)
+    if state.statistics_another_models:
+        state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
     for model in models:
         well_calculated_by_model = f'{well_name_normal}_{mode}_pred' in state.statistics[model]
         if well_calculated_by_model:
