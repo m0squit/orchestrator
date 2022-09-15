@@ -1,121 +1,49 @@
 import pandas as pd
 import streamlit as st
 from io import BytesIO
-from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME, LAST_MEASUREMENT, DATE, \
-    VALUE, VALUE_LIQ, DEC_RATES, DEC_RATES_LIQ
+from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME
 import datetime as dt
-from copy import deepcopy
-from frameworks_shelf_algo.class_Shelf.support_functions import transform_str_dates_to_datetime_or_vice_versa, \
-    get_s_decline_rates, get_s_decline_rates_liq, get_date_range
+from frameworks_shelf_algo.class_Shelf.support_functions import get_date_range, _get_path
 
-
-# def draw_last_measurement_settings(_well: str, _date_start: datetime.date):
-#     def edit_last_measurement():
-#         st.session_state.shelf_json[_well][LAST_MEASUREMENT][DATE] = st.session_state['changed_date']
-#         st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE] = st.session_state['changed_val']
-#         st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE_LIQ] = st.session_state['changed_val_liq']
-#         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
-#
-#     def del_last_measurement():
-#         st.session_state.shelf_json[_well][LAST_MEASUREMENT] = dict()
-#         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
-#
-#     st.write('**Последний замер**')
-#     last_measurement_data = st.session_state.shelf_json[_well][LAST_MEASUREMENT]
-#     there_is_data = len(last_measurement_data) != 0
-#     if there_is_data:
-#         date = last_measurement_data[DATE]
-#         val = last_measurement_data[VALUE]
-#         val_liq = last_measurement_data[VALUE_LIQ]
-#         st.write(f"Дата: {date}")
-#         st.write(f"Значение нефти: {val}")
-#         st.write(f"Значение жидкости: {val_liq}")
-#     else:
-#         st.write('Данные отсутствуют')
-#         date, val, val_liq = _date_start, 0, 0
-#     with st.empty():
-#         if 'b_edit_last_measurement' in st.session_state and st.session_state['b_edit_last_measurement'] is True:
-#             with st.form('form_edit_last_measurement'):
-#                 st.date_input('Дата', value=date, key='changed_date')
-#                 st.number_input('Значение нефти', value=val, key='changed_val')
-#                 st.number_input('Значение жидкости', value=val_liq, key='changed_val_liq')
-#                 st.form_submit_button('Применить', on_click=edit_last_measurement)
-#         else:
-#             st.button('Добавить/изменить', key='b_edit_last_measurement')
-#     if there_is_data:
-#         st.button('Удалить', on_click=del_last_measurement)
-#
-#
-# def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_end: datetime.date):
-#     def edit_dec_rate():
-#         st.session_state.shelf_json[_well][DEC_RATES][st.session_state['new_date']] = st.session_state['new_val']
-#         st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['new_date']] = st.session_state['new_val_liq']
-#         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
-#
-#     def del_dec_rate():
-#         del st.session_state.shelf_json[_well][DEC_RATES][st.session_state['date_to_delete']]
-#         del st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['date_to_delete']]
-#         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
-#
-#     st.write('**Темпы падения**')
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         st.write('Введенные пользователем:')
-#         dec_rates_to_show = deepcopy(st.session_state.shelf_json[_well][DEC_RATES])
-#         dec_rates_to_show_liq = deepcopy(st.session_state.shelf_json[_well][DEC_RATES_LIQ])
-#         transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show, dates_to_datetime=False)
-#         transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show_liq, dates_to_datetime=False)
-#         st.write('Темпы падения для нефти')
-#         st.write(dec_rates_to_show)
-#         st.write('Темпы падения для жидкости')
-#         st.write(dec_rates_to_show_liq)
-#         with st.empty():
-#             if 'b_edit_dec_rate' in st.session_state and st.session_state['b_edit_dec_rate'] is True:
-#                 with st.form('form_edit_dec_rate'):
-#                     st.date_input('Дата', value=_date_start, key='new_date')
-#                     st.number_input('Значение ТП нефти', key='new_val')
-#                     st.number_input('Значение ТП жидкости', key='new_val_liq')
-#                     st.form_submit_button('Добавить/изменить', on_click=edit_dec_rate)
-#             else:
-#                 st.button('Добавить/изменить', key='b_edit_dec_rate')
-#         with st.empty():
-#             if 'b_del_dec_rate' in st.session_state and st.session_state['b_del_dec_rate'] is True:
-#                 with st.form('form_del_dec_rate'):
-#                     dates_when_dec_rate_changes = [*st.session_state.shelf_json[_well][DEC_RATES].keys()]
-#                     st.selectbox('Дата', dates_when_dec_rate_changes, key='date_to_delete')
-#                     st.form_submit_button('Удалить', on_click=del_dec_rate)
-#             else:
-#                 if len(st.session_state.shelf_json[_well][DEC_RATES]) != 0:
-#                     st.button('Удалить', key='b_del_dec_rate')
-#     with col2:
-#         st.write('Автозаполненные:')
-#         s_decline_rates = get_s_decline_rates(st.session_state.shelf_json, _well, _date_start, _date_end)
-#         s_decline_rates_liq = get_s_decline_rates_liq(st.session_state.shelf_json, _well, _date_start, _date_end)
-#         pd_decline_show = pd.concat([s_decline_rates, s_decline_rates_liq], axis=1, ignore_index=True)
-#         pd_decline_show.columns = ['нефть', 'жидкость']
-#         st.write(pd_decline_show)
 
 def show(session: st.session_state):
     # print("GTM show")
     if 'change_gtm_info' not in st.session_state:
         st.session_state['change_gtm_info'] = 0
-    wells_sorted_ois = sorted(st.session_state.state.selected_wells_ois)
-    wells_sorted_norm = []
-    for w in wells_sorted_ois:
-        wells_sorted_norm.append(st.session_state.state.wellnames_key_ois[w])
+    _path = _get_path(session.field_name)
+    welllist = pd.read_feather(_path / 'welllist.feather')
+    #
+    wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
+    wells_work.set_index('dt', inplace=True)
+    wells_work = wells_work[wells_work.index > session.date_test]
+    wells_work = wells_work[wells_work["sost"] == 'В работе']
+    wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
+    all_wells_ois_ = wells_work["well.ois"]
+    #
+    wellnames_key_normal_ = {}
+    wellnames_key_ois_ = {}
+    for name_well in all_wells_ois_.unique():
+        well_name_norm = welllist[welllist["ois"] == name_well]
+        well_name_norm = well_name_norm[well_name_norm.npath == 0]
+        well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+        wellnames_key_normal_[well_name_norm] = name_well
+        wellnames_key_ois_[name_well] = well_name_norm
+    if 'Все скважины' in session.selected_wells_norm:
+        wells_ois = list(session.shelf_json.keys())
+        del wells_ois[0]
+    else:
+        wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
+    wells_sorted_ois = sorted(wells_ois)
+    wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+
     _well1 = st.selectbox(
         label='Скважина',
         options=wells_sorted_norm,
         key='well',
     )
-    _well = st.session_state.state.wellnames_key_normal[_well1]
-    # _date_start = st.session_state['date_test']
-    # draw_last_measurement_settings(_well, _date_start)
-    # print('measurements done')
-    # st.write('-' * 100)
+    _well = wellnames_key_normal_[_well1]
 
     def change_gtm_info(command: str):
-        # print("change_gtm_info")
         _date = st.session_state['DATE' + command]
         if command == 'add':
             st.session_state.shelf_json[_well][GTMS][_date] = dict()
@@ -125,7 +53,6 @@ def show(session: st.session_state):
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
 
     def del_gtm():
-        # print("del_gtm")
         del st.session_state.shelf_json[_well][GTMS][st.session_state['DATE' + 'edit']]
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
 
@@ -165,6 +92,7 @@ def show(session: st.session_state):
                 st.number_input(param, value=val, key=param + 'add')
             st.form_submit_button('Применить', on_click=change_gtm_info, kwargs={'command': 'add'})
 
+
     def draw_final_table():
         st.write('-' * 100)
         st.write('**Сводная таблица по ГТМ**')
@@ -176,7 +104,7 @@ def show(session: st.session_state):
         all_gtm_columns = wells_sorted_norm
         all_gtms = pd.DataFrame(index=dates, columns=all_gtm_columns)
         for _well1 in all_gtm_columns:
-            _well = st.session_state.state.wellnames_key_normal[_well1]
+            _well = wellnames_key_normal_[_well1]
             for _date1, all_data in sorted(st.session_state.shelf_json[_well][GTMS].items()):
                 if _date1 >= _date_start:
                     name = st.session_state.shelf_json[_well][GTMS][_date1][NAME]
@@ -239,7 +167,7 @@ def show(session: st.session_state):
                 color = 'white'
             return 'background-color: %s' % color
 
-        st.dataframe(all_gtms.style.applymap(color_gtm))
+        # st.dataframe(all_gtms.style.applymap(color_gtm))
 
         def to_excel(df):
             output = BytesIO()
@@ -257,26 +185,3 @@ def show(session: st.session_state):
     draw_final_table()
 
 
-
-
-    # _date_start = st.session_state['date_test']
-    # draw_last_measurement_settings(_well, _date_start)
-    # print('measurements done')
-    # st.write('-' * 100)
-    # _date_end = st.session_state['date_end']
-    # print(_well, _date_start, _date_end)
-    # draw_decline_rates_settings(_well, _date_start, _date_end)
-
-    # _date_start = st.session_state['date_test']
-    # draw_last_measurement_settings(_well, _date_start)
-    # print('measurements done')
-
-    # dates = get_date_range(_date_start, _date_end)
-    # all_gtm = pd.Dataframe(index=dates, dtype=float)
-    # all_gtm.columns = st.session_state.state.selected_wells_norm
-    # print(all_gtm)
-
-    # for date, val in sorted(_data[_well][DEC_RATES].items()):
-    #     s_dec_rates[s_dec_rates.index >= date] = val
-    # for date, all_data in sorted(st.session_state.shelf_json[_well][GTMS].items()):
-    #     st.session_state.state.selected_wells_norm

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pathlib
 
-from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
+# from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 from UI.app_state import AppState
 from UI.config import FTOR_DECODE
 # from frameworks_crm.class_Fedot.fedot_model import FedotModel
@@ -91,10 +91,10 @@ def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> 
     state['coeff_f'] = data_coeff_f
 
 
-def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
-    state.statistics['fedot'] = fedot_entity.statistic_all
+# def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
+#     state.statistics['fedot'] = fedot_entity.statistic_all
 
-def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _change_gtm_info: int) -> None:
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None: #, _change_gtm_info: int
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['shelf'] = pd.DataFrame(index=dates)
     for well_shelf in _calculator_shelf.wells_list:
