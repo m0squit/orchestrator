@@ -229,41 +229,45 @@ def draw_shelf_settings(session: st.session_state) -> None:
         # print(session.selected_wells_norm)
         # print("----")
         # print(wellnames_key_ois_)
-        if 'Все скважины' in session.selected_wells_norm:
-            wells_ois = list(wellnames_key_ois_.keys())
+        if session.selected_wells_norm:
+            if 'Все скважины' in session.selected_wells_norm:
+                wells_ois = list(wellnames_key_ois_.keys())
+            else:
+                wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
+            wells_sorted_ois = sorted(wells_ois)
+            wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+            config_shelf = ConfigShelf(oilfield=session.field_name,
+                                       shops=session.shops,
+                                       wells_ois=wells_sorted_ois,
+                                       train_start=session.date_start,
+                                       train_end=session.date_test,
+                                       predict_start=session.date_test,
+                                       predict_end=session.date_end,
+                                       n_days_past=session.n_days_past,
+                                       n_days_calc_avg=session.n_days_calc_avg)
+            if 'change_gtm_info' not in session:
+                session['change_gtm_info'] = 0
+            DataProcessorShelf(config_shelf)
+            if 'Все скважины' in session.selected_wells_norm:
+                wells_ois = list(session.shelf_json.keys())
+                del wells_ois[0]
+            wells_sorted_ois = sorted(wells_ois)
+            wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+            # print(session.shelf_json)
+            _well1 = st.selectbox(
+                label='Скважина',
+                options=wells_sorted_norm,
+                key='well',
+            )
+            _well = wellnames_key_normal_[_well1]
+            _date_start = session['date_test']
+            draw_last_measurement_settings(_well, _date_start)
+            st.write('-' * 100)
+            _date_end = session['date_end']
+            draw_decline_rates_settings(_well, _date_start, _date_end)
         else:
-            wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
-        wells_sorted_ois = sorted(wells_ois)
-        wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
-        config_shelf = ConfigShelf(oilfield=session.field_name,
-                               shops=session.shops,
-                               wells_ois=wells_sorted_ois,
-                               train_start=session.date_start,
-                               train_end=session.date_test,
-                               predict_start=session.date_test,
-                               predict_end=session.date_end,
-                               n_days_past=session.n_days_past,
-                               n_days_calc_avg=session.n_days_calc_avg)
-        if 'change_gtm_info' not in session:
-            session['change_gtm_info'] = 0
-        DataProcessorShelf(config_shelf)
-        if 'Все скважины' in session.selected_wells_norm:
-            wells_ois = list(session.shelf_json.keys())
-            del wells_ois[0]
-        wells_sorted_ois = sorted(wells_ois)
-        wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
-        # print(session.shelf_json)
-        _well1 = st.selectbox(
-            label='Скважина',
-            options=wells_sorted_norm,
-            key='well',
-        )
-        _well = wellnames_key_normal_[_well1]
-        _date_start = session['date_test']
-        draw_last_measurement_settings(_well, _date_start)
-        st.write('-' * 100)
-        _date_end = session['date_end']
-        draw_decline_rates_settings(_well, _date_start, _date_end)
+            st.write("Необходимо выбрать скважину")
+
 
 
 def draw_ensemble_settings(session: st.session_state) -> None:
