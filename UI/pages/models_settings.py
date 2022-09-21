@@ -235,7 +235,7 @@ def draw_shelf_settings(session: st.session_state) -> None:
             else:
                 wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
             wells_sorted_ois = sorted(wells_ois)
-            wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+            # wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
             config_shelf = ConfigShelf(oilfield=session.field_name,
                                        shops=session.shops,
                                        wells_ois=wells_sorted_ois,
@@ -248,9 +248,13 @@ def draw_shelf_settings(session: st.session_state) -> None:
             if 'change_gtm_info' not in session:
                 session['change_gtm_info'] = 0
             DataProcessorShelf(config_shelf)
+            session['change_gtm_info'] = session['change_gtm_info'] + 1
             if 'Все скважины' in session.selected_wells_norm:
                 wells_ois = list(session.shelf_json.keys())
                 del wells_ois[0]
+            # print(wells_ois)
+            # df_well = pd.DataFrame(sorted(wells_ois))
+            # df_well.to_excel("model_settings.xlsx")
             wells_sorted_ois = sorted(wells_ois)
             wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
             # print(session.shelf_json)
