@@ -371,6 +371,8 @@ def run_models(_session: st.session_state,
             run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       calculator_CRM.f, _session.state)
     if _models_to_run['shelf']:
+        # df_well = pd.DataFrame(sorted(wells_ois))
+        # df_well.to_excel("main.xlsx")
         run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                   date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
     if at_least_one_model:
