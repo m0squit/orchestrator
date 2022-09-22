@@ -91,7 +91,6 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
     fig = add_traces_to_specific_column(fig, statistics_test, df_chess_test,
                                         wellname, MODEL_NAMES, ensemble_interval_test,
                                         column=2, showlegend=True, marker_size=3)
-
     calced_liq = f'{wellname}_liq_lower' in ensemble_interval.columns
     calced_oil = f'{wellname}_oil_lower' in ensemble_interval.columns
     if not ensemble_interval.empty and (calced_liq or calced_oil):
@@ -160,9 +159,10 @@ def add_traces_to_specific_column(
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
     fig.add_trace(trace, row=2, col=column)
     if column == 1:
+        # Обводнённость
         trace_obv = go.Scatter(name='Обводнённость', x=y_liq_true.index, y=((1 - y_oil_true / y_liq_true) * 100),
                                mode=m, marker=dict(size=5, color='#19D3F3'), showlegend=True)
-        fig.add_trace(trace_obv, row=3, col=column)# Обводнённость
+        fig.add_trace(trace_obv, row=3, col=column)
     # Прогнозы моделей
     for model in statistics:
         if f'{wellname}_oil_pred' in statistics[model]:
@@ -212,5 +212,4 @@ def add_traces_to_specific_column(
             font=dict(size=10))
     )
     fig.add_trace(trace_events, row=4, col=column)
-
     return fig

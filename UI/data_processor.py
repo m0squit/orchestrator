@@ -13,6 +13,7 @@ from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfra
 from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
 from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
 
+
 def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
     """ Расшифровка названий параметров адаптации."""
     parsed_dict = params_dict.copy()

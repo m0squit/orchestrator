@@ -1,6 +1,7 @@
 from typing import Tuple
 import pandas as pd
 import streamlit as st
+
 from UI.app_state import AppState
 from UI.cached_funcs import calculate_statistics_plots
 
@@ -12,7 +13,6 @@ def show(session: st.session_state) -> None:
         return
     if state.statistics_another_models:
         selected_wells_set = select_wells_set(state)
-        print(state.statistics_another_models)
         draw_statistics_plots(state, selected_wells_set, state.statistics_another_models)
         draw_form_exclude_wells(state, selected_wells_set)
     else:
