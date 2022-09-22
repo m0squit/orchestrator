@@ -40,9 +40,6 @@ def draw_well_plot(state: AppState) -> str:
     preprocessor = run_preprocessor(state.was_config)
     well_ftor = preprocessor.create_wells_ftor([well_name_ois])[0]
     df_chess = well_ftor.df_chess
-    # if state.statistics_another_models:
-    #     state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
-    # print(state.statistics)
     fig = create_well_plot_UI(statistics=state.statistics,
                               date_test=state.was_date_test,
                               date_test_if_ensemble=state.was_date_test_if_ensemble,
@@ -69,7 +66,7 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                         column_titles=['', 'Прогноз'],
                         subplot_titles=['Дебит жидкости, м3/сут', '',
                                         'Дебит нефти, м3/сут', '',
-                                        'Относительная ошибка по нефти, %', '',
+                                        'Обводнённость, %', 'Относительная ошибка по нефти, %',
                                         'Забойное давление, атм', ''])
     fig.update_layout(font=dict(size=15), template='seaborn',
                       title_text=f'Скважина {wellname}',
@@ -162,6 +159,10 @@ def add_traces_to_specific_column(
     trace = go.Scatter(name=f'OIL: {MODEL_NAMES["true"]}', x=y_oil_true.index, y=y_oil_true,
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
     fig.add_trace(trace, row=2, col=column)
+    if column == 1:
+        trace_obv = go.Scatter(name='Обводнённость', x=y_liq_true.index, y=((1 - y_oil_true / y_liq_true) * 100),
+                               mode=m, marker=dict(size=5, color='#19D3F3'), showlegend=True)
+        fig.add_trace(trace_obv, row=3, col=column)# Обводнённость
     # Прогнозы моделей
     for model in statistics:
         if f'{wellname}_oil_pred' in statistics[model]:
@@ -201,7 +202,7 @@ def add_traces_to_specific_column(
     events = df_chess['Мероприятие']
     _events = events.dropna()
     trace_events = go.Scatter(name='Мероприятие', x=_events.index, y=[0.2] * len(_events),
-                              mode='markers+text', marker=dict(size=5), text=_events.array,
+                              mode='markers+text', marker=dict(size=5, color='#AB63FA'), text=_events.array,
                               textposition='top center', textfont=dict(size=12),
                               showlegend=True,
                               legendgroup=f'group2_{model}')
