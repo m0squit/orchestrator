@@ -1,7 +1,6 @@
 from typing import Tuple
-
+import pandas as pd
 import streamlit as st
-
 from UI.app_state import AppState
 from UI.cached_funcs import calculate_statistics_plots
 
@@ -11,9 +10,15 @@ def show(session: st.session_state) -> None:
     if not state.statistics_test_only:
         st.info('Здесь будет отображаться статистика по выбранному набору скважин.')
         return
-    selected_wells_set = select_wells_set(state)
-    draw_statistics_plots(state, selected_wells_set)
-    draw_form_exclude_wells(state, selected_wells_set)
+    if state.statistics_another_models:
+        selected_wells_set = select_wells_set(state)
+        print(state.statistics_another_models)
+        draw_statistics_plots(state, selected_wells_set, state.statistics_another_models)
+        draw_form_exclude_wells(state, selected_wells_set)
+    else:
+        selected_wells_set = select_wells_set(state)
+        draw_statistics_plots(state, selected_wells_set, 'str')
+        draw_form_exclude_wells(state, selected_wells_set)
 
 
 def select_wells_set(state: AppState) -> Tuple[str, ...]:
@@ -29,7 +34,7 @@ def select_wells_set(state: AppState) -> Tuple[str, ...]:
     return well_names_for_statistics
 
 
-def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) -> None:
+def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...], add_models: str) -> None:
     analytics_plots, config_stat = calculate_statistics_plots(
         statistics=state.statistics_test_only,
         field_name=state.was_config.field_name,
@@ -38,7 +43,8 @@ def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) 
         well_names=selected_wells_set,
         use_abs=True,
         exclude_wells=state.exclude_wells,
-        bin_size=10
+        bin_size=10,
+        add_models=add_models
     )
     available_plots = [plot_name for plot_name in analytics_plots if plot_name not in config_stat.ignore_plots]
     plots_mode = select_plots_subset()

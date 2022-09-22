@@ -18,7 +18,7 @@ def show(session: st.session_state) -> None:
     draw_export_state(state)
     draw_export_excel(state)
     draw_upload_oilfield_data()
-
+    external_stats(state)
 
 def draw_upload_state(state: AppState) -> None:
     st.subheader("Импорт готового состояния программы")
@@ -116,3 +116,12 @@ def add_oilfield(oilfield_name: str,
     if Path(path_to_save / 'welllist.feather').exists():
         oilfield_shops = pd.read_feather(Path(path_to_save / 'welllist.feather'))
         FIELDS_SHOPS[oilfield_name] = list(oilfield_shops.ceh.unique())
+
+def external_stats(state: AppState):
+    st.subheader("Загрузка готовых данных для статистики и Ансамбля")
+    uploaded_file = st.file_uploader('Принимаются данные в формате .xlsx',
+                                    accept_multiple_files=False,
+                                      type='xlsx')
+    state.statistics[uploaded_file.name.split('.')[0]] = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
+    state.statistics_test_only[uploaded_file.name.split('.')[0]] = pd.read_excel(uploaded_file, sheet_name=0, index_col=0)
+    state['statistics_another_models'] = uploaded_file.name.split('.')[0]

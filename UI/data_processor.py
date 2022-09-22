@@ -13,7 +13,6 @@ from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfra
 from frameworks_shelf_algo.class_Shelf.data_postprocessor_shelf import DataPostProcessorShelf
 from frameworks_shelf_algo.class_Shelf.calculator import CalculatorShelf
 
-
 def convert_params_to_readable(params_dict: Dict[str, Any]) -> Dict[str, Any]:
     """ Расшифровка названий параметров адаптации."""
     parsed_dict = params_dict.copy()
@@ -121,6 +120,8 @@ def prepare_data_for_ensemble(state: AppState,
                               wells_norm: list[str],
                               name_of_y_true: str,
                               mode: str = 'liq') -> dict[str: str, str: pd.DataFrame]:
+    if state.statistics_another_models:
+        state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
     input_data = []
     for well_name_normal in wells_norm:
         well_input = prepare_single_df_for_ensemble(state, well_name_normal, name_of_y_true, mode)
@@ -138,6 +139,8 @@ def prepare_single_df_for_ensemble(state: AppState,
         models.remove('ensemble')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
     input_df = pd.DataFrame(index=dates_test)
+    if state.statistics_another_models:
+        state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
     for model in models:
         well_calculated_by_model = f'{well_name_normal}_{mode}_pred' in state.statistics[model]
         if well_calculated_by_model:
