@@ -168,37 +168,32 @@ def draw_shelf_settings(session: st.session_state) -> None:
         #         Ключ = имя скважины в формате ГРАД, значение - имя скважины OIS.
         #     wellnames_key_ois : Dict[int, str]
         #         Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
+        if 'change_gtm_info' not in session:
+            session['change_gtm_info'] = 0
+        if session['changes'] == True:
+            session['change_gtm_info'] = 0
+        session['changes'] = False
         _path = _get_path(session.field_name)
-        welllist = pd.read_feather(_path / 'welllist.feather')
-        # config = ConfigPreprocessor(session.field_name, session.shops, session.date_start,
-        #                             session.date_test, session.date_end)
-        # preprocessor = run_preprocessor(config)
-        # wellnames_key_normal_ = {}
-        # wellnames_key_ois_ = {}
-        # print('preprocessor.well_names')
-        # print(preprocessor.well_names)
-        # for name_ois in preprocessor.well_names:
-        #     print(name_ois)
-        #     well_name_norm = welllist[welllist.ois == name_ois]
-        #     well_name_norm = well_name_norm[well_name_norm.npath == 0]
-        #     well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
-        #     wellnames_key_normal_[well_name_norm] = name_ois
-        #     wellnames_key_ois_[name_ois] = well_name_norm
-        wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
-        wells_work.set_index('dt', inplace=True)
-        wells_work = wells_work[wells_work.index > session.date_test]
-        wells_work = wells_work[wells_work["sost"] == 'В работе']
-        wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
-        all_wells_ois_ = wells_work["well.ois"]
-        wellnames_key_normal_ = {}
-        wellnames_key_ois_ = {}
-        for ois_well in all_wells_ois_.unique():
-            well_name_norm = welllist[welllist["ois"] == ois_well]
-            well_name_norm = well_name_norm[well_name_norm.npath == 0]
-            # well_name_norm = well_name_norm[well_name_norm.ceh in session.shops]
-            well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
-            wellnames_key_normal_[well_name_norm] = ois_well
-            wellnames_key_ois_[ois_well] = well_name_norm
+        if session['change_gtm_info'] == 0:
+            welllist = pd.read_feather(_path / 'welllist.feather')
+            wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
+            wells_work.set_index('dt', inplace=True)
+            wells_work = wells_work[wells_work.index > session.date_test]
+            wells_work = wells_work[wells_work["sost"] == 'В работе']
+            wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
+            all_wells_ois_ = wells_work["well.ois"]
+            wellnames_key_normal_ = {}
+            wellnames_key_ois_ = {}
+            for ois_well in all_wells_ois_.unique():
+                well_name_norm = welllist[welllist["ois"] == ois_well]
+                well_name_norm = well_name_norm[well_name_norm.npath == 0]
+                well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+                wellnames_key_normal_[well_name_norm] = ois_well
+                wellnames_key_ois_[ois_well] = well_name_norm
+        else:
+            wellnames_key_normal_ = session.state.wellnames_key_normal
+            wellnames_key_ois_ = session.state.wellnames_key_ois
+
         with st.form(key='shelf_params'):
             max_adapt_period = (session.date_end - session.date_test).days - 1
             # if max_adapt_period <= 25:
@@ -226,16 +221,12 @@ def draw_shelf_settings(session: st.session_state) -> None:
                                                           'write_to': session})
         st.write('-' * 100)
         st.write('**Последний замер и темпы падения**')
-        # print(session.selected_wells_norm)
-        # print("----")
-        # print(wellnames_key_ois_)
         if session.selected_wells_norm:
             if 'Все скважины' in session.selected_wells_norm:
                 wells_ois = list(wellnames_key_ois_.keys())
             else:
                 wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
             wells_sorted_ois = sorted(wells_ois)
-            # wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
             config_shelf = ConfigShelf(oilfield=session.field_name,
                                        shops=session.shops,
                                        wells_ois=wells_sorted_ois,
@@ -245,19 +236,16 @@ def draw_shelf_settings(session: st.session_state) -> None:
                                        predict_end=session.date_end,
                                        n_days_past=session.n_days_past,
                                        n_days_calc_avg=session.n_days_calc_avg)
-            if 'change_gtm_info' not in session:
-                session['change_gtm_info'] = 0
-            DataProcessorShelf(config_shelf)
-            session['change_gtm_info'] = session['change_gtm_info'] + 1
+            if 'change_gtm' not in session:
+                session['change_gtm'] = 0
+            if session['change_gtm_info'] == 0:
+                DataProcessorShelf(config_shelf)
+                session['change_gtm_info'] = session['change_gtm_info'] + 1
             if 'Все скважины' in session.selected_wells_norm:
                 wells_ois = list(session.shelf_json.keys())
                 del wells_ois[0]
-            # print(wells_ois)
-            # df_well = pd.DataFrame(sorted(wells_ois))
-            # df_well.to_excel("model_settings.xlsx")
             wells_sorted_ois = sorted(wells_ois)
             wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
-            # print(session.shelf_json)
             _well1 = st.selectbox(
                 label='Скважина',
                 options=wells_sorted_norm,

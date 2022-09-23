@@ -8,26 +8,28 @@ from frameworks_shelf_algo.class_Shelf.support_functions import get_date_range, 
 
 def show(session: st.session_state):
     # print("GTM show")
-    if 'change_gtm_info' not in st.session_state:
-        st.session_state['change_gtm_info'] = 0
-    _path = _get_path(session.field_name)
-    welllist = pd.read_feather(_path / 'welllist.feather')
-    #
-    wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
-    wells_work.set_index('dt', inplace=True)
-    wells_work = wells_work[wells_work.index > session.date_test]
-    wells_work = wells_work[wells_work["sost"] == 'В работе']
-    wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
-    all_wells_ois_ = wells_work["well.ois"]
-    #
-    wellnames_key_normal_ = {}
-    wellnames_key_ois_ = {}
-    for name_well in all_wells_ois_.unique():
-        well_name_norm = welllist[welllist["ois"] == name_well]
-        well_name_norm = well_name_norm[well_name_norm.npath == 0]
-        well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
-        wellnames_key_normal_[well_name_norm] = name_well
-        wellnames_key_ois_[name_well] = well_name_norm
+    if session['change_gtm'] == 0:
+        _path = _get_path(session.field_name)
+        welllist = pd.read_feather(_path / 'welllist.feather')
+        #
+        wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
+        wells_work.set_index('dt', inplace=True)
+        wells_work = wells_work[wells_work.index > session.date_test]
+        wells_work = wells_work[wells_work["sost"] == 'В работе']
+        wells_work = wells_work[wells_work["charwork.name"] == 'Нефтяные']
+        all_wells_ois_ = wells_work["well.ois"]
+        #
+        wellnames_key_normal_ = {}
+        wellnames_key_ois_ = {}
+        for name_well in all_wells_ois_.unique():
+            well_name_norm = welllist[welllist["ois"] == name_well]
+            well_name_norm = well_name_norm[well_name_norm.npath == 0]
+            well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+            wellnames_key_normal_[well_name_norm] = name_well
+            wellnames_key_ois_[name_well] = well_name_norm
+    else:
+        wellnames_key_normal_ = session.state.wellnames_key_normal
+        wellnames_key_ois_ = session.state.wellnames_key_ois
     if 'Все скважины' in session.selected_wells_norm:
         wells_ois = list(session.shelf_json.keys())
         del wells_ois[0]

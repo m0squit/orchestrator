@@ -221,7 +221,7 @@ def select_models() -> Dict[str, bool]:
     return selected_models
 
 
-def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
+def select_oilfield(session: st.session_state, fields_shops: Dict[str, List[str]]) -> str:
     """Виджет выбора месторождения для расчета.
 
     Parameters
@@ -235,10 +235,11 @@ def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
         options=fields_shops.keys(),
         key='field_name',
     )
+    session['changes'] = True
     return oilfield_name
 
 
-def select_shops(oilfield_name: str) -> List[str]:
+def select_shops(session: st.session_state, oilfield_name: str) -> List[str]:
     """Виджет выбора списка цехов для выбранного месторождения.
 
     Parameters
@@ -253,10 +254,11 @@ def select_shops(oilfield_name: str) -> List[str]:
     )
     if 'Все' in selected_shops:
         selected_shops = FIELDS_SHOPS[oilfield_name]
+    session['changes'] = True
     return selected_shops
 
 
-def select_dates(date_min: date,
+def select_dates(session: st.session_state, date_min: date,
                  date_max: date) -> Tuple[date, date, date]:
     """Виджет выбора дат адаптации и прогноза.
     """
@@ -285,6 +287,7 @@ def select_dates(date_min: date,
         max_value=date_max,
         key='date_end',
     )
+    session['changes'] = True
     return date_start_, date_test_, date_end_
 
 
@@ -589,14 +592,16 @@ def run_ensemble(_session: st.session_state,
 @logger.catch
 def main():
     session = start_streamlit()
+    if 'changes' not in session:
+        session['changes'] = False
     # Реализация UI: сайдбар
     with st.sidebar:
         selected_page = select_page(PAGES)
         models_to_run = select_models()
         try:
-            field_name = select_oilfield(FIELDS_SHOPS)
-            shops = select_shops(field_name)
-            date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
+            field_name = select_oilfield(st.session_state, FIELDS_SHOPS)
+            shops = select_shops(st.session_state, field_name)
+            date_start, date_test, date_end = select_dates(st.session_state, date_min=DATE_MIN, date_max=DATE_MAX)
 
             config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
             preprocessor = run_preprocessor(config)
