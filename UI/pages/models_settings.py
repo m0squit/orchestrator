@@ -195,7 +195,7 @@ def draw_shelf_settings(session: st.session_state) -> None:
             wellnames_key_ois_ = session.state.wellnames_key_ois
 
         with st.form(key='shelf_params'):
-            max_adapt_period = (session.date_end - session.date_test).days - 1
+            max_adapt_period = (session.date_test - session.date_start).days - 1
             # if max_adapt_period <= 25:
             #     max_adapt_period = 30
             st.number_input(
@@ -264,7 +264,7 @@ def draw_shelf_settings(session: st.session_state) -> None:
 def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
-            max_adapt_period = (session.date_end - session.date_test).days - 1
+            max_adapt_period = (session.date_test - session.date_start).days - 1
             if max_adapt_period <= 25:
                 max_adapt_period = 30
             st.number_input(
