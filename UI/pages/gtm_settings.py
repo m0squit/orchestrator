@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 from io import BytesIO
-from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME
+from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME, PLANNED_MLSP_STOPS, \
+    DEBIT_INCREASE, DEBIT_INCREASE_LIQ, N_DAYS_DEBIT_RECOVERY, DATE_START_MLSP
 import datetime as dt
 from frameworks_shelf_algo.class_Shelf.support_functions import get_date_range, _get_path
 
@@ -94,7 +95,71 @@ def show(session: st.session_state):
                 st.number_input(param, value=val, key=param + 'add')
             st.form_submit_button('Применить', on_click=change_gtm_info, kwargs={'command': 'add'})
 
+    #     MLSP stop
+    if session.field_name == 'Шельф':
+        def del_mlsp_stop_data_of_well(_mlsp_date):
+            del st.session_state.shelf_json[PLANNED_MLSP_STOPS][_mlsp_date][_well]
 
+        def edit_mlsp_stop_data_of_well(_mlsp_date):
+            st.session_state.shelf_json[PLANNED_MLSP_STOPS][_mlsp_date][_well] = {
+                DEBIT_INCREASE: st.session_state[DEBIT_INCREASE],
+                DEBIT_INCREASE_LIQ: st.session_state[DEBIT_INCREASE_LIQ],
+                N_DAYS_DEBIT_RECOVERY: st.session_state[N_DAYS_DEBIT_RECOVERY]
+            }
+
+        def edit_mlsp_stop():
+            date_stop = st.session_state['date_stop_mlsp']
+            date_start = st.session_state['date_start_mlsp']
+            if date_stop not in st.session_state.shelf_json[PLANNED_MLSP_STOPS]:
+                st.session_state.shelf_json[PLANNED_MLSP_STOPS][date_stop] = dict()
+            st.session_state.shelf_json[PLANNED_MLSP_STOPS][date_stop][DATE_START_MLSP] = date_start
+
+        def del_mlsp_stop(mlsp_stop_date):
+            del st.session_state.shelf_json[PLANNED_MLSP_STOPS][mlsp_stop_date]
+
+        mlsp_date = st.selectbox('Даты планируемых остановов МЛСП',
+                                 st.session_state.shelf_json[PLANNED_MLSP_STOPS].keys())
+        col1, col2 = st.columns(2)
+        with col1:
+            if 'b_add_mlsp_stop' in st.session_state and st.session_state['b_add_mlsp_stop'] is True:
+                with st.form('edit_mlsp_stop'):
+                    st.date_input('Дата останова', key='date_stop_mlsp')
+                    st.date_input('Дата запуска', key='date_start_mlsp')
+                    st.form_submit_button('Добавить/изменить', on_click=edit_mlsp_stop)
+            else:
+                st.button('Добавить/изменить', key='b_add_mlsp_stop')
+        if mlsp_date is not None:
+            col2.button('Удалить', on_click=del_mlsp_stop, args=[mlsp_date], key='del_mlsp_stop')
+        st.write('-' * 100)
+        st.write('**Данные выбранной скважины по данному останову МЛСП**')
+        well_data_placeholder = st.empty()
+        col1, col2 = st.columns(2)
+        if mlsp_date is None:
+            well_data_placeholder.write('Не задано ни одного останова')
+        else:
+            if _well not in st.session_state.shelf_json[PLANNED_MLSP_STOPS][mlsp_date]:
+                well_data_placeholder.write('После данного останова прирост добычи по выбранной скважине равен нулю')
+                default_debit_val = 10.0
+                default_debit_val_liq = 10.0
+                default_n_days_val = 10
+            else:
+                mlsp_stop_data_of_well = st.session_state.shelf_json[PLANNED_MLSP_STOPS][mlsp_date][_well]
+                default_debit_val = mlsp_stop_data_of_well[DEBIT_INCREASE]
+                default_debit_val_liq = mlsp_stop_data_of_well[DEBIT_INCREASE_LIQ]
+                default_n_days_val = mlsp_stop_data_of_well[N_DAYS_DEBIT_RECOVERY]
+                well_data_placeholder.write(mlsp_stop_data_of_well)
+                col2.button('Удалить', on_click=del_mlsp_stop_data_of_well, args=[mlsp_date], key='del_data_of_well')
+            with col1.empty():
+                if 'b_edit_mlsp_of_well' not in st.session_state or st.session_state['b_edit_mlsp_of_well'] is False:
+                    st.button('Править', key='b_edit_mlsp_of_well')
+                else:
+                    with st.form('form_edit_mlsp_stop_data_of_well'):
+                        st.number_input(DEBIT_INCREASE, value=default_debit_val, key=DEBIT_INCREASE)
+                        st.number_input(DEBIT_INCREASE_LIQ, value=default_debit_val_liq, key=DEBIT_INCREASE_LIQ)
+                        st.number_input(N_DAYS_DEBIT_RECOVERY, value=default_n_days_val, key=N_DAYS_DEBIT_RECOVERY)
+                        st.form_submit_button('Применить', on_click=edit_mlsp_stop_data_of_well, args=[mlsp_date])
+
+    # Добавить останов МЛСП!
     def draw_final_table():
         st.write('-' * 100)
         st.write('**Сводная таблица по ГТМ**')
