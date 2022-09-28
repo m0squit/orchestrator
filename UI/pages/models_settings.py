@@ -170,11 +170,14 @@ def draw_shelf_settings(session: st.session_state) -> None:
         #         Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
         if 'change_gtm_info' not in session:
             session['change_gtm_info'] = 0
-        if session['changes'] == True:
-            session['change_gtm_info'] = 0
+        if 'change_gtm' not in session:
+            session['change_gtm'] = 0
+        # if session['changes'] == True:
+        #     session['change_gtm_info'] = 0
         session['changes'] = False
         _path = _get_path(session.field_name)
-        if session['change_gtm_info'] == 0:
+        # if session['change_gtm_info'] == 0:
+        if session['change_gtm'] == 0:
             welllist = pd.read_feather(_path / 'welllist.feather')
             wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
             wells_work.set_index('dt', inplace=True)
@@ -236,8 +239,8 @@ def draw_shelf_settings(session: st.session_state) -> None:
                                        predict_end=session.date_end,
                                        n_days_past=session.n_days_past,
                                        n_days_calc_avg=session.n_days_calc_avg)
-            if 'change_gtm' not in session:
-                session['change_gtm'] = 0
+            # if 'change_gtm' not in session:
+            #     session['change_gtm'] = 0
             if session['change_gtm_info'] == 0:
                 DataProcessorShelf(config_shelf)
                 session['change_gtm_info'] = session['change_gtm_info'] + 1
@@ -423,6 +426,8 @@ def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_en
         st.session_state.shelf_json[_well][DEC_RATES][st.session_state['new_date']] = st.session_state['new_val']
         st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['new_date']] = st.session_state['new_val_liq']
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
+        # print("edit TP")
+        # print(_well)
 
     def del_dec_rate():
         del st.session_state.shelf_json[_well][DEC_RATES][st.session_state['date_to_delete']]

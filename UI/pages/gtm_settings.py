@@ -214,6 +214,21 @@ def show(session: st.session_state):
                             all_gtms.loc[_date2, _well1] = name
                     elif name == 'Перевод в нагнетательный фонд':
                         all_gtms.loc[_date1, _well1] = name
+                    # name = st.session_state.shelf_json[PLANNED_MLSP_STOPS]
+
+                    # elif name == 'MLSP_STOP':
+                    #     print(name, _date1)
+                    #     first_day_vnr = st.session_state['Первый день периода выхода на режим после останова МЛСП']
+                    #     last_day_vnr = st.session_state['Последний день периода выхода на режим после останова МЛСП']
+                    #     n_days_vnr = st.session_state.shelf_json[_well][GTMS][_date1][N_DAYS_DEBIT_RECOVERY]
+                    #     print(first_day_vnr, last_day_vnr)
+                    #     print(n_days_vnr)
+                    #     dates = get_date_range(_date1, first_day_vnr - dt.timedelta(1))
+                    #     for _date2 in dates:
+                    #         all_gtms.loc[_date2, _well1] = 'Останов МЛСП'
+                    #     dates = get_date_range(first_day_vnr, last_day_vnr)
+                    #     for _date2 in dates:
+                    #         all_gtms.loc[_date2, _well1] = name_vnr
 
         all_gtms = all_gtms.fillna('В работе')
 
@@ -230,11 +245,13 @@ def show(session: st.session_state):
                 color = 'yellow'
             elif val == 'Перевод в нагнетательный фонд':
                 color = 'tomato1'
+            elif val == 'Останов МЛСП':
+                color = 'blanchedalmond'
             else:
                 color = 'white'
             return 'background-color: %s' % color
 
-        # st.dataframe(all_gtms.style.applymap(color_gtm))
+        st.dataframe(all_gtms.style.applymap(color_gtm))
 
         def to_excel(df):
             output = BytesIO()
