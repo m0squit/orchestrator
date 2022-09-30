@@ -84,7 +84,7 @@ def draw_export_excel(state: AppState) -> None:
                     df_adapt_params.to_excel(writer, sheet_name='Параметры адаптации пьезо')
         st.download_button(label="Экспорт .xlsx",
                            data=state.buffer,
-                           file_name=f'Все результаты {state.was_config.field_name}.xlsx',
+                           file_name=f'Все результаты {state.was_config.field_name} {state.was_date_test}_{state.was_date_end}.xlsx',
                            mime='text/csv', )
     else:
         st.info("Кнопка станет доступна, как только будет рассчитана хотя бы одна скважина.")
