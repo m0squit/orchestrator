@@ -374,6 +374,10 @@ def run_models(_session: st.session_state,
         if calculator_CRM is not None:
             run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       calculator_CRM.f, _session.state)
+        else:
+            coeff_f_fake = pd.DataFrame(columns = wells_norm)
+            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
+                      coeff_f_fake, _session.state)
     if _models_to_run['shelf']:
         run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                   date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
