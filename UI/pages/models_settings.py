@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import json
+import numpy
 from copy import deepcopy
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 from frameworks_shelf_algo.class_Shelf.config import ConfigShelf
@@ -172,9 +174,12 @@ def draw_shelf_settings(session: st.session_state) -> None:
             session['change_gtm_info'] = 0
         if 'change_gtm' not in session:
             session['change_gtm'] = 0
+        if 'change_tp' not in session:
+            session['change_tp'] = 0
         # if session['changes'] == True:
         #     session['change_gtm_info'] = 0
         session['changes'] = False
+        file = st.file_uploader('Загрузить данные', type='json')
         _path = _get_path(session.field_name)
         # if session['change_gtm_info'] == 0:
         if session['change_gtm'] == 0:
@@ -196,59 +201,99 @@ def draw_shelf_settings(session: st.session_state) -> None:
         else:
             wellnames_key_normal_ = session.state.wellnames_key_normal
             wellnames_key_ois_ = session.state.wellnames_key_ois
-
-        with st.form(key='shelf_params'):
-            max_adapt_period = (session.date_test - session.date_start).days - 1
-            # if max_adapt_period <= 25:
-            #     max_adapt_period = 30
-            st.number_input(
-                label='Количество дней для расчета темпа падения',
-                min_value=2,
-                value=session.n_days_past,
-                max_value=max_adapt_period,
-                step=1,
-                key='n_days_past_'
-            )
-            max_avg = int(session.n_days_past / 2)
-            st.number_input(
-                label='Количество дней для осреднения',
-                min_value=1,
-                value=session.n_days_calc_avg,
-                max_value=max_avg,
-                step=1,
-                key='n_days_calc_avg_'
-            )
-            submit_params = st.form_submit_button('Применить',
-                                                  on_click=update_shelf_params,
-                                                  kwargs={'write_from': session,
-                                                          'write_to': session})
+        if file is not None:
+            data = json.load(file)
+            transform_str_dates_to_datetime_or_vice_versa(data, dates_to_datetime=True)
+            new_keys = []
+            for w in data.keys():
+                if w != 'MLSP_STOP':
+                    new_keys.append(numpy.int64(w))
+                else:
+                    new_keys.append(w)
+            data = dict(zip(new_keys, list(data.values())))
+            session.shelf_json = data
+            session['change_gtm_info'] = session['change_gtm_info'] + 1
+        else:
+            with st.form(key='shelf_params'):
+                max_adapt_period = (session.date_test - session.date_start).days - 1
+                # if max_adapt_period <= 25:
+                #     max_adapt_period = 30
+                st.number_input(
+                    label='Количество дней для расчета темпа падения',
+                    min_value=2,
+                    value=session.n_days_past,
+                    max_value=max_adapt_period,
+                    step=1,
+                    key='n_days_past_'
+                )
+                max_avg = int(session.n_days_past / 2)
+                st.number_input(
+                    label='Количество дней для осреднения',
+                    min_value=1,
+                    value=session.n_days_calc_avg,
+                    max_value=max_avg,
+                    step=1,
+                    key='n_days_calc_avg_'
+                )
+                submit_params = st.form_submit_button('Применить',
+                                                      on_click=update_shelf_params,
+                                                      kwargs={'write_from': session,
+                                                              'write_to': session})
+            if session.selected_wells_norm:
+                if 'Все скважины' in session.selected_wells_norm:
+                    wells_ois = list(wellnames_key_ois_.keys())
+                else:
+                    wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
+                wells_sorted_ois = sorted(wells_ois)
+                config_shelf = ConfigShelf(oilfield=session.field_name,
+                                           shops=session.shops,
+                                           wells_ois=wells_sorted_ois,
+                                           train_start=session.date_start,
+                                           train_end=session.date_test,
+                                           predict_start=session.date_test,
+                                           predict_end=session.date_end,
+                                           n_days_past=session.n_days_past,
+                                           n_days_calc_avg=session.n_days_calc_avg)
+                # if 'change_gtm' not in session:
+                #     session['change_gtm'] = 0
+                # if session['change_gtm_info'] == 0:
+                DataProcessorShelf(config_shelf)
+                session['change_gtm_info'] = session['change_gtm_info'] + 1
         st.write('-' * 100)
         st.write('**Последний замер и темпы падения**')
         if session.selected_wells_norm:
-            if 'Все скважины' in session.selected_wells_norm:
-                wells_ois = list(wellnames_key_ois_.keys())
-            else:
-                wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
-            wells_sorted_ois = sorted(wells_ois)
-            config_shelf = ConfigShelf(oilfield=session.field_name,
-                                       shops=session.shops,
-                                       wells_ois=wells_sorted_ois,
-                                       train_start=session.date_start,
-                                       train_end=session.date_test,
-                                       predict_start=session.date_test,
-                                       predict_end=session.date_end,
-                                       n_days_past=session.n_days_past,
-                                       n_days_calc_avg=session.n_days_calc_avg)
-            # if 'change_gtm' not in session:
-            #     session['change_gtm'] = 0
-            if session['change_gtm_info'] == 0:
-                DataProcessorShelf(config_shelf)
-                session['change_gtm_info'] = session['change_gtm_info'] + 1
+            # if 'Все скважины' in session.selected_wells_norm:
+            #     wells_ois = list(wellnames_key_ois_.keys())
+            # else:
+            #     wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
+            # wells_sorted_ois = sorted(wells_ois)
+            # config_shelf = ConfigShelf(oilfield=session.field_name,
+            #                            shops=session.shops,
+            #                            wells_ois=wells_sorted_ois,
+            #                            train_start=session.date_start,
+            #                            train_end=session.date_test,
+            #                            predict_start=session.date_test,
+            #                            predict_end=session.date_end,
+            #                            n_days_past=session.n_days_past,
+            #                            n_days_calc_avg=session.n_days_calc_avg)
+            # # if 'change_gtm' not in session:
+            # #     session['change_gtm'] = 0
+            # # if session['change_gtm_info'] == 0:
+            # DataProcessorShelf(config_shelf)
+            # session['change_gtm_info'] = session['change_gtm_info'] + 1
             if 'Все скважины' in session.selected_wells_norm:
                 wells_ois = list(session.shelf_json.keys())
                 del wells_ois[0]
             wells_sorted_ois = sorted(wells_ois)
-            wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+            # for w in wells_sorted_ois:
+            #     print(w, type(w))
+            # print("==========")
+            # print(wellnames_key_ois_)
+            # for wo in wellnames_key_ois_.keys():
+            #     print(wo, type(wo))
+
+            wells_sorted_norm = [wellnames_key_ois_[int(w)] for w in wells_sorted_ois]
+            # wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
             _well1 = st.selectbox(
                 label='Скважина',
                 options=wells_sorted_norm,
@@ -260,6 +305,16 @@ def draw_shelf_settings(session: st.session_state) -> None:
             st.write('-' * 100)
             _date_end = session['date_end']
             draw_decline_rates_settings(_well, _date_start, _date_end)
+            data_out = deepcopy(session.shelf_json)
+            new_keys = []
+            for w in data_out.keys():
+                if w != 'MLSP_STOP':
+                    new_keys.append(int(w))
+                else:
+                    new_keys.append(w)
+            data_out = dict(zip(new_keys, list(data_out.values())))
+            transform_str_dates_to_datetime_or_vice_versa(data_out, dates_to_datetime=False)
+            st.download_button('Выгрузить данные', json.dumps(data_out, ensure_ascii=False), 'data_output.json')
         else:
             st.write("Необходимо выбрать скважину")
 
@@ -373,6 +428,8 @@ def update_shelf_params(write_from: st.session_state,
                         write_to: st.session_state) -> None:
     write_to['n_days_past'] = int(write_from['n_days_past_'])
     write_to['n_days_calc_avg'] = int(write_from['n_days_calc_avg_'])
+    # st.session_state['change_tp'] = 0
+    st.session_state['change_gtm_info'] = 0
 
 
 def update_ensemble_params(write_from: st.session_state,
