@@ -251,7 +251,7 @@ def show(session: st.session_state):
                 color = 'white'
             return 'background-color: %s' % color
 
-        st.dataframe(all_gtms.style.applymap(color_gtm))
+        # st.dataframe(all_gtms.style.applymap(color_gtm))
 
         def to_excel(df):
             output = BytesIO()
