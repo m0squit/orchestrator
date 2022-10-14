@@ -176,7 +176,7 @@ def calculate_ensemble(input_data: list[dict],
         input_data,
         logging=True
     )
-    return calculator_ensemble.result_test
+    return calculator_ensemble.result_test, calculator_ensemble.weights
 
 
 @st.experimental_memo

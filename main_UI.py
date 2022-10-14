@@ -178,6 +178,7 @@ def save_current_state(
     state['coeff_f'] = pd.DataFrame()
     state['CRM_influence_R'] = _session.CRM_influence_R
     state['wells_coords_CRM'] = pd.DataFrame()
+    state['models_weights'] = {}
     return state
 
 
@@ -579,7 +580,7 @@ def run_ensemble(_session: st.session_state,
     """
     name_of_y_true = 'true'
     input_data = prepare_data_for_ensemble(_session.state, wells_norm, name_of_y_true, mode)
-    ensemble_result = calculate_ensemble(
+    ensemble_result, ensemble_weights = calculate_ensemble(
         input_data,
         adaptation_days_number=_session.ensemble_adapt_period,
         interval_probability=_session.interval_probability,
@@ -588,6 +589,7 @@ def run_ensemble(_session: st.session_state,
         chains=_session.chains,
         target_accept=_session.target_accept,
         name_of_y_true=name_of_y_true)
+    _session.state.models_weights[mode] = ensemble_weights
     for well_name_normal in ensemble_result.keys():
         extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
 

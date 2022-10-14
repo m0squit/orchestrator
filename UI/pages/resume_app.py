@@ -82,6 +82,10 @@ def draw_export_excel(state: AppState) -> None:
                 if state.adapt_params:
                     df_adapt_params = pd.DataFrame(state.adapt_params)
                     df_adapt_params.to_excel(writer, sheet_name='Параметры адаптации пьезо')
+                if state.models_weights:
+                    for mode in state.models_weights.keys():
+                        pd.DataFrame.from_dict(state.models_weights[mode]).to_excel(writer, sheet_name=f'Веса моделей {mode}')
+
         st.download_button(label="Экспорт .xlsx",
                            data=state.buffer,
                            file_name=f'Все результаты {state.was_config.field_name} {state.was_date_test}_{state.was_date_end}.xlsx',
