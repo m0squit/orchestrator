@@ -36,6 +36,7 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
     selected_plot = st.selectbox(label='', options=['Карта скважин', 'TreeMap'])
     if selected_plot == 'Карта скважин':
         mode_well = select_well(state.coeff_f.columns)
+        state.coeff_f = state.coeff_f / state.coeff_f.sum()
         coords_df, f_dict = crm_map(state.coeff_f, state.wells_coords_CRM)
         df_f_coeff = plot_influence_table(state.coeff_f, mode_well)
         return crm_plot(coords_df, f_dict, mode_well, state.CRM_influence_R), selected_plot, df_f_coeff
@@ -260,6 +261,7 @@ def crm_plot(coords_df: pd.DataFrame, f_dict: dict, mode:str, influence_R:int) -
     return fig
 
 def plot_influence_table(df_table: pd.DataFrame, mode: str) -> go.Figure:
+    # TODO: выводить таблицу целиком
     # if mode == "":
     #     return None
     # elif mode == "Все скважины":

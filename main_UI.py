@@ -1,12 +1,13 @@
 from datetime import date, timedelta
 from typing import Optional, Union
 
+import pandas as pd
 import streamlit as st
 from loguru import logger
 
 import UI.pages
 from UI.cached_funcs import calculate_ftor, calculate_wolfram, calculate_ensemble, run_preprocessor,\
-    calculate_fedot, calculate_CRM,  calculate_shelf
+    calculate_shelf, calculate_fedot, calculate_CRM
 from UI.config import FIELDS_SHOPS, DATE_MIN, DATE_MAX, DEFAULT_FTOR_BOUNDS
 from UI.data_processor import *
 from frameworks_crm.class_CRM.calculator import Calculator as CalculatorCRM
@@ -177,6 +178,7 @@ def save_current_state(
     state['coeff_f'] = pd.DataFrame()
     state['CRM_influence_R'] = _session.CRM_influence_R
     state['wells_coords_CRM'] = pd.DataFrame()
+    state['models_weights'] = {}
     return state
 
 
@@ -221,7 +223,7 @@ def select_models() -> Dict[str, bool]:
     return selected_models
 
 
-def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
+def select_oilfield(session: st.session_state, fields_shops: Dict[str, List[str]]) -> str:
     """Виджет выбора месторождения для расчета.
 
     Parameters
@@ -235,10 +237,11 @@ def select_oilfield(fields_shops: Dict[str, List[str]]) -> str:
         options=fields_shops.keys(),
         key='field_name',
     )
+    session['changes'] = True
     return oilfield_name
 
 
-def select_shops(oilfield_name: str) -> List[str]:
+def select_shops(session: st.session_state, oilfield_name: str) -> List[str]:
     """Виджет выбора списка цехов для выбранного месторождения.
 
     Parameters
@@ -253,17 +256,18 @@ def select_shops(oilfield_name: str) -> List[str]:
     )
     if 'Все' in selected_shops:
         selected_shops = FIELDS_SHOPS[oilfield_name]
+    session['changes'] = True
     return selected_shops
 
 
-def select_dates(date_min: date,
+def select_dates(session: st.session_state, date_min: date,
                  date_max: date) -> Tuple[date, date, date]:
     """Виджет выбора дат адаптации и прогноза.
     """
     date_start_ = st.date_input(
         label='Дата начала адаптации (с 00:00)',
         min_value=date_min,
-        value=date(2021, 3, 1),
+        value=date(2019, 1, 1),
         max_value=date_max,
         key='date_start',
         help="""
@@ -274,17 +278,18 @@ def select_dates(date_min: date,
     date_test_ = st.date_input(
         label='Дата начала прогноза (с 00:00)',
         min_value=date_min,
-        value=date(2021, 12, 2),
+        value=date(2022, 1, 1),
         max_value=date_max,
         key='date_test',
     )
     date_end_ = st.date_input(
         label='Дата конца прогноза (по 23:59)',
         min_value=date_min,
-        value=date(2022, 4, 30),
+        value=date(2022, 2, 28),
         max_value=date_max,
         key='date_end',
     )
+    session['changes'] = True
     return date_start_, date_test_, date_end_
 
 
@@ -370,6 +375,10 @@ def run_models(_session: st.session_state,
         if calculator_CRM is not None:
             run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       calculator_CRM.f, _session.state)
+        else:
+            coeff_f_fake = pd.DataFrame(columns = wells_norm)
+            run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
+                      coeff_f_fake, _session.state)
     if _models_to_run['shelf']:
         run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                   date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
@@ -552,7 +561,7 @@ def run_shelf(oilfield: str,
                                        n_days_calc_avg,
                                        st.session_state['change_gtm_info'])
     print('run shelf done')
-    extract_data_shelf(calculator_shelf,state,st.session_state['change_gtm_info'])
+    extract_data_shelf(calculator_shelf,state) #,st.session_state['change_gtm_info'])
 
 def run_ensemble(_session: st.session_state,
                  wells_norm: list[str],
@@ -571,7 +580,7 @@ def run_ensemble(_session: st.session_state,
     """
     name_of_y_true = 'true'
     input_data = prepare_data_for_ensemble(_session.state, wells_norm, name_of_y_true, mode)
-    ensemble_result = calculate_ensemble(
+    ensemble_result, ensemble_weights = calculate_ensemble(
         input_data,
         adaptation_days_number=_session.ensemble_adapt_period,
         interval_probability=_session.interval_probability,
@@ -580,6 +589,7 @@ def run_ensemble(_session: st.session_state,
         chains=_session.chains,
         target_accept=_session.target_accept,
         name_of_y_true=name_of_y_true)
+    _session.state.models_weights[mode] = ensemble_weights
     for well_name_normal in ensemble_result.keys():
         extract_data_ensemble(ensemble_result[well_name_normal], _session.state, well_name_normal, mode)
 
@@ -587,14 +597,16 @@ def run_ensemble(_session: st.session_state,
 @logger.catch
 def main():
     session = start_streamlit()
+    if 'changes' not in session:
+        session['changes'] = False
     # Реализация UI: сайдбар
     with st.sidebar:
         selected_page = select_page(PAGES)
         models_to_run = select_models()
         try:
-            field_name = select_oilfield(FIELDS_SHOPS)
-            shops = select_shops(field_name)
-            date_start, date_test, date_end = select_dates(date_min=DATE_MIN, date_max=DATE_MAX)
+            field_name = select_oilfield(st.session_state, FIELDS_SHOPS)
+            shops = select_shops(st.session_state, field_name)
+            date_start, date_test, date_end = select_dates(st.session_state, date_min=DATE_MIN, date_max=DATE_MAX)
 
             config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
             preprocessor = run_preprocessor(config)
@@ -644,7 +656,7 @@ def main():
 PAGES = {
     "Настройки моделей": UI.pages.models_settings,
     "Планируемые мероприятия": UI.pages.gtm_settings,
-    "Последний замер и темпы падения": UI.pages.tp_settings,
+    # "Последний замер и темпы падения": UI.pages.tp_settings,
     "Карта скважин": UI.pages.wells_map,
     "Аналитика": UI.pages.analytics,
     "Скважина": UI.pages.specific_well,

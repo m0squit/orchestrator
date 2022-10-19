@@ -7,7 +7,6 @@ import pathlib
 from frameworks_hybrid_crm_ml.class_Fedot.calculator import CalculatorFedot
 from UI.app_state import AppState
 from UI.config import FTOR_DECODE
-# from frameworks_crm.class_Fedot.fedot_model import FedotModel
 from frameworks_ftor.ftor.calculator import Calculator as CalculatorFtor
 from frameworks_ftor.ftor.well import Well as WellFtor
 from frameworks_wolfram.wolfram.calculator import Calculator as CalculatorWolfram
@@ -94,7 +93,7 @@ def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> 
 def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
     state.statistics['fedot'] = fedot_entity.statistic_all
 
-def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState, _change_gtm_info: int) -> None:
+def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None: #, _change_gtm_info: int
     dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
     state.statistics['shelf'] = pd.DataFrame(index=dates)
     for well_shelf in _calculator_shelf.wells_list:
@@ -122,6 +121,8 @@ def prepare_data_for_ensemble(state: AppState,
                               wells_norm: list[str],
                               name_of_y_true: str,
                               mode: str = 'liq') -> dict[str: str, str: pd.DataFrame]:
+    if state.statistics_another_models:
+        state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
     input_data = []
     for well_name_normal in wells_norm:
         well_input = prepare_single_df_for_ensemble(state, well_name_normal, name_of_y_true, mode)
@@ -139,6 +140,8 @@ def prepare_single_df_for_ensemble(state: AppState,
         models.remove('ensemble')
     dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
     input_df = pd.DataFrame(index=dates_test)
+    if state.statistics_another_models:
+        state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
     for model in models:
         well_calculated_by_model = f'{well_name_normal}_{mode}_pred' in state.statistics[model]
         if well_calculated_by_model:
