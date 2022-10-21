@@ -387,6 +387,7 @@ def run_models(_session: st.session_state,
     if _models_to_run['ensemble'] and at_least_one_model:
         run_ensemble(_session, wells_norm, mode='liq')
         run_ensemble(_session, wells_norm, mode='oil')
+        run_ensemble(_session, wells_norm, mode='gaz')
 
 
 def run_ftor(_preprocessor: Preprocessor,
