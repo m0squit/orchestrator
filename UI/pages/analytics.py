@@ -51,8 +51,8 @@ def draw_statistics_plots(state: AppState, selected_wells_set: Tuple[str, ...]) 
 
 
 def select_plots_subset() -> str:
-    MODES = {'Жидкость': 'жидк', 'Нефть': 'нефт'}
-    mode = st.selectbox(label='Жидкость/нефть',
+    MODES = {'Жидкость': 'жидк', 'Нефть': 'нефт', 'Газ': 'газ'}
+    mode = st.selectbox(label='Жидкость/нефть/газ',
                         options=MODES)
     return MODES[mode]
 

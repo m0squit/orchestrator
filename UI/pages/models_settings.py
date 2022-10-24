@@ -7,14 +7,14 @@ from copy import deepcopy
 from UI.config import ML_FULL_ABBR, YES_NO, DEFAULT_FTOR_BOUNDS
 from frameworks_shelf_algo.class_Shelf.config import ConfigShelf
 from frameworks_shelf_algo.class_Shelf.support_functions import _get_path, \
-    transform_str_dates_to_datetime_or_vice_versa, get_s_decline_rates, get_s_decline_rates_liq
+    transform_str_dates_to_datetime_or_vice_versa, get_s_decline_rates, get_s_decline_rates_liq, get_s_decline_rates_gas
 from frameworks_shelf_algo.class_Shelf.data_processor_shelf import DataProcessorShelf
 from tools_preprocessor.config import Config as ConfigPreprocessor
 from tools_preprocessor.preprocessor import Preprocessor
 from UI.cached_funcs import run_preprocessor #, parse_well_names
 # from UI.pages.tp_settings import draw_last_measurement_settings, draw_decline_rates_settings
 from frameworks_shelf_algo.class_Shelf.constants import LAST_MEASUREMENT, DATE, \
-    VALUE, VALUE_LIQ, DEC_RATES, DEC_RATES_LIQ
+    VALUE, VALUE_LIQ, VALUE_GAS, DEC_RATES, DEC_RATES_LIQ, DEC_RATES_GAS
 
 
 def show(session: st.session_state) -> None:
@@ -448,6 +448,7 @@ def draw_last_measurement_settings(_well: str, _date_start: datetime.date):
         st.session_state.shelf_json[_well][LAST_MEASUREMENT][DATE] = st.session_state['changed_date']
         st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE] = st.session_state['changed_val']
         st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE_LIQ] = st.session_state['changed_val_liq']
+        st.session_state.shelf_json[_well][LAST_MEASUREMENT][VALUE_GAS] = st.session_state['changed_val_gas']
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
 
     def del_last_measurement():
@@ -461,9 +462,11 @@ def draw_last_measurement_settings(_well: str, _date_start: datetime.date):
         date = last_measurement_data[DATE]
         val = last_measurement_data[VALUE]
         val_liq = last_measurement_data[VALUE_LIQ]
+        val_gas = last_measurement_data[VALUE_GAS]
         st.write(f"Дата: {date}")
         st.write(f"Значение нефти: {val}")
         st.write(f"Значение жидкости: {val_liq}")
+        st.write(f"Значение газа: {val_gas}")
     else:
         st.write('Данные отсутствуют')
         date, val, val_liq = _date_start, 0, 0
@@ -473,6 +476,7 @@ def draw_last_measurement_settings(_well: str, _date_start: datetime.date):
                 st.date_input('Дата', value=date, key='changed_date')
                 st.number_input('Значение нефти', value=val, key='changed_val')
                 st.number_input('Значение жидкости', value=val_liq, key='changed_val_liq')
+                st.number_input('Значение газа', value=val_gas, key='changed_val_gas')
                 st.form_submit_button('Применить', on_click=edit_last_measurement)
         else:
             st.button('Добавить/изменить', key='b_edit_last_measurement')
@@ -483,6 +487,7 @@ def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_en
     def edit_dec_rate():
         st.session_state.shelf_json[_well][DEC_RATES][st.session_state['new_date']] = st.session_state['new_val']
         st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['new_date']] = st.session_state['new_val_liq']
+        st.session_state.shelf_json[_well][DEC_RATES_GAS][st.session_state['new_date']] = st.session_state['new_val_gas']
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
         # print("edit TP")
         # print(_well)
@@ -490,6 +495,7 @@ def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_en
     def del_dec_rate():
         del st.session_state.shelf_json[_well][DEC_RATES][st.session_state['date_to_delete']]
         del st.session_state.shelf_json[_well][DEC_RATES_LIQ][st.session_state['date_to_delete']]
+        del st.session_state.shelf_json[_well][DEC_RATES_GAS][st.session_state['date_to_delete']]
         st.session_state['change_gtm_info'] = st.session_state['change_gtm_info'] + 1
 
     st.write('**Темпы падения**')
@@ -498,18 +504,23 @@ def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_en
         st.write('Введенные пользователем:')
         dec_rates_to_show = deepcopy(st.session_state.shelf_json[_well][DEC_RATES])
         dec_rates_to_show_liq = deepcopy(st.session_state.shelf_json[_well][DEC_RATES_LIQ])
+        dec_rates_to_show_gas = deepcopy(st.session_state.shelf_json[_well][DEC_RATES_GAS])
         transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show, dates_to_datetime=False)
         transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show_liq, dates_to_datetime=False)
+        transform_str_dates_to_datetime_or_vice_versa(dec_rates_to_show_gas, dates_to_datetime=False)
         st.write('Темпы падения для нефти')
         st.write(dec_rates_to_show)
         st.write('Темпы падения для жидкости')
         st.write(dec_rates_to_show_liq)
+        st.write('Темпы падения для газа')
+        st.write(dec_rates_to_show_gas)
         with st.empty():
             if 'b_edit_dec_rate' in st.session_state and st.session_state['b_edit_dec_rate'] is True:
                 with st.form('form_edit_dec_rate'):
                     st.date_input('Дата', value=_date_start, key='new_date')
                     st.number_input('Значение ТП нефти', key='new_val')
                     st.number_input('Значение ТП жидкости', key='new_val_liq')
+                    st.number_input('Значение ТП газа', key='new_val_gas')
                     st.form_submit_button('Добавить/изменить', on_click=edit_dec_rate)
             else:
                 st.button('Добавить/изменить', key='b_edit_dec_rate')
@@ -526,6 +537,7 @@ def draw_decline_rates_settings(_well: str, _date_start: datetime.date, _date_en
         st.write('Автозаполненные:')
         s_decline_rates = get_s_decline_rates(st.session_state.shelf_json, _well, _date_start, _date_end)
         s_decline_rates_liq = get_s_decline_rates_liq(st.session_state.shelf_json, _well, _date_start, _date_end)
-        pd_decline_show = pd.concat([s_decline_rates, s_decline_rates_liq], axis=1, ignore_index=True)
-        pd_decline_show.columns = ['нефть', 'жидкость']
+        s_decline_rates_gas = get_s_decline_rates_gas(st.session_state.shelf_json, _well, _date_start, _date_end)
+        pd_decline_show = pd.concat([s_decline_rates, s_decline_rates_liq, s_decline_rates_gas], axis=1, ignore_index=True)
+        pd_decline_show.columns = ['нефть', 'жидкость', 'газ']
         st.write(pd_decline_show)

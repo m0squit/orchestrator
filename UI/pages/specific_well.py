@@ -59,14 +59,16 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                         wellname: str,
                         MODEL_NAMES: Dict[str, str],
                         ensemble_interval: pd.DataFrame = pd.DataFrame()) -> go.Figure:
-    fig = make_subplots(rows=4, cols=2, shared_xaxes=True, x_title='Дата',
+    fig = make_subplots(rows=6, cols=2, shared_xaxes=True, x_title='Дата',
                         vertical_spacing=0.07,
                         horizontal_spacing=0.06,
                         column_widths=[0.7, 0.3],
                         column_titles=['', 'Прогноз'],
                         subplot_titles=['Дебит жидкости, м3', '',
                                         'Дебит нефти, м3', '',
+                                        'Дебит газа, м3', '',
                                         'Относительная ошибка по нефти, %', '',
+                                        'Относительная ошибка по газу, %', '',
                                         'Забойное давление, атм', ''])
     fig.update_layout(font=dict(size=15), template='seaborn',
                       title_text=f'Скважина {wellname}',
@@ -93,7 +95,8 @@ def create_well_plot_UI(statistics: Dict[str, pd.DataFrame],
                                         column=2, showlegend=True, marker_size=3)
     calced_liq = f'{wellname}_liq_lower' in ensemble_interval.columns
     calced_oil = f'{wellname}_oil_lower' in ensemble_interval.columns
-    if not ensemble_interval.empty and (calced_liq or calced_oil):
+    calced_gas = f'{wellname}_gas_lower' in ensemble_interval.columns
+    if not ensemble_interval.empty and (calced_liq or calced_oil or calced_gas):
         fig.add_vline(x=date_test_if_ensemble, line_width=1, line_dash='dash', row='all', col=2)
     fig.add_vline(x=date_test, line_width=1, line_dash='dash')
     return fig
@@ -123,6 +126,7 @@ def add_traces_to_specific_column(
               'pressure': '#C075A6'}
     y_liq_true = df_chess['Дебит жидкости']
     y_oil_true = df_chess['Дебит нефти']
+    y_gas_true = df_chess['Дебит газа']
     # Доверительный интервал ансамбля
     if not ensemble_interval.empty:
         if f'{wellname}_liq_lower' in ensemble_interval.columns:
@@ -147,6 +151,18 @@ def add_traces_to_specific_column(
                                fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
                                showlegend=False)
             fig.add_trace(trace, row=2, col=column)
+        if f'{wellname}_gas_lower' in ensemble_interval.columns:
+            trace = go.Scatter(name=f'GAS: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_gas_lower'],
+                               mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=showlegend)
+            fig.add_trace(trace, row=3, col=column)
+            trace = go.Scatter(name=f'GAS: Доверит. интервал',
+                               x=ensemble_interval.index, y=ensemble_interval[f'{wellname}_gas_upper'],
+                               fill='tonexty', mode='lines', line=dict(width=1, color=colors['ensemble_interval']),
+                               showlegend=False)
+            fig.add_trace(trace, row=3, col=column)
+
     # Факт
     trace = go.Scatter(name=f'{MODEL_NAMES["true"]}', x=y_liq_true.index, y=y_liq_true,
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend)
@@ -154,12 +170,16 @@ def add_traces_to_specific_column(
     trace = go.Scatter(name=f'OIL: {MODEL_NAMES["true"]}', x=y_oil_true.index, y=y_oil_true,
                        mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
     fig.add_trace(trace, row=2, col=column)
+    trace = go.Scatter(name=f'GAS: {MODEL_NAMES["true"]}', x=y_gas_true.index, y=y_gas_true,
+                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
+    fig.add_trace(trace, row=3, col=column)
     # Прогнозы моделей
     for model in statistics:
         if f'{wellname}_oil_pred' in statistics[model]:
             clr = colors[model]
             y_liq = statistics[model][f'{wellname}_liq_pred'].dropna()
             y_oil = statistics[model][f'{wellname}_oil_pred'].dropna()
+            y_gas = statistics[model][f'{wellname}_gas_pred'].dropna()
             trace_liq = go.Scatter(name=f'{MODEL_NAMES[model]}', x=y_liq.index, y=y_liq,
                                    mode=m, marker=mark, line=dict(width=1, color=clr),
                                    showlegend=showlegend)
@@ -172,13 +192,22 @@ def add_traces_to_specific_column(
             trace_err = go.Scatter(name=f'OIL ERR: {MODEL_NAMES[model]}', x=deviation.index, y=deviation,
                                    mode=m, marker=dict(size=4), line=dict(width=1, color=clr),
                                    showlegend=False)
-            fig.add_trace(trace_err, row=3, col=column)  # Ошибка по нефти
+            fig.add_trace(trace_err, row=4, col=column)  # Ошибка по нефти
+            trace_gas = go.Scatter(name=f'GAS: {MODEL_NAMES[model]}', x=y_gas.index, y=y_gas,
+                                   mode=m, marker=mark, line=dict(width=1, color=clr),
+                                   showlegend=False)
+            fig.add_trace(trace_gas, row=3, col=column)  # Дебит газа
+            deviation = calc_relative_error(y_gas_true, y_gas, use_abs=False)
+            trace_err = go.Scatter(name=f'GAS ERR: {MODEL_NAMES[model]}', x=deviation.index, y=deviation,
+                                   mode=m, marker=dict(size=4), line=dict(width=1, color=clr),
+                                   showlegend=False)
+            fig.add_trace(trace_err, row=5, col=column)  # Ошибка по нефти
     # Забойное давление
     pressure = df_chess['Давление забойное']
     trace_pressure = go.Scatter(name=f'Заб. давление', x=pressure.index, y=pressure,
                                 mode=m, marker=dict(size=4, color=colors['pressure']),
                                 showlegend=showlegend)
-    fig.add_trace(trace_pressure, row=4, col=column)
+    fig.add_trace(trace_pressure, row=6, col=column)
     # Мероприятия
     events = df_chess['Мероприятие']
     _events = events.dropna()
@@ -186,5 +215,5 @@ def add_traces_to_specific_column(
                               mode='markers+text', marker=dict(size=8), text=_events.array,
                               textposition='top center', textfont=dict(size=12),
                               showlegend=showlegend)
-    fig.add_trace(trace_events, row=4, col=column)
+    fig.add_trace(trace_events, row=6, col=column)
     return fig
