@@ -249,6 +249,8 @@ def show(session: st.session_state):
                 color = 'yellow'
             elif val == 'Перевод в нагнетательный фонд':
                 color = 'tomato1'
+            elif val == 'Другие остановки':
+                color = 'pink'
             elif val == 'Останов МЛСП':
                 color = 'blanchedalmond'
             else:
