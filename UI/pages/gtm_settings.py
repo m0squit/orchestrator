@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from io import BytesIO
 from frameworks_shelf_algo.class_Shelf.constants import GTMS, GTM_DATA_FORMAT, NAME, PLANNED_MLSP_STOPS, \
-    DEBIT_INCREASE, DEBIT_INCREASE_LIQ, N_DAYS_DEBIT_RECOVERY, DATE_START_MLSP
+    DEBIT_INCREASE, DEBIT_INCREASE_LIQ, DEBIT_INCREASE_GAS, N_DAYS_DEBIT_RECOVERY, DATE_START_MLSP
 import datetime as dt
 from frameworks_shelf_algo.class_Shelf.support_functions import get_date_range, _get_path
 
@@ -104,6 +104,7 @@ def show(session: st.session_state):
             st.session_state.shelf_json[PLANNED_MLSP_STOPS][_mlsp_date][_well] = {
                 DEBIT_INCREASE: st.session_state[DEBIT_INCREASE],
                 DEBIT_INCREASE_LIQ: st.session_state[DEBIT_INCREASE_LIQ],
+                DEBIT_INCREASE_GAS: st.session_state[DEBIT_INCREASE_GAS],
                 N_DAYS_DEBIT_RECOVERY: st.session_state[N_DAYS_DEBIT_RECOVERY]
             }
 
@@ -141,11 +142,13 @@ def show(session: st.session_state):
                 well_data_placeholder.write('После данного останова прирост добычи по выбранной скважине равен нулю')
                 default_debit_val = 10.0
                 default_debit_val_liq = 10.0
+                default_debit_val_gas = 10.0
                 default_n_days_val = 10
             else:
                 mlsp_stop_data_of_well = st.session_state.shelf_json[PLANNED_MLSP_STOPS][mlsp_date][_well]
                 default_debit_val = mlsp_stop_data_of_well[DEBIT_INCREASE]
                 default_debit_val_liq = mlsp_stop_data_of_well[DEBIT_INCREASE_LIQ]
+                default_debit_val_gas = mlsp_stop_data_of_well[DEBIT_INCREASE_GAS]
                 default_n_days_val = mlsp_stop_data_of_well[N_DAYS_DEBIT_RECOVERY]
                 well_data_placeholder.write(mlsp_stop_data_of_well)
                 col2.button('Удалить', on_click=del_mlsp_stop_data_of_well, args=[mlsp_date], key='del_data_of_well')
@@ -156,6 +159,7 @@ def show(session: st.session_state):
                     with st.form('form_edit_mlsp_stop_data_of_well'):
                         st.number_input(DEBIT_INCREASE, value=default_debit_val, key=DEBIT_INCREASE)
                         st.number_input(DEBIT_INCREASE_LIQ, value=default_debit_val_liq, key=DEBIT_INCREASE_LIQ)
+                        st.number_input(DEBIT_INCREASE_GAS, value=default_debit_val_gas, key=DEBIT_INCREASE_GAS)
                         st.number_input(N_DAYS_DEBIT_RECOVERY, value=default_n_days_val, key=N_DAYS_DEBIT_RECOVERY)
                         st.form_submit_button('Применить', on_click=edit_mlsp_stop_data_of_well, args=[mlsp_date])
 
@@ -245,6 +249,8 @@ def show(session: st.session_state):
                 color = 'yellow'
             elif val == 'Перевод в нагнетательный фонд':
                 color = 'tomato1'
+            elif val == 'Другие остановки':
+                color = 'pink'
             elif val == 'Останов МЛСП':
                 color = 'blanchedalmond'
             else:

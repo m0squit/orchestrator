@@ -51,7 +51,7 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
 def select_model(state: AppState, mode: str) -> str:
     MODEL_NAMES = ConfigStatistics.MODEL_NAMES
     MODEL_NAMES_REVERSED = {v: k for k, v in MODEL_NAMES.items()}
-    if mode == "Нефть":
+    if mode == "Нефть" or mode == "Газ":
         models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble' and model != 'CRM']
     else:
         models_without_ensemble = [MODEL_NAMES[model] for model in state.statistics.keys() if model != 'ensemble']

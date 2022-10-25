@@ -109,14 +109,16 @@ def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> N
         well_name_normal = state.wellnames_key_ois[well_name_ois]
         res_oil = _calculator_shelf.df_result[well_name_ois]
         res_liq = _calculator_shelf.df_result_liq[well_name_ois]
+        res_gas = _calculator_shelf.df_result_gas[well_name_ois]
         true_oil = _calculator_shelf._df_fact_test_prd[well_name_ois]
         true_liq = _calculator_shelf._df_fact_test_prd_liq[well_name_ois]
+        true_gas = _calculator_shelf._df_fact_test_prd_gas[well_name_ois]
         state.statistics['shelf'][f'{well_name_normal}_liq_true'] = true_liq
         state.statistics['shelf'][f'{well_name_normal}_liq_pred'] = res_liq
         state.statistics['shelf'][f'{well_name_normal}_oil_true'] = true_oil
         state.statistics['shelf'][f'{well_name_normal}_oil_pred'] = res_oil
-        state.statistics['shelf'][f'{well_name_normal}_gaz_true'] = np.nan
-        state.statistics['shelf'][f'{well_name_normal}_gaz_pred'] = np.nan
+        state.statistics['shelf'][f'{well_name_normal}_gas_true'] = true_gas
+        state.statistics['shelf'][f'{well_name_normal}_gas_pred'] = res_gas
 
 
 def convert_tones_to_m3_for_wolfram(state: AppState, wells_ftor: List[WellFtor]) -> None:
