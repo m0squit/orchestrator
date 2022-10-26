@@ -218,6 +218,22 @@ def show(session: st.session_state):
                             all_gtms.loc[_date2, _well1] = name
                     elif name == 'Перевод в нагнетательный фонд':
                         all_gtms.loc[_date1, _well1] = name
+                    elif name == 'Другие остановки':
+                        n_days_stop = st.session_state.shelf_json[_well][GTMS][_date1]['длительность остановки: полных дней']
+                        # n_hours_stop = st.session_state.shelf_json[_well][GTMS][_date1]['длительность остановки: + часов']
+                        if n_days_stop > 0:
+                            dates = get_date_range(_date1, _date1 + dt.timedelta(days=n_days_stop - 1))
+                            for _date2 in dates:
+                                all_gtms.loc[_date2, _well1] = name
+                            all_gtms.loc[_date1 + dt.timedelta(days=n_days_stop), _well1] = name_vnr
+                        else:
+                            all_gtms.loc[_date1, _well1] = name
+                            all_gtms.loc[_date1 + dt.timedelta(days=1), _well1] = name_vnr
+                        # n_days_vnr = st.session_state.shelf_json[_well][GTMS][_date1]['длительность выхода на режим']
+                        # dates = get_date_range(_date1 + dt.timedelta(n_days_trs),
+                        #                        _date1 + dt.timedelta(n_days_trs) + dt.timedelta(days=n_days_vnr - 1))
+                        # for _date2 in dates:
+                        #     all_gtms.loc[_date2, _well1] = name_vnr
                     # name = st.session_state.shelf_json[PLANNED_MLSP_STOPS]
 
                     # elif name == 'MLSP_STOP':
