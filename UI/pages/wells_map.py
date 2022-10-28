@@ -41,7 +41,7 @@ def select_plot(state: AppState, selected_wells_set: Tuple[str, ...]) -> [go.Fig
         df_f_coeff = plot_influence_table(state.coeff_f, mode_well)
         return crm_plot(coords_df, f_dict, mode_well, state.CRM_influence_R), selected_plot, df_f_coeff
     if selected_plot == 'TreeMap':
-        mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq', 'Газ': 'gaz'}
+        mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq', 'Газ': 'gas'}
         mode = st.selectbox(label='Жидкость/нефть/газ', options=sorted(mode_dict))
         model_for_error = select_model(state, mode)
         df = prepare_data_for_treemap(state, model_for_error, selected_wells_set)
@@ -63,17 +63,17 @@ def select_model(state: AppState, mode: str) -> str:
 
 
 def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tuple[str, ...]) -> pd.DataFrame:
-    columns = ['wellname', 'cum_q_liq', 'cum_q_oil', 'cum_q_gaz', 'err_liq', 'err_oil', 'err_gaz']
+    columns = ['wellname', 'cum_q_liq', 'cum_q_oil', 'cum_q_gas', 'err_liq', 'err_oil', 'err_gas']
     df = pd.DataFrame(columns=columns)
     well_names = [
         elem for elem in selected_wells_set if elem not in state.exclude_wells
     ]
     for well in well_names:
-        cum_q_liq, cum_q_oil, cum_q_gaz, err_liq, err_oil, err_gaz = None, None, None, None, None, None
+        cum_q_liq, cum_q_oil, cum_q_gas, err_liq, err_oil, err_gas = None, None, None, None, None, None
         if f'{well}_liq_true' in state.statistics[model]:
             df_test_period = state.statistics[model][state.was_date_test:]
-            q_test_period = df_test_period[[f'{well}_liq_true', f'{well}_oil_true', f'{well}_gaz_true']]
-            cum_q_liq, cum_q_oil, cum_q_gaz = q_test_period.sum().round(1)
+            q_test_period = df_test_period[[f'{well}_liq_true', f'{well}_oil_true', f'{well}_gas_true']]
+            cum_q_liq, cum_q_oil, cum_q_gas = q_test_period.sum().round(1)
             err_liq = calc_relative_error(df_test_period[f'{well}_liq_true'],
                                           df_test_period[f'{well}_liq_pred'],
                                           use_abs=True)
@@ -82,11 +82,11 @@ def prepare_data_for_treemap(state: AppState, model: str, selected_wells_set: Tu
                                           df_test_period[f'{well}_oil_pred'],
                                           use_abs=True)
             err_oil = round(err_oil.mean(), 1)
-            err_gaz = calc_relative_error(df_test_period[f'{well}_gaz_true'],
-                                          df_test_period[f'{well}_gaz_pred'],
+            err_gas = calc_relative_error(df_test_period[f'{well}_gas_true'],
+                                          df_test_period[f'{well}_gas_pred'],
                                           use_abs=True)
-            err_gaz = round(err_gaz.mean(), 1)
-        df.loc[len(df)] = well, cum_q_liq, cum_q_oil, cum_q_gaz, err_liq, err_oil, err_gaz
+            err_gas = round(err_gas.mean(), 1)
+        df.loc[len(df)] = well, cum_q_liq, cum_q_oil, cum_q_gas, err_liq, err_oil, err_gas
     return df
 
 
@@ -97,7 +97,7 @@ def create_tree_plot(df: pd.DataFrame, mode: str) -> go.Figure:
                       height=630,
                       width=1300,
                       separators='. ')
-    mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq', 'Газ': 'gaz'}
+    mode_dict = {'Нефть': 'oil', 'Жидкость': 'liq', 'Газ': 'gas'}
     mode = mode_dict[mode]
     df['text_error'] = 'Ошибка: ' + df[f'err_{mode}'].apply(str) + '%'
     fig.add_trace(go.Treemap(labels=df['wellname'],

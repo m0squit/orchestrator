@@ -47,8 +47,8 @@ def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None
         state.statistics['ftor'][f'{well_name_normal}_liq_pred'] = rates_liq_ftor
         state.statistics['ftor'][f'{well_name_normal}_oil_true'] = df['Дебит нефти']
         state.statistics['ftor'][f'{well_name_normal}_oil_pred'] = rates_oil_test_ftor
-        state.statistics['ftor'][f'{well_name_normal}_gaz_true'] = np.nan
-        state.statistics['ftor'][f'{well_name_normal}_gaz_pred'] = np.nan
+        state.statistics['ftor'][f'{well_name_normal}_gas_true'] = np.nan
+        state.statistics['ftor'][f'{well_name_normal}_gas_pred'] = np.nan
 
 
 def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState) -> None:
@@ -62,18 +62,18 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
         df_true = _well_wolfram.df
         rates_liq_true = df_true[_well_wolfram.NAME_RATE_LIQ]
         rates_oil_true = df_true[_well_wolfram.NAME_RATE_OIL]
-        rates_gaz_true = df_true[_well_wolfram.NAME_RATE_GAZ]
+        rates_gas_true = df_true[_well_wolfram.NAME_RATE_GAS]
         rates_liq_wolfram = res_wolfram.rates_liq_test
         rates_oil_wolfram = res_wolfram.rates_oil_test
-        rates_gaz_wolfram = res_wolfram.rates_gaz_test
+        rates_gas_wolfram = res_wolfram.rates_gas_test
 
         well_name_normal = state.wellnames_key_ois[_well_name_ois]
         state.statistics['wolfram'][f'{well_name_normal}_liq_true'] = rates_liq_true
         state.statistics['wolfram'][f'{well_name_normal}_liq_pred'] = rates_liq_wolfram
         state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
-        state.statistics['wolfram'][f'{well_name_normal}_gaz_true'] = rates_gaz_true
-        state.statistics['wolfram'][f'{well_name_normal}_gaz_pred'] = rates_gaz_wolfram
+        state.statistics['wolfram'][f'{well_name_normal}_gas_true'] = rates_gas_true
+        state.statistics['wolfram'][f'{well_name_normal}_gas_pred'] = rates_gas_wolfram
 
 
 def extract_data_CRM(df: pd.DataFrame,
@@ -91,8 +91,8 @@ def extract_data_CRM(df: pd.DataFrame,
             state.statistics[mode][f'{well_name_normal}_liq_pred'] = df[well_name_normal]
             state.statistics[mode][f'{well_name_normal}_oil_true'] = np.nan
             state.statistics[mode][f'{well_name_normal}_oil_pred'] = np.nan
-            state.statistics[mode][f'{well_name_normal}_gaz_true'] = np.nan
-            state.statistics[mode][f'{well_name_normal}_gaz_pred'] = np.nan
+            state.statistics[mode][f'{well_name_normal}_gas_true'] = np.nan
+            state.statistics[mode][f'{well_name_normal}_gas_pred'] = np.nan
 
 def extract_influence_coeff_CRM(data_coeff_f: pd.DataFrame, state: AppState) -> None:
     state['coeff_f'] = data_coeff_f
@@ -183,11 +183,11 @@ def extract_data_ensemble(ensemble_df: pd.DataFrame,
         state.statistics['ensemble'][f'{well_name_normal}_liq_pred'] = ensemble_df['ensemble']
         state.ensemble_interval[f'{well_name_normal}_liq_upper'] = ensemble_df['interval_upper']
         state.ensemble_interval[f'{well_name_normal}_liq_lower'] = ensemble_df['interval_lower']
-    elif mode == 'gaz':
-        state.statistics['ensemble'][f'{well_name_normal}_gaz_true'] = ensemble_df['true']
-        state.statistics['ensemble'][f'{well_name_normal}_gaz_pred'] = ensemble_df['ensemble']
-        state.ensemble_interval[f'{well_name_normal}_gaz_upper'] = ensemble_df['interval_upper']
-        state.ensemble_interval[f'{well_name_normal}_gaz_lower'] = ensemble_df['interval_lower']
+    elif mode == 'gas':
+        state.statistics['ensemble'][f'{well_name_normal}_gas_true'] = ensemble_df['true']
+        state.statistics['ensemble'][f'{well_name_normal}_gas_pred'] = ensemble_df['ensemble']
+        state.ensemble_interval[f'{well_name_normal}_gas_upper'] = ensemble_df['interval_upper']
+        state.ensemble_interval[f'{well_name_normal}_gas_lower'] = ensemble_df['interval_lower']
 
 
 def make_models_stop_well(statistics: Dict[str, pd.DataFrame],
@@ -205,9 +205,9 @@ def make_models_stop_well(statistics: Dict[str, pd.DataFrame],
             oil_nans = statistics[model][f'{well_name}_oil_true'].isna()
             statistics[model][f'{well_name}_oil_pred'][oil_zeros | oil_nans] = np.nan
 
-            gaz_zeros = statistics[model][f'{well_name}_gaz_true'] == 0
-            gaz_nans = statistics[model][f'{well_name}_gaz_true'].isna()
-            statistics[model][f'{well_name}_gaz_pred'][gaz_zeros | gaz_nans] = np.nan
+            gas_zeros = statistics[model][f'{well_name}_gas_true'] == 0
+            gas_nans = statistics[model][f'{well_name}_gas_true'].isna()
+            statistics[model][f'{well_name}_gas_pred'][gas_zeros | gas_nans] = np.nan
 
 
 def cut_statistics_test_only(state: AppState) -> Tuple[Dict[str, pd.DataFrame], pd.date_range]:
