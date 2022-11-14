@@ -41,7 +41,6 @@ def draw_well_plot(state: AppState) -> str:
     preprocessor = run_preprocessor(state.was_config)
     well_ftor = preprocessor.create_wells_ftor([well_name_ois])[0]
     df_chess = well_ftor.df_chess
-    print(df_chess)
     fig = create_well_plot_UI(statistics=state.statistics,
                               date_test=state.was_date_test,
                               date_test_if_ensemble=state.was_date_test_if_ensemble,
