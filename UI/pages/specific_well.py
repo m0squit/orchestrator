@@ -173,13 +173,16 @@ def add_traces_to_specific_column(
             fig.add_trace(trace, row=3, col=column)
     # Факт
     trace = go.Scatter(name=f'{MODEL_NAMES["true"]}', x=y_liq_true.index, y=y_liq_true,
-                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend)
+                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=showlegend,
+                       legendgroup=f'group_fact_{MODEL_NAMES["true"]}')
     fig.add_trace(trace, row=1, col=column)
     trace = go.Scatter(name=f'OIL: {MODEL_NAMES["true"]}', x=y_oil_true.index, y=y_oil_true,
-                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
+                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False,
+                       legendgroup=f'group_fact_{MODEL_NAMES["true"]}')
     fig.add_trace(trace, row=2, col=column)
     trace = go.Scatter(name=f'GAS: {MODEL_NAMES["true"]}', x=y_gas_true.index, y=y_gas_true,
-                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False)
+                       mode=m, marker=dict(size=5, color=colors['true']), showlegend=False,
+                       legendgroup=f'group_fact_{MODEL_NAMES["true"]}')
     fig.add_trace(trace, row=3, col=column)
     if column == 1:
         # Обводнённость
