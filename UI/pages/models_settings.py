@@ -18,11 +18,11 @@ from frameworks_shelf_algo.class_Shelf.constants import LAST_MEASUREMENT, DATE, 
 
 
 def show(session: st.session_state) -> None:
-    draw_ftor_settings(session)
+    # draw_ftor_settings(session)
     draw_wolfram_settings(session)
-    draw_CRM_settings(session)
+    # draw_CRM_settings(session)
     draw_shelf_settings(session)
-    draw_ensemble_settings(session)
+    # draw_ensemble_settings(session)
 
 
 def draw_ftor_settings(session: st.session_state) -> None:
@@ -193,11 +193,8 @@ def draw_shelf_settings(session: st.session_state) -> None:
             wellnames_key_normal_ = {}
             wellnames_key_ois_ = {}
             for ois_well in all_wells_ois_.unique():
-                well_name_norm = welllist[welllist["ois"] == ois_well]
-                well_name_norm = well_name_norm[well_name_norm.npath == 0]
-                well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
-                wellnames_key_normal_[well_name_norm] = ois_well
-                wellnames_key_ois_[ois_well] = well_name_norm
+                wellnames_key_normal_[ois_well] = ois_well
+                wellnames_key_ois_[ois_well] = ois_well
         else:
             wellnames_key_normal_ = session.state.wellnames_key_normal
             wellnames_key_ois_ = session.state.wellnames_key_ois
@@ -246,7 +243,7 @@ def draw_shelf_settings(session: st.session_state) -> None:
                     wells_ois = [wellnames_key_normal_[well_name_] for well_name_ in session.selected_wells_norm]
                 wells_sorted_ois = sorted(wells_ois)
                 config_shelf = ConfigShelf(oilfield=session.field_name,
-                                           shops=session.shops,
+                                           # shops=session.shops,
                                            wells_ois=wells_sorted_ois,
                                            train_start=session.date_start,
                                            train_end=session.date_test,
@@ -292,8 +289,8 @@ def draw_shelf_settings(session: st.session_state) -> None:
             # for wo in wellnames_key_ois_.keys():
             #     print(wo, type(wo))
 
-            wells_sorted_norm = [wellnames_key_ois_[int(w)] for w in wells_sorted_ois]
-            # wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
+            # wells_sorted_norm = [wellnames_key_ois_[int(w)] for w in wells_sorted_ois]
+            wells_sorted_norm = [wellnames_key_ois_[w] for w in wells_sorted_ois]
             _well1 = st.selectbox(
                 label='Скважина',
                 options=wells_sorted_norm,
@@ -309,7 +306,8 @@ def draw_shelf_settings(session: st.session_state) -> None:
             new_keys = []
             for w in data_out.keys():
                 if w != 'MLSP_STOP':
-                    new_keys.append(int(w))
+                    # new_keys.append(int(w))
+                    new_keys.append(w)
                 else:
                     new_keys.append(w)
             data_out = dict(zip(new_keys, list(data_out.values())))
@@ -322,7 +320,8 @@ def draw_shelf_settings(session: st.session_state) -> None:
 def draw_ensemble_settings(session: st.session_state) -> None:
     with st.expander('Настройки модели ансамбля'):
         with st.form(key='ensemble_params'):
-            max_adapt_period = (session.date_test - session.date_start).days - 1
+            # max_adapt_period = (session.date_test - session.date_start).days - 1
+            max_adapt_period = (session.date_test.year - session.date_start.year) * 12 + session.date_test.month - session.date_start.month
             if max_adapt_period <= 25:
                 max_adapt_period = 30
             st.number_input(

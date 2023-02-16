@@ -133,7 +133,7 @@ def calculate_fedot(oilfield: str,
 
 @st.experimental_singleton
 def calculate_shelf(oilfield: str,
-                    shops: List[str],
+                    # shops: List[str],
                     wells_ois: List[int],
                     train_start: date,
                     train_end: date,
@@ -143,7 +143,7 @@ def calculate_shelf(oilfield: str,
                     n_days_calc_avg: int,
                     change_gtm_info: int) -> DataPostProcessorShelf:
     config_shelf = ConfigShelf(oilfield=oilfield,
-                               shops=shops,
+                               # shops=shops,
                                wells_ois=wells_ois,
                                train_start=train_start,
                                train_end=train_end,

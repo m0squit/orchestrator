@@ -96,15 +96,15 @@ def parse_well_names(well_names_ois: List[int], field_name: str) -> Tuple[Dict[s
         Ключ = имя скважины OIS, значение - имя скважины в формате ГРАД.
     """
     # TODO: заменить костыльный способ
-    welllist = pd.read_feather(Preprocessor._path_general / field_name / 'welllist.feather')
+    # welllist = pd.read_feather(Preprocessor._path_general / field_name / 'welllist.feather')
     wellnames_key_normal_ = {}
     wellnames_key_ois_ = {}
     for name_ois in well_names_ois:
-        well_name_norm = welllist[welllist.ois == name_ois]
-        well_name_norm = well_name_norm[well_name_norm.npath == 0]
-        well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
-        wellnames_key_normal_[well_name_norm] = name_ois
-        wellnames_key_ois_[name_ois] = well_name_norm
+        # well_name_norm = welllist[welllist.ois == name_ois]
+        # well_name_norm = well_name_norm[well_name_norm.npath == 0]
+        # well_name_norm = well_name_norm.at[well_name_norm.index[0], 'num']
+        wellnames_key_normal_[name_ois] = name_ois
+        wellnames_key_ois_[name_ois] = name_ois
     return wellnames_key_normal_, wellnames_key_ois_
 
 # TODO: добавить переменные в функцию
@@ -333,7 +333,8 @@ def run_models(_session: st.session_state,
                date_start_forecast: date,
                date_end_forecast: date,
                oilfield: str,
-               shops: List[str]) -> None:
+               # shops: List[str]
+               ) -> None:
     """Запуск расчета моделей, которые выбрал пользователь.
 
     Parameters
@@ -380,10 +381,10 @@ def run_models(_session: st.session_state,
             run_fedot(oilfield, date_start_adapt, date_start_forecast, date_end_forecast, wells_norm,
                       coeff_f_fake, _session.state)
     if _models_to_run['shelf']:
-        run_shelf(oilfield, shops, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
+        run_shelf(oilfield, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                   date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
-    if at_least_one_model:
-        make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
+    # if at_least_one_model:
+    #     make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
         run_ensemble(_session, wells_norm, mode='liq')
         run_ensemble(_session, wells_norm, mode='oil')
@@ -436,7 +437,8 @@ def run_wolfram(date_start_forecast: date,
     state: AppState
         состояние программы, заданное пользователем.
     """
-    forecast_days_number = (date_end_forecast - date_start_forecast).days + 1
+    # forecast_days_number = (date_end_forecast - date_start_forecast).days + 1 # руками задать
+    forecast_days_number = (date_end_forecast.year - date_start_forecast.year) * 12 + date_end_forecast.month - date_start_forecast.month
     calculator_wolfram = calculate_wolfram(_preprocessor,
                                            wells_ois,
                                            forecast_days_number,
@@ -446,7 +448,7 @@ def run_wolfram(date_start_forecast: date,
                                            _session.window_sizes,
                                            _session.quantiles)
     extract_data_wolfram(calculator_wolfram, state)
-    convert_tones_to_m3_for_wolfram(state, state.wells_ftor)
+    # convert_tones_to_m3_for_wolfram(state, state.wells_ftor)
 
 
 def run_CRM(date_start_adapt: date,
@@ -525,7 +527,7 @@ def run_fedot(oilfield: str,
     extract_data_fedot(calculator_fedot, state)
 
 def run_shelf(oilfield: str,
-              shops: List[str],
+              # shops: List[str],
               well_ois: List[int],
               train_start: date,
               train_end: date,
@@ -551,7 +553,7 @@ def run_shelf(oilfield: str,
     if 'change_gtm_info' not in st.session_state:
         st.session_state['change_gtm_info'] = 0
     calculator_shelf = calculate_shelf(oilfield,
-                                       shops,
+                                       # shops,
                                        well_ois,
                                        train_start,
                                        train_end,
@@ -605,10 +607,10 @@ def main():
         models_to_run = select_models()
         try:
             field_name = select_oilfield(st.session_state, FIELDS_SHOPS)
-            shops = select_shops(st.session_state, field_name)
+            # shops = select_shops(st.session_state, field_name)
             date_start, date_test, date_end = select_dates(st.session_state, date_min=DATE_MIN, date_max=DATE_MAX)
 
-            config = ConfigPreprocessor(field_name, shops, date_start, date_test, date_end)
+            config = ConfigPreprocessor(field_name, date_start, date_test, date_end)
             preprocessor = run_preprocessor(config)
             wellnames_key_normal, wellnames_key_ois = parse_well_names(preprocessor.well_names, field_name)
             selected_wells_norm, selected_wells_ois = select_wells_to_calc(wellnames_key_normal)
@@ -637,12 +639,12 @@ def main():
             selected_wells_ois,
             wellnames_key_normal,
             wellnames_key_ois,
-            preprocessor.create_wells_ftor(selected_wells_ois)
+            preprocessor.create_wells_wolfram(selected_wells_ois)
         )
         # Запуск моделей
         run_models(session, models_to_run, preprocessor,
                    selected_wells_ois, selected_wells_norm,
-                   date_start, date_test, date_end, field_name, shops)
+                   date_start, date_test, date_end, field_name)
         logger.success('Finish calculations.')
         # Выделение прогнозов моделей
         dfs, dates = cut_statistics_test_only(session.state)

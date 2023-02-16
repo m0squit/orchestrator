@@ -20,7 +20,7 @@ FIELDS_SHOPS = dict(sorted(FIELDS_SHOPS.items()))
 
 # Диапазон дат выгрузки sh таблицы
 DATE_MIN = datetime.date(2000, 1, 1)
-DATE_MAX = datetime.date(2025, 1, 1)
+DATE_MAX = datetime.date(2030, 1, 1)
 
 PERIOD_TRAIN_MIN = relativedelta(months=3)
 PERIOD_TEST_MIN = relativedelta(months=1)

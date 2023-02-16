@@ -50,7 +50,7 @@ def extract_data_ftor(_calculator_ftor: CalculatorFtor, state: AppState) -> None
 
 
 def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState) -> None:
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq=pd.offsets.MonthBegin(1)).date
     state.statistics['wolfram'] = pd.DataFrame(index=dates)
     for _well_wolfram in _calculator_wolfram.wells:
         _well_name_ois = _well_wolfram.well_name
@@ -69,6 +69,7 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
         state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
 
+    state.statistics['wolfram'] = abs(state.statistics['wolfram'])
 
 def extract_data_CRM(df: pd.DataFrame,
                      state: AppState,
@@ -94,7 +95,7 @@ def extract_data_fedot(fedot_entity: CalculatorFedot, state: AppState) -> None:
     state.statistics['fedot'] = fedot_entity.statistic_all
 
 def extract_data_shelf(_calculator_shelf: CalculatorShelf, state: AppState) -> None: #, _change_gtm_info: int
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq=pd.offsets.MonthBegin(1)).date
     state.statistics['shelf'] = pd.DataFrame(index=dates)
     for well_shelf in _calculator_shelf.wells_list:
         well_name_ois = well_shelf
@@ -138,7 +139,7 @@ def prepare_single_df_for_ensemble(state: AppState,
     models = list(state.statistics.keys())
     if 'ensemble' in models:
         models.remove('ensemble')
-    dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq='D').date
+    dates_test = pd.date_range(state.was_date_test, state.was_date_end, freq=pd.offsets.MonthBegin(1)).date
     input_df = pd.DataFrame(index=dates_test)
     if state.statistics_another_models:
         state.statistics[state.statistics_another_models] = state.statistics_test_only[state.statistics_another_models]
@@ -158,7 +159,7 @@ def extract_data_ensemble(ensemble_df: pd.DataFrame,
                           mode: str = 'liq') -> None:
     if ensemble_df.empty:
         return
-    dates = pd.date_range(state.was_date_start, state.was_date_end, freq='D').date
+    dates = pd.date_range(state.was_date_start, state.was_date_end, freq=pd.offsets.MonthBegin(1)).date
     if 'ensemble' not in state.statistics:
         state.statistics['ensemble'] = pd.DataFrame(index=dates)
     if mode == 'oil':
