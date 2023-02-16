@@ -206,10 +206,10 @@ def add_fieldshops(fieldshops: dict) -> None:
     fieldshops_path = pathlib.Path.cwd() / 'tools_preprocessor' / 'data'
     fieldshops_name = fieldshops_path.glob("**")
     for fs_name in fieldshops_name:
-        if pathlib.Path(fs_name / 'welllist.feather').exists():
-            fieldshops_ceh = pd.read_feather(pathlib.Path(fs_name / 'welllist.feather'))
+        if pathlib.Path(fs_name / 'sh_sost_fond.feather').exists():
+            # fieldshops_ceh = pd.read_feather(pathlib.Path(fs_name / 'welllist.feather'))
             fs_name = fs_name.name
         else:
             continue
-        fieldshops_ceh = fieldshops_ceh.ceh.unique()
-        fieldshops[fs_name] = list(fieldshops_ceh)
+        # fieldshops_ceh = fieldshops_ceh.ceh.unique()
+        fieldshops[fs_name] = list('')
