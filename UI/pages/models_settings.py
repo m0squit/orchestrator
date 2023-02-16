@@ -183,7 +183,6 @@ def draw_shelf_settings(session: st.session_state) -> None:
         _path = _get_path(session.field_name)
         # if session['change_gtm_info'] == 0:
         if session['change_gtm'] == 0:
-            welllist = pd.read_feather(_path / 'welllist.feather')
             wells_work = pd.read_feather(_path / 'sh_sost_fond.feather')
             wells_work.set_index('dt', inplace=True)
             wells_work = wells_work[wells_work.index > session.date_test]
