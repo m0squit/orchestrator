@@ -22,7 +22,7 @@ def show(session: st.session_state) -> None:
     draw_wolfram_settings(session)
     # draw_CRM_settings(session)
     draw_shelf_settings(session)
-    # draw_ensemble_settings(session)
+    draw_ensemble_settings(session)
 
 
 def draw_ftor_settings(session: st.session_state) -> None:
