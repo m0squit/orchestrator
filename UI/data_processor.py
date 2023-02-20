@@ -165,13 +165,13 @@ def extract_data_ensemble(ensemble_df: pd.DataFrame,
     if mode == 'oil':
         state.statistics['ensemble'][f'{well_name_normal}_oil_true'] = ensemble_df['true']
         state.statistics['ensemble'][f'{well_name_normal}_oil_pred'] = ensemble_df['ensemble']
-        state.ensemble_interval[f'{well_name_normal}_oil_upper'] = ensemble_df['interval_upper']
-        state.ensemble_interval[f'{well_name_normal}_oil_lower'] = ensemble_df['interval_lower']
+        # state.ensemble_interval[f'{well_name_normal}_oil_upper'] = ensemble_df['interval_upper']
+        # state.ensemble_interval[f'{well_name_normal}_oil_lower'] = ensemble_df['interval_lower']
     elif mode == 'liq':
         state.statistics['ensemble'][f'{well_name_normal}_liq_true'] = ensemble_df['true']
         state.statistics['ensemble'][f'{well_name_normal}_liq_pred'] = ensemble_df['ensemble']
-        state.ensemble_interval[f'{well_name_normal}_liq_upper'] = ensemble_df['interval_upper']
-        state.ensemble_interval[f'{well_name_normal}_liq_lower'] = ensemble_df['interval_lower']
+        # state.ensemble_interval[f'{well_name_normal}_liq_upper'] = ensemble_df['interval_upper']
+        # state.ensemble_interval[f'{well_name_normal}_liq_lower'] = ensemble_df['interval_lower']
 
 
 def make_models_stop_well(statistics: Dict[str, pd.DataFrame],

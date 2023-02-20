@@ -383,8 +383,8 @@ def run_models(_session: st.session_state,
     if _models_to_run['shelf']:
         run_shelf(oilfield, wells_ois, date_start_adapt, date_start_forecast, date_start_adapt,
                   date_end_forecast, _session.n_days_past, _session.n_days_calc_avg, _session.state)
-    # if at_least_one_model:
-    #     make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
+    if at_least_one_model:
+        make_models_stop_well(_session.state['statistics'], _session.state['selected_wells_norm'])
     if _models_to_run['ensemble'] and at_least_one_model:
         run_ensemble(_session, wells_norm, mode='liq')
         run_ensemble(_session, wells_norm, mode='oil')

@@ -325,7 +325,7 @@ def draw_ensemble_settings(session: st.session_state) -> None:
                 max_adapt_period = 30
             st.number_input(
                 label='Количество дней обучения ансамбля',
-                min_value=25,
+                min_value=2,
                 value=session.ensemble_adapt_period,
                 max_value=max_adapt_period,
                 step=1,
