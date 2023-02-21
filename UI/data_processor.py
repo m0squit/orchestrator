@@ -69,7 +69,7 @@ def extract_data_wolfram(_calculator_wolfram: CalculatorWolfram, state: AppState
         state.statistics['wolfram'][f'{well_name_normal}_oil_true'] = rates_oil_true
         state.statistics['wolfram'][f'{well_name_normal}_oil_pred'] = rates_oil_wolfram
 
-    state.statistics['wolfram'] = abs(state.statistics['wolfram'])
+    # state.statistics['wolfram'] = abs(state.statistics['wolfram'])
 
 def extract_data_CRM(df: pd.DataFrame,
                      state: AppState,
@@ -172,6 +172,7 @@ def extract_data_ensemble(ensemble_df: pd.DataFrame,
         state.statistics['ensemble'][f'{well_name_normal}_liq_pred'] = ensemble_df['ensemble']
         # state.ensemble_interval[f'{well_name_normal}_liq_upper'] = ensemble_df['interval_upper']
         # state.ensemble_interval[f'{well_name_normal}_liq_lower'] = ensemble_df['interval_lower']
+    state.statistics['ensemble'][state.statistics['ensemble']<0] = 0
 
 
 def make_models_stop_well(statistics: Dict[str, pd.DataFrame],
